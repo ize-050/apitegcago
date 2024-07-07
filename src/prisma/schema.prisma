@@ -1,0 +1,88 @@
+datasource db {
+    url      = env("DATABASE_URL")
+    provider = "mysql"
+}
+
+generator client {
+    provider = "prisma-client-js"
+}
+
+
+
+model roles {
+    id          String @id @default(uuid())
+    roles_name  String 
+    user        user?
+
+}
+
+model user {
+    id           String  @id @default(uuid())
+    roles_id     String  @unique
+    email        String  @unique
+    password     String
+    fullname     String
+    
+    roles        roles @relation(fields: [roles_id], references: [id])
+    @@index([roles_id])
+}
+
+
+model customer {
+    id           String  @id @default(uuid())
+    cus_fullname String?
+    cus_phone    String?
+    cus_line     String?
+    cus_website  String?
+    cus_etc      String?
+    cus_facebook String?
+    cus_wechat   String?
+    details      customer_detail?
+    customer_status      customer_status[]
+    customer_emp        customer_emp[]
+}
+
+model customer_detail {
+    id              String @id @default(uuid())
+    customer_id     String @unique
+    cd_consider     String
+    cd_typeinout    String
+    cd_custype      String
+    cd_cusservice   String
+    cd_channels     String
+    cd_num          Int
+    cd_capital      String
+    cd_emp          String
+    cd_shareholders String
+    cd_address      String
+    cd_num_saka     String
+    cd_frequency    String
+    cd_leader       String
+    cd_priority     String
+    customer        customer @relation(fields: [customer_id], references: [id])
+
+    @@index([customer_id])
+}
+
+
+model customer_status {
+    id           String @id @default(uuid())
+    customer_id  String
+    cus_status   String 
+    active       String
+
+    customer        customer @relation(fields: [customer_id], references: [id])
+    @@index([customer_id])
+
+} 
+
+
+model customer_emp{
+    id   String @id @default(uuid())
+    customer_id String
+    cus_status String 
+    active String
+
+    customer        customer @relation(fields: [customer_id], references: [id])
+    @@index([customer_id])
+}
