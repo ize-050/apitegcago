@@ -14,9 +14,8 @@ CREATE TABLE `user` (
     `password` VARCHAR(191) NOT NULL,
     `fullname` VARCHAR(191) NOT NULL,
 
-    UNIQUE INDEX `user_roles_id_key`(`roles_id`),
+    INDEX `user_roles_id_key`(`roles_id`),
     UNIQUE INDEX `user_email_key`(`email`),
-    INDEX `user_roles_id_idx`(`roles_id`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
