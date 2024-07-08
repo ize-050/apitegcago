@@ -188,6 +188,26 @@ class SaleRepository {
     }
   }
 
+  async getEstimate(customerId: string):Promise<any>{
+    try{
+      return await this.prisma.d_purchase.findFirst({
+        where:{
+          customer_id: customerId,
+        },
+        include:{
+          d_product:{
+            include:{
+              d_product_image:true
+            }
+          }
+        }
+      })
+    }
+    catch(err:any){
+      throw new Error(err)
+    }
+  }
+
   async submitEstimate(tx:any,RequestData:RequestPurchase):Promise<any>{
     try{
       return await tx.d_purchase.create({

@@ -132,6 +132,8 @@ model  d_purchase {
     updatedAt          DateTime?  
     deletedAt DateTime?
     d_product  d_product?
+    d_product_image d_product_image[]
+    
 } 
 
 
@@ -144,24 +146,25 @@ model d_product {
      createdAt          DateTime  @default(now())
      updatedAt          DateTime?  
      deletedAt DateTime?
+     d_product_image  d_product_image[]
 
-     d_product_image d_product_image[]
      d_purchase        d_purchase  @relation(fields: [d_purchase_id], references: [id])
     @@index([d_purchase_id])
 }
 
-model d_product_image{
+model d_product_image {
      id String @id @default(uuid())
      d_product_id String
-     d_purchase_id String? 
+     d_purchase_id String
      d_product_image_name String?
      d_active  Boolean?
      createdAt          DateTime  @default(now())
      updatedAt          DateTime?  
      deletedAt DateTime?
-    
 
+     d_purchase      d_purchase  @relation(fields: [d_purchase_id], references: [id])
      d_product        d_product  @relation(fields: [d_product_id], references: [id])
-
-     
+    
+    @@index([d_product_id,d_purchase_id])
 }
+

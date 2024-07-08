@@ -60,6 +60,23 @@ class SaleService {
     }
   }
 
+
+  async getEstimate(customerId: string):Promise<any>{
+    try{
+      const data = await this.saleRepo.getEstimate(customerId);
+      console.log('data',data)
+      const response = {
+        data: data
+      }
+        
+      return response;
+
+    }
+    catch(err:any){
+      throw err;
+    }
+  }
+
   async submitEstimate(RequestData: Partial<any>): Promise<any> {
     try {
       const d_purchase: RequestPurchase = {

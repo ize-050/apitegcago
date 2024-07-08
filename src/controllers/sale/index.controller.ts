@@ -132,6 +132,22 @@ export class SaleController {
     }
   }
 
+  async getEstimate(req: Request, res: Response):Promise<any>{
+    try{
+      const customerId = req.params.id;
+      console.log('errr',customerId);
+      const userId =req?.userId;
+
+      const data = await this.saleservice.getEstimate(customerId)
+
+
+      res.status(200).json(data)
+    }
+    catch(err:any){
+      res.status(500).json(err)
+    }
+  }
+
   async submitEstimate(req: Request, res: Response): Promise<any> {
     try {
       const validatedData = ValidationsubmitEstimate.safeParse(req.body);

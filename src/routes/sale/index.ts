@@ -29,4 +29,7 @@ router.post('/createCustomer',authMiddleware, (req, res) => saleController.creat
 router.put('/editCustomer/:id',authMiddleware, (req, res) => saleController.editCustomer(req, res));
 router.put('/changetagStatus/:id',authMiddleware, (req, res) => saleController.changeTagStatus(req, res));
 router.post('/submitEstimate/:id',authMiddleware,upload.array('d_image',10), (req, res) => saleController.submitEstimate(req,res));
+
+router.get('/getEstimate/:id',authMiddleware, (req, res) => saleController.getEstimate(req, res));
+
 module.exports = router

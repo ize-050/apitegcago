@@ -24,7 +24,6 @@ export class UserController {
         if( data ===false){
             return res.status(400).json({ error: "รหัสผ่านหรืออีเมลไม่ถูกต้อง" });
         }
-
         res.json({
             data: data,
         });
