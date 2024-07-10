@@ -25,13 +25,14 @@ class SaleRepository {
       const tag = RequestData.tag as string | undefined;
       const emp_id = RequestData.emp_id as string | undefined;
       return await this.prisma.customer.findMany({
-        //ดึงข้อมูลลูกค้า รอ Login
         skip: 1 - 1,
         take: 10,
         include: {
           details: true,
           customer_emp: true,
-          customer_status: true,
+          customer_status: {
+            orderBy: { createdAt: 'desc' },
+          },
         },
         where: {
           customer_emp: {
@@ -47,6 +48,8 @@ class SaleRepository {
             },
           }),
         },
+        
+       
       });
     } catch (err: any) {
       throw new Error(err);

@@ -109,6 +109,7 @@ export class SaleController {
 
   async changeTagStatus(req: Request, res: Response): Promise<any> {
     try {
+      console.log('delay')
       const customerId = req.params.id;
       const userId = req?.userId;
       const RequestData = req.body;
@@ -120,7 +121,7 @@ export class SaleController {
       };
 
       const response = await this.saleservice.changeTagStatus(request);
-
+      console.log('response',response)
       res.status(200).json({
         data: {
           message: "เปลี่ยนสถานะสำเร็จ",

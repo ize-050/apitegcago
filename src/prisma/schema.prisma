@@ -31,7 +31,74 @@ model user {
     deletedAt  DateTime?
     @@index([roles_id])
 }
+enum TypeIm {
+    Car
+    BOAT
+    AIR
+    ETC
+}
 
+model typeMaster{
+    id           String  @id @default(uuid())
+    type_name String
+    createdAt          DateTime  @default(now())
+    updatedAt         DateTime?
+    deletedAt  DateTime?
+    documentType documentType[]
+}
+
+model documentType{
+     id           String  @id @default(uuid())
+     type_master_id String
+     type_name  TypeIm
+     createdAt          DateTime  @default(now())
+     updatedAt         DateTime?
+     deletedAt  DateTime?
+
+     document document[]
+     typeMaster        typeMaster @relation(fields: [type_master_id], references: [id])
+     
+}
+
+enum keyDocument {
+    Document
+    License
+}
+
+model document {
+    id String @id @default(uuid())
+    document_type_id String
+    documennt_type String
+    document_key  keyDocument
+    document_name Json
+    document_so  Boolean
+    document_Invpick Boolean //ใบรับตู้
+    document_PL  Boolean
+    document_INV Boolean
+    document_DraftBL Boolean
+    document_DraftFE Boolean
+    document_FE    Boolean
+    document_BILL_OF_LADING Boolean
+    document_ARRIVAL_NOTICE Boolean
+    Cabinet_deposit Boolean //มัดจำตู่
+    document_Slip Boolean
+    document_do  Boolean //จดหมายแลกดีโอ
+    document_card Boolean //การ์ด
+    document_draft Boolean //ใบขนส่ง
+    document_hairy Boolean //ใบขน
+    document_customs_receipt  Boolean //ใบเสร็จรับเงินศุลกรกร
+    document_certificate   Boolean //ใบรับรอง
+    document_world20  Boolean // ภw 20
+    document_tracking Boolean //
+    document_etc  Boolean //อื่นๆ
+    createdAt          DateTime  @default(now())
+    updatedAt         DateTime?
+    deletedAt  DateTime?
+
+    documentType        documentType @relation(fields: [document_type_id], references: [id])
+
+
+}
 
 model customer {
     id           String  @id @default(uuid())
@@ -133,6 +200,7 @@ model  d_purchase {
     deletedAt DateTime?
     d_product  d_product?
     d_product_image d_product_image[]
+    d_document d_document[]
     
 } 
 
@@ -168,3 +236,14 @@ model d_product_image {
     @@index([d_product_id,d_purchase_id])
 }
 
+
+model d_document {
+    id String @id @default(uuid())
+    d_purchase_id String
+    d_document_name String
+    d_document_key String //key ยกตัวอย่าง เอกสาร ใบอนุญาติ
+    createdAt          DateTime  @default(now())
+    updatedAt          DateTime?  
+    deletedAt DateTime?
+    d_purchase        d_purchase  @relation(fields: [d_purchase_id], references: [id])
+}

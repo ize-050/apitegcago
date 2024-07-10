@@ -71,9 +71,9 @@ export interface RequestProductImage{
 }
 
 export enum Tagstatus {
-    Interested = "1", // "1" is now the string representation of Interested
-    NotInterested = "2",
-    Continue_follow = "3",
-    Follow = "4",
-    CloseSale = "5",
+    Interested = "สนใจ", // "1" is now the string representation of Interested
+    NotInterested = "ไม่สนใจ",
+    Continue_follow = "ติดตามต่อ",
+    Follow = "ติดต่อไม่ได้",
+    CloseSale = "ปิดการขาย",
 }
