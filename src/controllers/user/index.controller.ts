@@ -10,6 +10,7 @@ export class UserController {
   async login(req: Request, res: Response): Promise<any> {
     try{
         const { email, password } = req.body;
+        console.log('reqbodty',req.body);
             // Input validation
             if (!email || !password) {
                 return res.status(400).json({ error: "กรุณากรอกอีเมลหรือพาสเวิส" });

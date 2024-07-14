@@ -23,6 +23,27 @@ class SaleService {
     return data;
   }
 
+  async getCustomerDetail(customerId: string): Promise<any>{
+    try{
+      const data = await this.saleRepo.getCustomerDetail(customerId)
+
+         let customer_detail :Partial<any> ={}
+
+         customer_detail = data.details
+         delete data.details;
+         Object.assign(customer_detail,{cus_status : data.customer_status[0].cus_status});
+
+         delete data.customer_status
+         Object.assign(customer_detail, data);
+
+
+      return customer_detail
+    }
+    catch(err:any){
+      throw err;
+    }
+  }
+
   async createCustomer(RequestData: Partial<any>): Promise<any> {
     try {
       const response = await this.saleRepo.createCustomer(RequestData);

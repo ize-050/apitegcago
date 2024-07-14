@@ -134,6 +134,7 @@ model customer_detail {
     cd_capital      String?
     cd_emp          String?
     cd_shareholders String?
+    cd_department   String? 
     cd_address      String?
     cd_num_saka     String?
     cd_frequency    String?

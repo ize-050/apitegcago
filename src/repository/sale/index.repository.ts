@@ -24,9 +24,38 @@ class SaleRepository {
       const status = RequestData.status as string | undefined;
       const tag = RequestData.tag as string | undefined;
       const emp_id = RequestData.emp_id as string | undefined;
-      return await this.prisma.customer.findMany({
-        skip: 1 - 1,
+
+      const skip = RequestData.skip
+
+      const customer =  await this.prisma.customer.findMany({
+        skip: skip ,
         take: 10,
+        include: {
+          details: true,
+          customer_emp: true,
+          customer_status: {
+            orderBy: { createdAt: 'desc' },
+          },
+        },
+        where: {
+          customer_emp: {
+            some: { user_id: userId },
+          },
+          ...(tag && { cus_etc: tag }),
+          ...(status && { customer_status: { some: { cus_status: status } } }),
+          ...(emp_id && {
+            customer_emp: {
+              some: {
+                user_id: emp_id,
+                active: "active",
+              },
+            },
+          }),
+        },
+      
+      });
+
+      const Total =  await this.prisma.customer.findMany({
         include: {
           details: true,
           customer_emp: true,
@@ -48,10 +77,36 @@ class SaleRepository {
             },
           }),
         },
-        
-       
+      
       });
+    const data= {
+        customer : customer,
+        total:Total.length
+      }
+      return  data
+     
     } catch (err: any) {
+      throw new Error(err);
+    }
+  }
+
+  async getCustomerDetail(customerId:string):Promise<any>{
+    try{
+       return  await this.prisma.customer.findUnique({
+        where:{
+          id: customerId
+        },
+        include:{
+          details:true,
+          customer_status :{
+            where:{
+              active:"active"
+            }
+          }
+        }
+       })
+    }
+    catch(err:any){
       throw new Error(err);
     }
   }

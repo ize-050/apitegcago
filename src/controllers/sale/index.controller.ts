@@ -10,6 +10,8 @@ import {
 } from "../../validation/validationSchema";
 import upload from "../../config/multerConfig";
 import multer from "multer";
+
+
 export class SaleController {
   private saleservice;
   constructor() {
@@ -30,24 +32,83 @@ export class SaleController {
 
       const RequestData = {
         ...req.query,
+        status,
+        tag,
+        skip,
         userId: userId,
       };
-
       const data = await this.saleservice.getCustomer(RequestData);
+      let customers :any[] = []
+      for(let customer of data.customer){
+        switch(customer.cus_etc){
+          case "โทร"  : customer.color = "bg-green-400" 
+          break;
+          case "ทัก"  : customer.color = "bg-blue-400"
+          break;
+          case "Walk-in"  : customer.color = "bg-gray-700"
+          break;
+          case "ออกบูธ"  : customer.color = "bg-purple-500"
+          break;
+          default : customer.color = "bg-blue-500"
+        }
+         for(let customer_status of customer.customer_status) {
+          
+           switch(customer_status.cus_status){
+             case "สนใจ"  : customer_status.color = "bg-blue-500" 
+             break;
+             case "ไม่สนใจ"  : customer_status.color = "bg-red-400"
+             break;
+             case "ติดตามต่อ"  : customer_status.color = "bg-orange-300"
+             break;
+             case "ติดต่อไม่ได้"  : customer_status.color = "bg-gray-500"
+             break;
+             case "ปิดการขาย"  : customer_status.color = "bg-green-400"
+             break;
+             default : customer_status.color = "bg-blue-500"
+           }
+         }
+         customers.push(customer);
+
+       
+        
+      }
+      let customerData ={
+        customer :customers,
+        total : data.total
+      }
       res.json({
         data: {
-          users: data,
+          users: customerData,  
           message: "success",
           statusCode: 200,
         },
       });
     } catch (err: any) {
+      console.log('errr',err)
       res.status(500).json(err);
     }
   }
 
+  async getCustomerDetail(req:Request, res:Response):Promise<any>{
+      try{
+        let customerId = req.params.id
+        const response = await this.saleservice.getCustomerDetail(customerId);
+
+        const resResponse ={
+          customer_detail :response,
+          statusCode:200,
+          message:'ดึงข้อมูลสำเร็จ'
+        }
+        res.status(200).json(resResponse);
+      }
+      catch(err:any){
+         res.status(500).json(err)
+      }
+  }
+
   async createCustomer(req: Request, res: Response): Promise<any> {
     try {
+      console.log('reqqq',req.body)
       const validatedData = ValidationCreateCustomer.safeParse(req.body);
 
       if (!validatedData.success) {

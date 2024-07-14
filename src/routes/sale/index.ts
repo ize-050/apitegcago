@@ -25,6 +25,7 @@ const router = Router()
 const saleController = new SaleController();
 
 router.get('/getCustomer',authMiddleware, (req, res) =>  saleController.getCustomer(req, res));
+router.get('/getCustomerDetail/:id',authMiddleware, (req, res) =>  saleController.getCustomerDetail(req, res));
 router.post('/createCustomer',authMiddleware, (req, res) => saleController.createCustomer(req, res));
 router.put('/editCustomer/:id',authMiddleware, (req, res) => saleController.editCustomer(req, res));
 router.put('/changetagStatus/:id',authMiddleware, (req, res) => saleController.changeTagStatus(req, res));
