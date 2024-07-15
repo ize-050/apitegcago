@@ -23,23 +23,60 @@ class SaleService {
     return data;
   }
 
-  async getCustomerDetail(customerId: string): Promise<any>{
-    try{
-      const data = await this.saleRepo.getCustomerDetail(customerId)
+  async getCustomerDetail(customerId: string): Promise<any> {
+    try {
+      const data = await this.saleRepo.getCustomerDetail(customerId);
 
-         let customer_detail :Partial<any> ={}
+      let customer_detail: Partial<any> = {};
 
-         customer_detail = data.details
-         delete data.details;
-         Object.assign(customer_detail,{cus_status : data.customer_status[0].cus_status});
+      customer_detail = data.details;
+      delete data.details;
+      switch (data.customer_status[0].cus_status) {
+        case "สนใจ":
+          data.customer_status[0].color = "bg-blue-500";
+          break;
+        case "ไม่สนใจ":
+          data.customer_status[0].color = "bg-red-400";
+          break;
+        case "ติดตามต่อ":
+          data.customer_status[0].color = "bg-orange-300";
+          break;
+        case "ติดต่อไม่ได้":
+          data.customer_status[0].color = "bg-gray-500";
+          break;
+        case "ปิดการขาย":
+          data.customer_status[0].color = "bg-green-400";
+          break;
+        default:
+          data.customer_status[0].color = "bg-blue-500";
+      }
 
-         delete data.customer_status
-         Object.assign(customer_detail, data);
+      switch (data.cus_etc) {
+        case "โทร":
+          data.cus_etc_color = "bg-green-400";
+          break;
+        case "ทัก":
+          data.cus_etc_color = "bg-blue-500";
+          break;
+        case "Walk-in":
+          data.cus_etc_color = "bg-gray-300";
+          break;
+        case "ออกบูธ":
+          data.cus_etc_color = "bg-purple-300";
+          break;
+        default:
+          data.cus_etc_color = "bg-blue-500";
+      }
+      Object.assign(customer_detail, { cus_etc_color: data.cus_etc_color });
+      Object.assign(customer_detail, {
+        cus_status: data.customer_status[0].cus_status,
+      });
+      Object.assign(customer_detail, { color: data.customer_status[0].color });
+      delete data.customer_status;
+      Object.assign(customer_detail, data);
 
-
-      return customer_detail
-    }
-    catch(err:any){
+      return customer_detail;
+    } catch (err: any) {
       throw err;
     }
   }
@@ -81,19 +118,16 @@ class SaleService {
     }
   }
 
-
-  async getEstimate(customerId: string):Promise<any>{
-    try{
+  async getEstimate(customerId: string): Promise<any> {
+    try {
       const data = await this.saleRepo.getEstimate(customerId);
-      console.log('data',data)
+      console.log("data", data);
       const response = {
-        data: data
-      }
-        
-      return response;
+        data: data,
+      };
 
-    }
-    catch(err:any){
+      return response;
+    } catch (err: any) {
       throw err;
     }
   }
@@ -120,7 +154,7 @@ class SaleService {
 
       await this.prisma.$transaction(async (tx) => {
         try {
-          const purchase = await this.saleRepo.submitEstimate(tx , d_purchase);
+          const purchase = await this.saleRepo.submitEstimate(tx, d_purchase);
 
           if (purchase) {
             const d_product: RequestProduct = {
@@ -128,7 +162,8 @@ class SaleService {
               d_product_name: RequestData.d_product_name,
             };
 
-            const purchase_products = await this.saleRepo.submitEstimateProduct(tx,
+            const purchase_products = await this.saleRepo.submitEstimateProduct(
+              tx,
               d_product
             );
             const uploadDir = path.join(
@@ -150,7 +185,7 @@ class SaleService {
                   d_active: true,
                 };
                 const purchase_product_image =
-                  await this.saleRepo.submitEstimateProductImage(tx,d_image);
+                  await this.saleRepo.submitEstimateProductImage(tx, d_image);
 
                 if (purchase_product_image) {
                   const newFilePath = path.join(uploadDir, file.filename);
@@ -159,17 +194,16 @@ class SaleService {
                 }
               }
             }
-      
           }
         } catch (error) {
-         throw error; 
+          throw error;
         }
       });
-      const response ={
-         message :'บัันทึกข้อมูลสำเร็จ',
-         statusCode :200,
-      }
-      return  response ;
+      const response = {
+        message: "บัันทึกข้อมูลสำเร็จ",
+        statusCode: 200,
+      };
+      return response;
     } catch (err: any) {
       console.log("errservice", err);
       throw err;

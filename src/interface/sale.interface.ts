@@ -8,6 +8,7 @@ export interface Requestcustomer {
   cus_sex?: string;
   cus_etc: string;
   cus_facebook?: string;
+  updatedAt?: Date
   cus_wechat?: string;
 }
 
@@ -23,9 +24,11 @@ export interface RequestcustomerDetail {
   cd_capital?: string;
   cd_emp?: string;
   cd_shareholders?: string;
+  cd_department?: string;
   cd_address?: string;
   cd_num_saka?: string;
   cd_frequency?: string;
+  updatedAt: Date;
   cd_leader?: string;
   cd_priority?: string;
 }

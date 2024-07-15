@@ -43,9 +43,9 @@ export class SaleController {
         switch(customer.cus_etc){
           case "โทร"  : customer.color = "bg-green-400" 
           break;
-          case "ทัก"  : customer.color = "bg-blue-400"
+          case "ทัก"  : customer.color = "bg-blue-500"
           break;
-          case "Walk-in"  : customer.color = "bg-gray-700"
+          case "Walk-in"  : customer.color = "bg-gray-300"
           break;
           case "ออกบูธ"  : customer.color = "bg-purple-500"
           break;
@@ -60,7 +60,7 @@ export class SaleController {
              break;
              case "ติดตามต่อ"  : customer_status.color = "bg-orange-300"
              break;
-             case "ติดต่อไม่ได้"  : customer_status.color = "bg-gray-500"
+             case "ติดต่อไม่ได้"  : customer_status.color = "bg-gray-300"
              break;
              case "ปิดการขาย"  : customer_status.color = "bg-green-400"
              break;

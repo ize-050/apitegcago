@@ -108,7 +108,7 @@ model customer {
     cus_website  String?
     cus_sex      String?
     cus_international String?
-    cus_age    Int?
+    cus_age      Int?
     cus_etc      String?
     cus_facebook String?
     cus_wechat   String?

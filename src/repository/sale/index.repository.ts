@@ -52,6 +52,9 @@ class SaleRepository {
             },
           }),
         },
+        orderBy:{
+          createdAt:'desc'
+        }
       
       });
 
@@ -192,6 +195,7 @@ class SaleRepository {
         cus_facebook: RequestData.cus_facebook,
         cus_wechat: RequestData.cus_wechat,
         cus_sex: RequestData.cus_sex,
+        updatedAt: new Date()
       };
 
       const UpdateCustomer = await this.prisma.customer.update({
@@ -211,6 +215,7 @@ class SaleRepository {
           cd_typeinout: RequestData.cd_typeinout,
           cd_custype: RequestData.cd_custype,
           cd_cusservice: RequestData.cd_cusservice,
+          cd_department: RequestData.cd_department,
           cd_channels: RequestData.cd_channels,
           cd_num: RequestData.cd_num,
           cd_capital: RequestData.cd_capital,
@@ -221,6 +226,7 @@ class SaleRepository {
           cd_frequency: RequestData.cd_frequency,
           cd_leader: RequestData.cd_leader,
           cd_priority: RequestData.cd_priority,
+          updatedAt: new Date()
         };
 
         const UpdateCustomerDetail = await this.prisma.customer_detail.update({
