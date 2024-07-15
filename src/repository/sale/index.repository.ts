@@ -160,6 +160,27 @@ class SaleRepository {
 
   async editCustomer(RequestData: Partial<any>): Promise<any> {
     try {
+
+      const status ={
+        customer_id : RequestData.customer_id,
+        status : RequestData.cus_status
+      }
+
+     const CheckStatus =  await this.prisma.customer_status.findFirst({
+        where:{
+          customer_id:RequestData.customer_id,
+          active:"active",
+          cus_status : RequestData.cus_status
+        }
+      })
+
+      if(!CheckStatus){
+        await this.changeTagStatus(status)
+      }
+      else{
+        console.log('not change')
+      }
+
       const customer: Requestcustomer = {
         cus_fullname: RequestData.cus_fullname,
         cus_phone: RequestData.cus_phone,
@@ -179,6 +200,8 @@ class SaleRepository {
         },
         data: customer,
       });
+
+
 
       if (UpdateCustomer) {
         let CustomerDetail: RequestcustomerDetail = {
@@ -206,7 +229,10 @@ class SaleRepository {
           },
           data: CustomerDetail,
         });
+
+
       }
+      
 
       return UpdateCustomer;
     } catch (err: any) {
