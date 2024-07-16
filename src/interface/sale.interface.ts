@@ -30,6 +30,7 @@ export interface RequestcustomerDetail {
   cd_frequency?: string;
   updatedAt: Date;
   cd_leader?: string;
+  status_update?: boolean;
   cd_priority?: string;
 }
 
@@ -56,6 +57,7 @@ export interface RequestPurchase{
     d_refund_tag :string;
     d_truck : string;
     d_etc :string;
+    d_status:string;
 }
 
 export interface RequestProduct{

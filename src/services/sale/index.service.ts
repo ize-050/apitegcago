@@ -10,6 +10,8 @@ import {
 } from "../../interface/sale.interface";
 import { PrismaClient } from "@prisma/client";
 
+import moment from 'moment'
+
 class SaleService {
   private saleRepo: SaleRepository;
   private prisma: PrismaClient;
@@ -121,10 +123,34 @@ class SaleService {
   async getEstimate(customerId: string): Promise<any> {
     try {
       const data = await this.saleRepo.getEstimate(customerId);
-      console.log("data", data);
-      const response = {
-        data: data,
-      };
+      let response : Partial<any> = {};
+      if(data ==null){
+        const today = moment().format('YYYY-MM-DD');
+        const existingBookNumber = await this.prisma.d_purchase.findFirst({
+          where: {
+            book_number: {
+              startsWith: `PO${today}-`,
+            },
+          },
+          orderBy: {
+            book_number: 'desc', 
+          },
+        });
+        const bookNumberPrefix = `PO${today}-`;
+        let nextNumber = 1;
+        if (existingBookNumber) {
+          const currentNumber = parseInt(existingBookNumber.book_number.replace(bookNumberPrefix, ''), 10);
+          nextNumber = currentNumber + 1;
+        }
+    
+        const formattedNumber = nextNumber.toString().padStart(4, '0');
+        response.book_number = `PO${today}-${formattedNumber}`; 
+      }
+      else{
+        response = data;
+      }
+
+      
 
       return response;
     } catch (err: any) {
@@ -150,6 +176,7 @@ class SaleService {
         d_refund_tag: RequestData.d_refund_tag,
         d_truck: RequestData.d_truck,
         d_etc: RequestData.d_etc,
+        d_status:"Prepurchase",
       };
 
       await this.prisma.$transaction(async (tx) => {
@@ -166,6 +193,8 @@ class SaleService {
               tx,
               d_product
             );
+
+
             const uploadDir = path.join(
               "public",
               "images",
@@ -176,23 +205,23 @@ class SaleService {
             await fs.mkdirSync(uploadDir, { recursive: true });
 
             if (purchase_products) {
-              for (let file of RequestData.files) {
-                const tempFilePath = file.path;
-                const d_image: RequestProductImage = {
-                  d_product_id: purchase_products.id,
-                  d_purchase_id: purchase.id,
-                  d_product_image_name: file.filename,
-                  d_active: true,
-                };
-                const purchase_product_image =
-                  await this.saleRepo.submitEstimateProductImage(tx, d_image);
+              // for (let file of RequestData.files) {
+              //   const tempFilePath = file.path;
+              //   const d_image: RequestProductImage = {
+              //     d_product_id: purchase_products.id,
+              //     d_purchase_id: purchase.id,
+              //     d_product_image_name: file.filename,
+              //     d_active: true,
+              //   };
+              //   const purchase_product_image =
+              //     await this.saleRepo.submitEstimateProductImage(tx, d_image);
 
-                if (purchase_product_image) {
-                  const newFilePath = path.join(uploadDir, file.filename);
-                  console.log("new file path", newFilePath);
-                  await fs.renameSync(tempFilePath, newFilePath);
-                }
-              }
+              //   if (purchase_product_image) {
+              //     const newFilePath = path.join(uploadDir, file.filename);
+              //     console.log("new file path", newFilePath);
+              //     await fs.renameSync(tempFilePath, newFilePath);
+              //   }
+              // }
             }
           }
         } catch (error) {

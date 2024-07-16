@@ -115,9 +115,12 @@ model customer {
     details      customer_detail?
     customer_status      customer_status[]
     customer_emp        customer_emp[]
+    
     createdAt          DateTime  @default(now())
     updatedAt           DateTime? 
     deletedAt  DateTime?
+
+    d_purchase d_purchase?
 
 }
 
@@ -140,6 +143,7 @@ model customer_detail {
     cd_frequency    String?
     cd_leader       String?
     cd_priority     String?
+    status_update   Boolean? @default(false)
     customer        customer @relation(fields: [customer_id], references: [id])
     createdAt          DateTime  @default(now())
     updatedAt          DateTime? 
@@ -165,7 +169,7 @@ model customer_status {
 
 model customer_emp{
     id   String @id @default(uuid())
-    customer_id String 
+    customer_id String  
     user_id  String  
     cus_status String 
     active String
@@ -175,6 +179,11 @@ model customer_emp{
     createdAt          DateTime  @default(now())
     updatedAt          DateTime?  
     deletedAt DateTime?
+
+
+    // d_purchase  d_purchase?
+
+
     @@index([customer_id])
 }
 
@@ -183,7 +192,7 @@ model  d_purchase {
     id String @id @default(uuid())
     book_number String  @unique
     customer_number String
-    customer_id String
+    customer_id String @unique
     d_route  String?
     d_transport String?
     d_term  String?
@@ -196,9 +205,16 @@ model  d_purchase {
     d_refund_tag String?
     d_truck String?
     d_etc String?
+    d_status String?
     createdAt          DateTime  @default(now())
     updatedAt          DateTime?  
     deletedAt DateTime?
+
+    // @@index([customer_id])
+
+
+     customer customer @relation(fields: [customer_id], references: [id])
+
     d_product  d_product?
     d_product_image d_product_image[]
     d_document d_document[]

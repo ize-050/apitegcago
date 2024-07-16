@@ -202,8 +202,13 @@ export class SaleController {
 
       const data = await this.saleservice.getEstimate(customerId)
 
+      const response ={
+        data:data,
+        message:'ดึงข้อมูลสำเร็จ',
+        statusCode:200
+      }
 
-      res.status(200).json(data)
+      res.status(200).json(response)
     }
     catch(err:any){
       res.status(500).json(err)

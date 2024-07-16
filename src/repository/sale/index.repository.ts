@@ -105,7 +105,15 @@ class SaleRepository {
             where:{
               active:"active"
             }
-          }
+          },
+         customer_emp:{
+            where:{
+              active:"active"
+            },
+            include:{
+              user:true
+            }
+         }
         }
        })
     }
@@ -224,6 +232,7 @@ class SaleRepository {
           cd_address: RequestData.cd_address,
           cd_num_saka: RequestData.cd_num_saka,
           cd_frequency: RequestData.cd_frequency,
+          status_update:true,
           cd_leader: RequestData.cd_leader,
           cd_priority: RequestData.cd_priority,
           updatedAt: new Date()
@@ -289,7 +298,8 @@ class SaleRepository {
             include:{
               d_product_image:true
             }
-          }
+          },
+       
         }
       })
     }
@@ -300,17 +310,20 @@ class SaleRepository {
 
   async submitEstimate(tx:any,RequestData:RequestPurchase):Promise<any>{
     try{
+      console.log('submit',RequestData)
       return await tx.d_purchase.create({
         data : RequestData
       })
     }
     catch(err:any){
+      console.log('err',err)
       throw new Error(err)
     }
   }
 
   async submitEstimateProduct(tx:any,RequestData:RequestProduct):Promise<any>{
     try{
+      
       return await tx.d_product.create({
         data : RequestData
       })
