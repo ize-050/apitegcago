@@ -10,6 +10,7 @@ import {
 } from "../../validation/validationSchema";
 import upload from "../../config/multerConfig";
 import multer from "multer";
+import moment from "moment";
 
 export class SaleController {
   private saleservice;
@@ -28,6 +29,8 @@ export class SaleController {
 
       const status = req.query.status as string | undefined;
       const tag = req.query.tag as string | undefined;
+
+      
 
       const RequestData = {
         ...req.query,
@@ -80,7 +83,6 @@ export class SaleController {
         for (let d_status of customer.d_status) {
           console.log('d_status.status_name',d_status.status_name);
           switch (d_status.status_name) {
-          
             case "กำลังดูแล":
               d_status.color = "bg-purple-500";
               break;
@@ -91,6 +93,8 @@ export class SaleController {
               d_status.color = 'bg-orange-300';
               break;
           }
+
+          customer.createdAt = moment(d_status.createdAt).format("DD/MM/YY HH:mm:ss");
 
         }
         customers.push(customer);
