@@ -11,7 +11,6 @@ import {
 import upload from "../../config/multerConfig";
 import multer from "multer";
 
-
 export class SaleController {
   private saleservice;
   constructor() {
@@ -38,77 +37,100 @@ export class SaleController {
         userId: userId,
       };
       const data = await this.saleservice.getCustomer(RequestData);
-      let customers :any[] = []
-      for(let customer of data.customer){
-        switch(customer.cus_etc){
-          case "โทร"  : customer.color = "bg-green-400" 
-          break;
-          case "ทัก"  : customer.color = "bg-blue-500"
-          break;
-          case "Walk-in"  : customer.color = "bg-gray-300"
-          break;
-          case "ออกบูธ"  : customer.color = "bg-purple-500"
-          break;
-          default : customer.color = "bg-blue-500"
+      let customers: any[] = [];
+      for (let customer of data.customer) {
+        switch (customer.cus_etc) {
+          case "โทร":
+            customer.color = "bg-green-400";
+            break;
+          case "ทัก":
+            customer.color = "bg-blue-500";
+            break;
+          case "Walk-in":
+            customer.color = "bg-gray-300";
+            break;
+          case "ออกบูธ":
+            customer.color = "bg-purple-500";
+            break;
+          default:
+            customer.color = "bg-blue-500";
         }
-         for(let customer_status of customer.customer_status) {
-          
-           switch(customer_status.cus_status){
-             case "สนใจ"  : customer_status.color = "bg-blue-500" 
-             break;
-             case "ไม่สนใจ"  : customer_status.color = "bg-red-400"
-             break;
-             case "ติดตามต่อ"  : customer_status.color = "bg-orange-300"
-             break;
-             case "ติดต่อไม่ได้"  : customer_status.color = "bg-gray-300"
-             break;
-             case "ปิดการขาย"  : customer_status.color = "bg-green-400"
-             break;
-             default : customer_status.color = "bg-blue-500"
-           }
-         }
-         customers.push(customer);
+        for (let customer_status of customer.customer_status) {
+          switch (customer_status.cus_status) {
+            case "สนใจ":
+              customer_status.color = "bg-blue-500";
+              break;
+            case "ไม่สนใจ":
+              customer_status.color = "bg-red-400";
+              break;
+            case "ติดตามต่อ":
+              customer_status.color = "bg-orange-300";
+              break;
+            case "ติดต่อไม่ได้":
+              customer_status.color = "bg-gray-300";
+              break;
+            case "ปิดการขาย":
+              customer_status.color = "bg-green-400";
+              break;
+            default:
+              customer_status.color = "bg-blue-500";
+          }
+        }
 
-       
-        
+        for (let d_status of customer.d_status) {
+          console.log('d_status.status_name',d_status.status_name);
+          switch (d_status.status_name) {
+          
+            case "กำลังดูแล":
+              d_status.color = "bg-purple-500";
+              break;
+            case "รอตีราคา":
+              d_status.color = "bg-blue-300";
+              break;
+            case "อยู่ระหว่างดำเนินการ":
+              d_status.color = 'bg-orange-300';
+              break;
+          }
+
+        }
+        customers.push(customer);
       }
-      let customerData ={
-        customer :customers,
-        total : data.total
-      }
+      let customerData = {
+        customer: customers,
+        total: data.total,
+      };
       res.json({
         data: {
-          users: customerData,  
+          users: customerData,
           message: "success",
           statusCode: 200,
         },
       });
     } catch (err: any) {
-      console.log('errr',err)
+      console.log("errr", err);
       res.status(500).json(err);
     }
   }
 
-  async getCustomerDetail(req:Request, res:Response):Promise<any>{
-      try{
-        let customerId = req.params.id
-        const response = await this.saleservice.getCustomerDetail(customerId);
+  async getCustomerDetail(req: Request, res: Response): Promise<any> {
+    try {
+      let customerId = req.params.id;
+      const response = await this.saleservice.getCustomerDetail(customerId);
 
-        const resResponse ={
-          customer_detail :response,
-          statusCode:200,
-          message:'ดึงข้อมูลสำเร็จ'
-        }
-        res.status(200).json(resResponse);
-      }
-      catch(err:any){
-         res.status(500).json(err)
-      }
+      const resResponse = {
+        customer_detail: response,
+        statusCode: 200,
+        message: "ดึงข้อมูลสำเร็จ",
+      };
+      res.status(200).json(resResponse);
+    } catch (err: any) {
+      res.status(500).json(err);
+    }
   }
 
   async createCustomer(req: Request, res: Response): Promise<any> {
     try {
-      console.log('reqqq',req.body)
+      console.log("reqqq", req.body);
       const validatedData = ValidationCreateCustomer.safeParse(req.body);
 
       if (!validatedData.success) {
@@ -170,7 +192,7 @@ export class SaleController {
 
   async changeTagStatus(req: Request, res: Response): Promise<any> {
     try {
-      console.log('delay')
+      console.log("delay");
       const customerId = req.params.id;
       const userId = req?.userId;
       const RequestData = req.body;
@@ -182,7 +204,7 @@ export class SaleController {
       };
 
       const response = await this.saleservice.changeTagStatus(request);
-      console.log('response',response)
+      console.log("response", response);
       res.status(200).json({
         data: {
           message: "เปลี่ยนสถานะสำเร็จ",
@@ -194,24 +216,34 @@ export class SaleController {
     }
   }
 
-  async getEstimate(req: Request, res: Response):Promise<any>{
-    try{
+  async getEstimate(req: Request, res: Response): Promise<any> {
+    try {
       const customerId = req.params.id;
-      console.log('errr',customerId);
-      const userId =req?.userId;
+      console.log("errr", customerId);
+      const userId = req?.userId;
 
-      const data = await this.saleservice.getEstimate(customerId)
+      const data = await this.saleservice.getEstimate(customerId);
 
-      const response ={
-        data:data,
-        message:'ดึงข้อมูลสำเร็จ',
-        statusCode:200
+      if (data?.d_product?.d_product_image.length > 0) {
+        data.d_product.d_product_image = data.d_product.d_product_image.map(
+          (file: Partial<any>, index: number) => {
+            file.name = file.d_product_image_name;
+            file.purchase_id = file.purchase_id;
+            file.id = file.id;
+            file.url = `${process.env.URl}/images/purchase_product/${file.d_purchase_id}/${file.d_product_image_name}`;
+            return file;
+          }
+        );
       }
-
-      res.status(200).json(response)
-    }
-    catch(err:any){
-      res.status(500).json(err)
+      const response = {
+        data: data,
+        message: "ดึงข้อมูลสำเร็จ",
+        statusCode: 200,
+      };
+      res.status(200).json(response);
+    } catch (err: any) {
+      console.log("err", err);
+      res.status(500).json(err);
     }
   }
 
@@ -232,7 +264,11 @@ export class SaleController {
         // userId: userId,
       };
       const response = await this.saleservice.submitEstimate(request);
+      // const response ={
+      //   message:'เพิ่มข้อมูลสำเร็จ',
+      //   statusCode:201
 
+      // }
       res.status(200).json(response);
     } catch (err: any) {
       res.status(500).json(err);

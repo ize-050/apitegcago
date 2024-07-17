@@ -69,6 +69,23 @@ class SaleService {
         default:
           data.cus_etc_color = "bg-blue-500";
       }
+
+      for (let d_status of data.d_status) {
+        switch (d_status.status_name) {
+        
+          case "กำลังดูแล":
+            d_status.color = "bg-purple-500";
+            break;
+          case "รอตีราคา":
+            d_status.color = "bg-blue-300";
+            break;
+          case "อยู่ระหว่างดำเนินการ":
+            d_status.color = 'bg-orange-300';
+            break;
+        }
+        
+      }
+
       Object.assign(customer_detail, { cus_etc_color: data.cus_etc_color });
       Object.assign(customer_detail, {
         cus_status: data.customer_status[0].cus_status,
@@ -186,7 +203,7 @@ class SaleService {
           if (purchase) {
             const d_product: RequestProduct = {
               d_purchase_id: purchase.id,
-              d_product_name: RequestData.d_product_name,
+              d_product_name: RequestData.d_product,
             };
 
             const purchase_products = await this.saleRepo.submitEstimateProduct(
@@ -205,23 +222,27 @@ class SaleService {
             await fs.mkdirSync(uploadDir, { recursive: true });
 
             if (purchase_products) {
-              // for (let file of RequestData.files) {
-              //   const tempFilePath = file.path;
-              //   const d_image: RequestProductImage = {
-              //     d_product_id: purchase_products.id,
-              //     d_purchase_id: purchase.id,
-              //     d_product_image_name: file.filename,
-              //     d_active: true,
-              //   };
-              //   const purchase_product_image =
-              //     await this.saleRepo.submitEstimateProductImage(tx, d_image);
+              if( RequestData.files.length > 0){
+              for (let file of RequestData.files) {
+                const tempFilePath = file.path;
+                const d_image: RequestProductImage = {
+                  d_product_id: purchase_products.id,
+                  d_purchase_id: purchase.id,
+                  d_product_image_name: file.filename,
+                  d_active: true,
+                };
+                const purchase_product_image =
+                  await this.saleRepo.submitEstimateProductImage(tx, d_image);
 
-              //   if (purchase_product_image) {
-              //     const newFilePath = path.join(uploadDir, file.filename);
-              //     console.log("new file path", newFilePath);
-              //     await fs.renameSync(tempFilePath, newFilePath);
-              //   }
-              // }
+                if (purchase_product_image) {
+                  const newFilePath = path.join(uploadDir, file.filename);
+                  console.log("new file path", newFilePath);
+                  await fs.renameSync(tempFilePath, newFilePath);
+                }
+              }
+
+              const d_status = await this.saleRepo.ChangeStatus(RequestData.customer_id);
+            }
             }
           }
         } catch (error) {

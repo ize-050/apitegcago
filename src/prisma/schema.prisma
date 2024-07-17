@@ -121,6 +121,7 @@ model customer {
     deletedAt  DateTime?
 
     d_purchase d_purchase?
+    d_status d_status[]
 
 }
 
@@ -187,6 +188,18 @@ model customer_emp{
     @@index([customer_id])
 }
 
+
+model d_status{
+    id String @id @default(uuid())
+    customer_id String
+    status_name String
+    createdAt          DateTime  @default(now())
+    updatedAt          DateTime?  
+    deletedAt DateTime?
+    active  Boolean
+    customer customer @relation(fields: [customer_id], references: [id])
+    
+}
 
 model  d_purchase {
     id String @id @default(uuid())
