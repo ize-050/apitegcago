@@ -25,12 +25,15 @@ model user {
     password     String  
     fullname     String
     customer_emp customer_emp[]
+    d_purchase_emp d_purchase_emp[]
     roles        roles @relation(fields: [roles_id], references: [id])
     createdAt          DateTime  @default(now())
     updatedAt         DateTime?
     deletedAt  DateTime?
     @@index([roles_id])
 }
+
+
 enum TypeIm {
     Car
     BOAT
@@ -94,7 +97,7 @@ model document {
     createdAt          DateTime  @default(now())
     updatedAt         DateTime?
     deletedAt  DateTime?
-
+    
     documentType        documentType @relation(fields: [document_type_id], references: [id])
 
 
@@ -120,9 +123,18 @@ model customer {
     updatedAt           DateTime? 
     deletedAt  DateTime?
 
-    d_purchase d_purchase?
-    d_status d_status[]
+    d_purchase d_purchase[]
 
+}
+
+model customer_group{
+    id           String  @id @default(uuid())
+    group_name    String
+    createdAt          DateTime  @default(now())
+    updatedAt          DateTime?
+    deletedAt  DateTime?
+
+    customer_detail customer_detail?
 }
 
 model customer_detail {
@@ -142,6 +154,7 @@ model customer_detail {
     cd_address      String?
     cd_num_saka     String?
     cd_frequency    String?
+    cd_group_id     String @unique
     cd_leader       String?
     cd_priority     String?
     status_update   Boolean? @default(false)
@@ -149,7 +162,10 @@ model customer_detail {
     createdAt          DateTime  @default(now())
     updatedAt          DateTime? 
     deletedAt  DateTime? 
-    @@index([customer_id])
+    customer_group customer_group @relation(fields: [cd_group_id], references: [id])
+
+
+    @@index([customer_id,cd_group_id])
 }
 
 
@@ -158,7 +174,6 @@ model customer_status {
     customer_id  String
     cus_status   String 
     active       String
-
     customer        customer @relation(fields: [customer_id], references: [id])
     createdAt          DateTime  @default(now())
     updatedAt          DateTime?  
@@ -174,38 +189,24 @@ model customer_emp{
     user_id  String  
     cus_status String 
     active String
-    
     user         user  @relation(fields: [user_id], references: [id])    
     customer     customer @relation(fields: [customer_id], references: [id])
     createdAt          DateTime  @default(now())
     updatedAt          DateTime?  
     deletedAt DateTime?
 
-
     // d_purchase  d_purchase?
-
 
     @@index([customer_id])
 }
 
 
-model d_status{
-    id String @id @default(uuid())
-    customer_id String
-    status_name String
-    createdAt          DateTime  @default(now())
-    updatedAt          DateTime?  
-    deletedAt DateTime?
-    active  Boolean
-    customer customer @relation(fields: [customer_id], references: [id])
-    
-}
 
 model  d_purchase {
     id String @id @default(uuid())
     book_number String  @unique
     customer_number String
-    customer_id String @unique
+    customer_id String 
     d_route  String?
     d_transport String?
     d_term  String?
@@ -226,13 +227,44 @@ model  d_purchase {
     // @@index([customer_id])
 
 
-     customer customer @relation(fields: [customer_id], references: [id])
+    customer customer @relation(fields: [customer_id], references: [id])
 
     d_product  d_product?
     d_product_image d_product_image[]
     d_document d_document[]
-    
+    d_purchase_emp d_purchase_emp[]
+    d_purchase_status d_purchase_status[]
 } 
+
+
+model d_purchase_status{
+    id String @id @default(uuid())
+    purchase_id String
+    status_name String
+    createdAt          DateTime  @default(now())
+    updatedAt          DateTime?  
+    deletedAt DateTime?
+    active  Boolean
+    d_purchase d_purchase @relation(fields: [purchase_id], references: [id])
+    
+}
+
+
+model d_purchase_emp{
+    id String @id @default(uuid())
+    d_purchase_id String
+    user_id String
+    createdAt          DateTime  @default(now())
+    updatedAt          DateTime?  
+    deletedAt DateTime?
+
+    user user @relation(fields: [user_id], references: [id])
+    d_purchase d_purchase @relation(fields: [d_purchase_id], references: [id])
+    @@index([d_purchase_id])
+
+}
+
+
 
 
 model d_product {
@@ -245,7 +277,6 @@ model d_product {
      updatedAt          DateTime?  
      deletedAt DateTime?
      d_product_image  d_product_image[]
-
      d_purchase        d_purchase  @relation(fields: [d_purchase_id], references: [id])
     @@index([d_purchase_id])
 }
@@ -254,6 +285,7 @@ model d_product_image {
      id String @id @default(uuid())
      d_product_id String
      d_purchase_id String
+     d_product_type String?
      d_product_image_name String?
      d_active  Boolean?
      createdAt          DateTime  @default(now())
