@@ -10,6 +10,8 @@ import {
 } from "../../interface/sale.interface";
 import { PrismaClient } from "@prisma/client";
 
+import moment from 'moment'
+
 class SaleService {
   private saleRepo: SaleRepository;
   private prisma: PrismaClient;
@@ -21,6 +23,81 @@ class SaleService {
   async getCustomer(RequestData: Partial<any>): Promise<any> {
     const data = await this.saleRepo.getCustomer(RequestData);
     return data;
+  }
+
+  async getCustomerDetail(customerId: string): Promise<any> {
+    try {
+      const data = await this.saleRepo.getCustomerDetail(customerId);
+
+      let customer_detail: Partial<any> = {};
+
+      customer_detail = data.details;
+      delete data.details;
+      switch (data.customer_status[0].cus_status) {
+        case "สนใจ":
+          data.customer_status[0].color = "bg-blue-500";
+          break;
+        case "ไม่สนใจ":
+          data.customer_status[0].color = "bg-red-400";
+          break;
+        case "ติดตามต่อ":
+          data.customer_status[0].color = "bg-orange-300";
+          break;
+        case "ติดต่อไม่ได้":
+          data.customer_status[0].color = "bg-gray-500";
+          break;
+        case "ปิดการขาย":
+          data.customer_status[0].color = "bg-green-400";
+          break;
+        default:
+          data.customer_status[0].color = "bg-blue-500";
+      }
+
+      switch (data.cus_etc) {
+        case "โทร":
+          data.cus_etc_color = "bg-green-400";
+          break;
+        case "ทัก":
+          data.cus_etc_color = "bg-blue-500";
+          break;
+        case "Walk-in":
+          data.cus_etc_color = "bg-gray-300";
+          break;
+        case "ออกบูธ":
+          data.cus_etc_color = "bg-purple-300";
+          break;
+        default:
+          data.cus_etc_color = "bg-blue-500";
+      }
+
+      for (let d_status of data.d_status) {
+        switch (d_status.status_name) {
+        
+          case "กำลังดูแล":
+            d_status.color = "bg-purple-500";
+            break;
+          case "รอตีราคา":
+            d_status.color = "bg-blue-300";
+            break;
+          case "อยู่ระหว่างดำเนินการ":
+            d_status.color = 'bg-orange-300';
+            break;
+        }
+        
+      }
+
+      Object.assign(customer_detail, { cus_etc_color: data.cus_etc_color });
+      Object.assign(customer_detail, {
+        cus_status: data.customer_status[0].cus_status,
+      });
+      Object.assign(customer_detail, { color: data.customer_status[0].color });
+      delete data.customer_status;
+      Object.assign(customer_detail, data);
+
+      return customer_detail;
+    } catch (err: any) {
+      throw err;
+    }
   }
 
   async createCustomer(RequestData: Partial<any>): Promise<any> {
@@ -60,6 +137,44 @@ class SaleService {
     }
   }
 
+  async getEstimate(customerId: string): Promise<any> {
+    try {
+      const data = await this.saleRepo.getEstimate(customerId);
+      let response : Partial<any> = {};
+      if(data ==null){
+        const today = moment().format('YYYY-MM-DD');
+        const existingBookNumber = await this.prisma.d_purchase.findFirst({
+          where: {
+            book_number: {
+              startsWith: `PO${today}-`,
+            },
+          },
+          orderBy: {
+            book_number: 'desc', 
+          },
+        });
+        const bookNumberPrefix = `PO${today}-`;
+        let nextNumber = 1;
+        if (existingBookNumber) {
+          const currentNumber = parseInt(existingBookNumber.book_number.replace(bookNumberPrefix, ''), 10);
+          nextNumber = currentNumber + 1;
+        }
+    
+        const formattedNumber = nextNumber.toString().padStart(4, '0');
+        response.book_number = `PO${today}-${formattedNumber}`; 
+      }
+      else{
+        response = data;
+      }
+
+      
+
+      return response;
+    } catch (err: any) {
+      throw err;
+    }
+  }
+
   async submitEstimate(RequestData: Partial<any>): Promise<any> {
     try {
       const d_purchase: RequestPurchase = {
@@ -78,21 +193,25 @@ class SaleService {
         d_refund_tag: RequestData.d_refund_tag,
         d_truck: RequestData.d_truck,
         d_etc: RequestData.d_etc,
+        d_status:"Prepurchase",
       };
 
       await this.prisma.$transaction(async (tx) => {
         try {
-          const purchase = await this.saleRepo.submitEstimate(tx , d_purchase);
+          const purchase = await this.saleRepo.submitEstimate(tx, d_purchase);
 
           if (purchase) {
             const d_product: RequestProduct = {
               d_purchase_id: purchase.id,
-              d_product_name: RequestData.d_product_name,
+              d_product_name: RequestData.d_product,
             };
 
-            const purchase_products = await this.saleRepo.submitEstimateProduct(tx,
+            const purchase_products = await this.saleRepo.submitEstimateProduct(
+              tx,
               d_product
             );
+
+
             const uploadDir = path.join(
               "public",
               "images",
@@ -103,6 +222,7 @@ class SaleService {
             await fs.mkdirSync(uploadDir, { recursive: true });
 
             if (purchase_products) {
+              if( RequestData.files.length > 0){
               for (let file of RequestData.files) {
                 const tempFilePath = file.path;
                 const d_image: RequestProductImage = {
@@ -112,7 +232,7 @@ class SaleService {
                   d_active: true,
                 };
                 const purchase_product_image =
-                  await this.saleRepo.submitEstimateProductImage(tx,d_image);
+                  await this.saleRepo.submitEstimateProductImage(tx, d_image);
 
                 if (purchase_product_image) {
                   const newFilePath = path.join(uploadDir, file.filename);
@@ -120,18 +240,20 @@ class SaleService {
                   await fs.renameSync(tempFilePath, newFilePath);
                 }
               }
+
+              const d_status = await this.saleRepo.ChangeStatus(RequestData.customer_id);
             }
-      
+            }
           }
         } catch (error) {
-         throw error; 
+          throw error;
         }
       });
-      const response ={
-         message :'บัันทึกข้อมูลสำเร็จ',
-         statusCode :200,
-      }
-      return  response ;
+      const response = {
+        message: "บัันทึกข้อมูลสำเร็จ",
+        statusCode: 200,
+      };
+      return response;
     } catch (err: any) {
       console.log("errservice", err);
       throw err;

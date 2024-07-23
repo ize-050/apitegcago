@@ -8,6 +8,7 @@ export interface Requestcustomer {
   cus_sex?: string;
   cus_etc: string;
   cus_facebook?: string;
+  updatedAt?: Date
   cus_wechat?: string;
 }
 
@@ -23,10 +24,13 @@ export interface RequestcustomerDetail {
   cd_capital?: string;
   cd_emp?: string;
   cd_shareholders?: string;
+  cd_department?: string;
   cd_address?: string;
   cd_num_saka?: string;
   cd_frequency?: string;
+  updatedAt: Date;
   cd_leader?: string;
+  status_update?: boolean;
   cd_priority?: string;
 }
 
@@ -53,6 +57,7 @@ export interface RequestPurchase{
     d_refund_tag :string;
     d_truck : string;
     d_etc :string;
+    d_status:string;
 }
 
 export interface RequestProduct{
@@ -71,9 +76,9 @@ export interface RequestProductImage{
 }
 
 export enum Tagstatus {
-    Interested = "1", // "1" is now the string representation of Interested
-    NotInterested = "2",
-    Continue_follow = "3",
-    Follow = "4",
-    CloseSale = "5",
+    Interested = "สนใจ", // "1" is now the string representation of Interested
+    NotInterested = "ไม่สนใจ",
+    Continue_follow = "ติดตามต่อ",
+    Follow = "ติดต่อไม่ได้",
+    CloseSale = "ปิดการขาย",
 }
