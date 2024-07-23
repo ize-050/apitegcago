@@ -12,20 +12,18 @@ class UserService {
     try {
       const user = await this.userRepo.login(request);
 
-      if (user === false){
-        return false
+      if (user === false) {
+        return false;
       }
-        
-
       const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET!, {
         expiresIn: "1days",
       });
       const response = {
         user: {
-            id : user.id,
-            email :user.email,
-            fullname :user.fullname,
-            roles :user.roles,
+          id: user.id,
+          email: user.email,
+          fullname: user.fullname,
+          roles: user.roles,
         },
         token: token,
       };

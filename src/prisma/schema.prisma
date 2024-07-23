@@ -1,311 +1,296 @@
 datasource db {
-    url      = env("DATABASE_URL")
-    provider = "mysql"
+  url      = env("DATABASE_URL")
+  provider = "mysql"
 }
 
 generator client {
-    provider = "prisma-client-js"
+  provider = "prisma-client-js"
 }
 
-
-
 model roles {
-    id          String @id @default(uuid())
-    roles_name  String 
-    user        user[]
-    createdAt          DateTime  @default(now())
-    updatedAt          DateTime?
-    deletedAt  DateTime?
+  id         String    @id @default(uuid())
+  roles_name String
+  user       user[]
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime?
+  deletedAt  DateTime?
 }
 
 model user {
-    id           String  @id @default(uuid())
-    roles_id     String  
-    email        String  @unique
-    password     String  
-    fullname     String
-    customer_emp customer_emp[]
-    d_purchase_emp d_purchase_emp[]
-    roles        roles @relation(fields: [roles_id], references: [id])
-    createdAt          DateTime  @default(now())
-    updatedAt         DateTime?
-    deletedAt  DateTime?
-    @@index([roles_id])
-}
+  id             String           @id @default(uuid())
+  roles_id       String
+  email          String           @unique
+  password       String
+  fullname       String
+  customer_emp   customer_emp[]
+  d_purchase_emp d_purchase_emp[]
+  roles          roles            @relation(fields: [roles_id], references: [id])
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime?
+  deletedAt      DateTime?
 
+  @@index([roles_id])
+}
 
 enum TypeIm {
-    Car
-    BOAT
-    AIR
-    ETC
+  Car
+  BOAT
+  AIR
+  TRAIN
+  TRUCK
 }
 
-model typeMaster{
-    id           String  @id @default(uuid())
-    type_name String
-    createdAt          DateTime  @default(now())
-    updatedAt         DateTime?
-    deletedAt  DateTime?
-    documentType documentType[]
+model typeMaster {
+  id           String         @id @default(uuid())
+  type_name    String
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime?
+  deletedAt    DateTime?
+  documentType documentType[]
 }
 
-model documentType{
-     id           String  @id @default(uuid())
-     type_master_id String
-     type_name  TypeIm
-     createdAt          DateTime  @default(now())
-     updatedAt         DateTime?
-     deletedAt  DateTime?
+model documentType {
+  id             String    @id @default(uuid())
+  type_master_id String
+  type_key       String?
+  do_key         TypeIm
+  do_name        String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime?
+  deletedAt      DateTime?
 
-     document document[]
-     typeMaster        typeMaster @relation(fields: [type_master_id], references: [id])
-     
+  document   document[]
+  typeMaster typeMaster @relation(fields: [type_master_id], references: [id])
 }
 
 enum keyDocument {
-    Document
-    License
+  Document
+  License
 }
 
 model document {
-    id String @id @default(uuid())
-    document_type_id String
-    documennt_type String
-    document_key  keyDocument
-    document_name Json
-    document_so  Boolean
-    document_Invpick Boolean //ใบรับตู้
-    document_PL  Boolean
-    document_INV Boolean
-    document_DraftBL Boolean
-    document_DraftFE Boolean
-    document_FE    Boolean
-    document_BILL_OF_LADING Boolean
-    document_ARRIVAL_NOTICE Boolean
-    Cabinet_deposit Boolean //มัดจำตู่
-    document_Slip Boolean
-    document_do  Boolean //จดหมายแลกดีโอ
-    document_card Boolean //การ์ด
-    document_draft Boolean //ใบขนส่ง
-    document_hairy Boolean //ใบขน
-    document_customs_receipt  Boolean //ใบเสร็จรับเงินศุลกรกร
-    document_certificate   Boolean //ใบรับรอง
-    document_world20  Boolean // ภw 20
-    document_tracking Boolean //
-    document_etc  Boolean //อื่นๆ
-    createdAt          DateTime  @default(now())
-    updatedAt         DateTime?
-    deletedAt  DateTime?
-    
-    documentType        documentType @relation(fields: [document_type_id], references: [id])
+  id                       String      @id @default(uuid())
+  document_type_id         String
+  key                      String
+  documennt_type           String
+  document_key             keyDocument
+  document_so              Boolean
+  document_Invpick         Boolean // ใบรับตู้
+  document_PL              Boolean // PL
+  document_INV             Boolean // INV
+  document_DraftBL         Boolean // DraftBL
+  document_DraftFE         Boolean // DraftFE
+  document_FE              Boolean // FE
+  document_BILL_OF_LADING  Boolean // BILL_OF_LADING
+  document_ARRIVAL_NOTICE  Boolean // ARRIVAL_NOTICE
+  Cabinet_deposit          Boolean // มัดจำตู่
+  document_Slip            Boolean
+  document_do              Boolean // จดหมายแลกดีโอ
+  document_card            Boolean // การ์ด
+  document_draft           Boolean // ใบขนส่ง
+  document_hairy           Boolean // ใบขน
+  document_customs_receipt Boolean // ใบเสร็จรับเงินศุลกรกร
+  document_certificate     Boolean // ใบรับรอง
+  document_world20         Boolean // ภw 20
+  document_tracking        Boolean //
+  document_etc             Boolean // อื่นๆ
+  document_power_attorney  Boolean // หนังสือมอบอำนาจ
+  createdAt                DateTime    @default(now())
+  updatedAt                DateTime?
+  deletedAt                DateTime?
 
-
+  documentType documentType @relation(fields: [document_type_id], references: [id])
 }
 
 model customer {
-    id           String  @id @default(uuid())
-    cus_fullname String?
-    cus_phone    String?
-    cus_line     String?
-    cus_website  String?
-    cus_sex      String?
-    cus_international String?
-    cus_age      Int?
-    cus_etc      String?
-    cus_facebook String?
-    cus_wechat   String?
-    details      customer_detail?
-    customer_status      customer_status[]
-    customer_emp        customer_emp[]
-    
-    createdAt          DateTime  @default(now())
-    updatedAt           DateTime? 
-    deletedAt  DateTime?
+  id                String            @id @default(uuid())
+  cus_fullname      String?
+  cus_phone         String?
+  cus_line          String?
+  cus_website       String?
+  cus_sex           String?
+  cus_international String?
+  cus_age           Int?
+  cus_etc           String?
+  cus_facebook      String?
+  cus_wechat        String?
+  details           customer_detail?
+  customer_status   customer_status[]
+  customer_emp      customer_emp[]
 
-    d_purchase d_purchase[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime?
+  deletedAt DateTime?
 
+  d_purchase d_purchase[]
 }
 
-model customer_group{
-    id           String  @id @default(uuid())
-    group_name    String
-    createdAt          DateTime  @default(now())
-    updatedAt          DateTime?
-    deletedAt  DateTime?
+model customer_group {
+  id         String    @id @default(uuid())
+  group_name String
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime?
+  deletedAt  DateTime?
 
-    customer_detail customer_detail?
+  customer_detail customer_detail?
 }
 
 model customer_detail {
-    id              String @id @default(uuid())
-    customer_id     String @unique
-    cd_consider     String?
-    cd_company      String?
-    cd_typeinout    String?
-    cd_custype      String?
-    cd_cusservice   String?
-    cd_channels     String?
-    cd_num          Int?
-    cd_capital      String?
-    cd_emp          String?
-    cd_shareholders String?
-    cd_department   String? 
-    cd_address      String?
-    cd_num_saka     String?
-    cd_frequency    String?
-    cd_group_id     String @unique
-    cd_leader       String?
-    cd_priority     String?
-    status_update   Boolean? @default(false)
-    customer        customer @relation(fields: [customer_id], references: [id])
-    createdAt          DateTime  @default(now())
-    updatedAt          DateTime? 
-    deletedAt  DateTime? 
-    customer_group customer_group @relation(fields: [cd_group_id], references: [id])
+  id              String         @id @default(uuid())
+  customer_id     String         @unique
+  cd_group_id     String         @unique
+  cd_consider     String?
+  cd_company      String?
+  cd_typeinout    String?
+  cd_custype      String?
+  cd_cusservice   String?
+  cd_channels     String?
+  cd_num          Int?
+  cd_capital      String?
+  cd_emp          String?
+  cd_shareholders String?
+  cd_department   String?
+  cd_address      String?
+  cd_num_saka     String?
+  cd_frequency    String?
+  cd_leader       String?
+  cd_priority     String?
+  status_update   Boolean?       @default(false)
+  customer        customer       @relation(fields: [customer_id], references: [id])
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime?
+  deletedAt       DateTime?
+  customer_group  customer_group @relation(fields: [cd_group_id], references: [id])
 
-
-    @@index([customer_id,cd_group_id])
+  @@index([customer_id, cd_group_id])
 }
-
 
 model customer_status {
-    id           String @id @default(uuid())
-    customer_id  String
-    cus_status   String 
-    active       String
-    customer        customer @relation(fields: [customer_id], references: [id])
-    createdAt          DateTime  @default(now())
-    updatedAt          DateTime?  
-    deletedAt DateTime? 
-    @@index([customer_id])
+  id          String    @id @default(uuid())
+  customer_id String
+  cus_status  String
+  active      String
+  customer    customer  @relation(fields: [customer_id], references: [id])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime?
+  deletedAt   DateTime?
 
-} 
-
-
-model customer_emp{
-    id   String @id @default(uuid())
-    customer_id String  
-    user_id  String  
-    cus_status String 
-    active String
-    user         user  @relation(fields: [user_id], references: [id])    
-    customer     customer @relation(fields: [customer_id], references: [id])
-    createdAt          DateTime  @default(now())
-    updatedAt          DateTime?  
-    deletedAt DateTime?
-
-    // d_purchase  d_purchase?
-
-    @@index([customer_id])
+  @@index([customer_id])
 }
 
+model customer_emp {
+  id          String    @id @default(uuid())
+  customer_id String
+  user_id     String
+  cus_status  String
+  active      String
+  user        user      @relation(fields: [user_id], references: [id])
+  customer    customer  @relation(fields: [customer_id], references: [id])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime?
+  deletedAt   DateTime?
 
-
-model  d_purchase {
-    id String @id @default(uuid())
-    book_number String  @unique
-    customer_number String
-    customer_id String 
-    d_route  String?
-    d_transport String?
-    d_term  String?
-    d_origin String?
-    d_destination String?
-    d_size_cabinet String?
-    d_weight String?
-    d_address_origin String?
-    d_address_destination String?
-    d_refund_tag String?
-    d_truck String?
-    d_etc String?
-    d_status String?
-    createdAt          DateTime  @default(now())
-    updatedAt          DateTime?  
-    deletedAt DateTime?
-
-    // @@index([customer_id])
-
-
-    customer customer @relation(fields: [customer_id], references: [id])
-
-    d_product  d_product?
-    d_product_image d_product_image[]
-    d_document d_document[]
-    d_purchase_emp d_purchase_emp[]
-    d_purchase_status d_purchase_status[]
-} 
-
-
-model d_purchase_status{
-    id String @id @default(uuid())
-    purchase_id String
-    status_name String
-    createdAt          DateTime  @default(now())
-    updatedAt          DateTime?  
-    deletedAt DateTime?
-    active  Boolean
-    d_purchase d_purchase @relation(fields: [purchase_id], references: [id])
-    
+  // d_purchase  d_purchase?
+  @@index([customer_id])
 }
 
+model d_purchase {
+  id                    String    @id @default(uuid())
+  book_number           String    @unique
+  customer_number       String
+  customer_id           String
+  d_route               String?
+  d_transport           String?
+  d_term                String?
+  d_origin              String?
+  d_destination         String?
+  d_size_cabinet        String?
+  d_weight              String?
+  d_address_origin      String?
+  d_address_destination String?
+  d_refund_tag          String?
+  d_truck               String?
+  d_etc                 String?
+  d_status              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime?
+  deletedAt             DateTime?
 
-model d_purchase_emp{
-    id String @id @default(uuid())
-    d_purchase_id String
-    user_id String
-    createdAt          DateTime  @default(now())
-    updatedAt          DateTime?  
-    deletedAt DateTime?
+  // @@index([customer_id])
 
-    user user @relation(fields: [user_id], references: [id])
-    d_purchase d_purchase @relation(fields: [d_purchase_id], references: [id])
-    @@index([d_purchase_id])
+  customer customer @relation(fields: [customer_id], references: [id])
 
+  d_product         d_product?
+  d_product_image   d_product_image[]
+  d_document        d_document[]
+  d_purchase_emp    d_purchase_emp[]
+  d_purchase_status d_purchase_status[]
 }
 
+model d_purchase_status {
+  id          String     @id @default(uuid())
+  purchase_id String
+  status_name String
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime?
+  deletedAt   DateTime?
+  active      Boolean
+  d_purchase  d_purchase @relation(fields: [purchase_id], references: [id])
+}
 
+model d_purchase_emp {
+  id            String    @id @default(uuid())
+  d_purchase_id String
+  user_id       String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime?
+  deletedAt     DateTime?
 
+  user       user       @relation(fields: [user_id], references: [id])
+  d_purchase d_purchase @relation(fields: [d_purchase_id], references: [id])
+
+  @@index([d_purchase_id])
+}
 
 model d_product {
-     id String @id @default(uuid())
-     d_product_name String?
-     d_purchase_id  String @unique
-     review_date DateTime?
-     performance_rating DateTime?
-     createdAt          DateTime  @default(now())
-     updatedAt          DateTime?  
-     deletedAt DateTime?
-     d_product_image  d_product_image[]
-     d_purchase        d_purchase  @relation(fields: [d_purchase_id], references: [id])
-    @@index([d_purchase_id])
+  id                 String            @id @default(uuid())
+  d_product_name     String?
+  d_purchase_id      String            @unique
+  review_date        DateTime?
+  performance_rating DateTime?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime?
+  deletedAt          DateTime?
+  d_product_image    d_product_image[]
+  d_purchase         d_purchase        @relation(fields: [d_purchase_id], references: [id])
+
+  @@index([d_purchase_id])
 }
 
 model d_product_image {
-     id String @id @default(uuid())
-     d_product_id String
-     d_purchase_id String
-     d_product_type String?
-     d_product_image_name String?
-     d_active  Boolean?
-     createdAt          DateTime  @default(now())
-     updatedAt          DateTime?  
-     deletedAt DateTime?
+  id                   String    @id @default(uuid())
+  d_product_id         String
+  d_purchase_id        String
+  d_product_type       String?
+  d_product_image_name String?
+  d_active             Boolean?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime?
+  deletedAt            DateTime?
 
-     d_purchase      d_purchase  @relation(fields: [d_purchase_id], references: [id])
-     d_product        d_product  @relation(fields: [d_product_id], references: [id])
-    
-    @@index([d_product_id,d_purchase_id])
+  d_purchase d_purchase @relation(fields: [d_purchase_id], references: [id])
+  d_product  d_product  @relation(fields: [d_product_id], references: [id])
+
+  @@index([d_product_id, d_purchase_id])
 }
 
-
 model d_document {
-    id String @id @default(uuid())
-    d_purchase_id String
-    d_document_name String
-    d_document_key String //key ยกตัวอย่าง เอกสาร ใบอนุญาติ
-    createdAt          DateTime  @default(now())
-    updatedAt          DateTime?  
-    deletedAt DateTime?
-    d_purchase        d_purchase  @relation(fields: [d_purchase_id], references: [id])
+  id              String     @id @default(uuid())
+  d_purchase_id   String
+  d_document_name String
+  d_document_key  String // key ยกตัวอย่าง เอกสาร ใบอนุญาติ
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime?
+  deletedAt       DateTime?
+  d_purchase      d_purchase @relation(fields: [d_purchase_id], references: [id])
 }

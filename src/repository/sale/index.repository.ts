@@ -39,6 +39,7 @@ class SaleRepository {
           d_purchase: true,
           d_status:{
             where:{
+
               active:true
             }
           }
@@ -148,6 +149,7 @@ class SaleRepository {
           data: {
             customer_id: InsertCustomer.id,
             cd_company: RequestData.cd_company,
+
           },
         });
 

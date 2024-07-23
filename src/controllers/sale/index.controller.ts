@@ -30,7 +30,6 @@ export class SaleController {
       const status = req.query.status as string | undefined;
       const tag = req.query.tag as string | undefined;
 
-      
 
       const RequestData = {
         ...req.query,
@@ -58,6 +57,7 @@ export class SaleController {
           default:
             customer.color = "bg-blue-500";
         }
+
         for (let customer_status of customer.customer_status) {
           switch (customer_status.cus_status) {
             case "สนใจ":
