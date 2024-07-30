@@ -70,21 +70,7 @@ class SaleService {
           data.cus_etc_color = "bg-blue-500";
       }
 
-      for (let d_status of data.d_status) {
-        switch (d_status.status_name) {
-        
-          case "กำลังดูแล":
-            d_status.color = "bg-purple-500";
-            break;
-          case "รอตีราคา":
-            d_status.color = "bg-blue-300";
-            break;
-          case "อยู่ระหว่างดำเนินการ":
-            d_status.color = 'bg-orange-300';
-            break;
-        }
-        
-      }
+
 
       Object.assign(customer_detail, { cus_etc_color: data.cus_etc_color });
       Object.assign(customer_detail, {
@@ -137,9 +123,20 @@ class SaleService {
     }
   }
 
-  async getEstimate(customerId: string): Promise<any> {
+  async getAllEstimate(RequestData:any):Promise<any>{
+    try{
+      const PurchaseData = await this.saleRepo.getAllEstimate(RequestData);
+      return PurchaseData
+
+    }
+    catch(err:any){
+      throw err;
+    }
+  }
+
+  async getEstimate(purchaseId: string): Promise<any> {
     try {
-      const data = await this.saleRepo.getEstimate(customerId);
+      const data = await this.saleRepo.getEstimate(purchaseId);
       let response : Partial<any> = {};
       if(data ==null){
         const today = moment().format('YYYY-MM-DD');
@@ -175,11 +172,41 @@ class SaleService {
     }
   }
 
+  async getCheckBooking():Promise<any>{ //เช็ค Booking +1 ถ้าไม่ให้เริ่มใหม่ต่อวัน
+    try{
+        const today = moment().format('YYYY-MM-DD');
+        let response : Partial<any> ={}
+        const existingBookNumber = await this.prisma.d_purchase.findFirst({
+          where: {
+            book_number: {
+              startsWith: `PO${today}-`,
+            },
+          },
+          orderBy: {
+            book_number: 'desc',
+          },
+        });
+        const bookNumberPrefix = `PO${today}-`;
+        let nextNumber = 1;
+        if (existingBookNumber) {
+
+          const currentNumber = parseInt(existingBookNumber.book_number.replace(bookNumberPrefix, ''), 10);
+          nextNumber = currentNumber + 1;
+        }
+
+        const formattedNumber = nextNumber.toString().padStart(4, '0');
+        response.book_number = `PO${today}-${formattedNumber}`;
+
+        return response;
+    }
+    catch(err:any){
+      throw new Error(err)
+    }
+  }
   async submitEstimate(RequestData: Partial<any>): Promise<any> {
     try {
       const d_purchase: RequestPurchase = {
         book_number: RequestData.book_number,
-        customer_number: RequestData.customer_number,
         customer_id: RequestData.customer_id,
         d_route: RequestData.d_route,
         d_transport: RequestData.d_transport,
@@ -193,7 +220,7 @@ class SaleService {
         d_refund_tag: RequestData.d_refund_tag,
         d_truck: RequestData.d_truck,
         d_etc: RequestData.d_etc,
-        d_status:"Prepurchase",
+        d_status:"อยู่ระหว่างดำเนินการ",
       };
 
       await this.prisma.$transaction(async (tx) => {
@@ -210,7 +237,6 @@ class SaleService {
               tx,
               d_product
             );
-
 
             const uploadDir = path.join(
               "public",
@@ -241,7 +267,9 @@ class SaleService {
                 }
               }
 
-              const d_status = await this.saleRepo.ChangeStatus(RequestData.customer_id);
+             await this.saleRepo.ChangeStatus(tx,purchase.id);
+             await this.saleRepo.submitPurchaseemployee( tx, purchase.id,  RequestData.employee_id)
+
             }
             }
           }
@@ -249,6 +277,7 @@ class SaleService {
           throw error;
         }
       });
+
       const response = {
         message: "บัันทึกข้อมูลสำเร็จ",
         statusCode: 200,

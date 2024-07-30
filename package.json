@@ -9,12 +9,14 @@
     "seed": "ts-node  ./src/prisma/seed.ts",
     "prisma:deploy": "prisma migrate  deploy  --schema=./src/prisma/schema.prisma",
     "prisma:push": "prisma db push --schema=./src/prisma/schema.prisma",
+    "prisma:pull" : "prisma db pull --schema=./src/prisma/schema.prisma",
     "prisma:migrate": "prisma migrate  dev  --schema=./src/prisma/schema.prisma --name init ",
     "prisma:dev": "prisma generate --schema=./src/prisma/schema.prisma"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
+  
   "description": "",
   "dependencies": {
     "@prisma/client": "^5.15.0",

@@ -22,7 +22,6 @@ export const ValidationEditCustomer =z.object({
 
 export const ValidationsubmitEstimate =z.object({
   book_number:z.string({ message: "book_number is missing"}),
-  customer_number : z.string({message:"customer_number is missing"}), // customer_number รหัสลูกค้า
   d_route : z.string({ message: "Estimate_route is missing"}),
   d_transport :z.string({message:"Estimate_transport is missing"}),
   d_term : z.string({message:"Estimate_Term is missing"}),

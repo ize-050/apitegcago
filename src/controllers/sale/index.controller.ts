@@ -80,23 +80,6 @@ export class SaleController {
           }
         }
 
-        for (let d_status of customer.d_status) {
-          console.log('d_status.status_name',d_status.status_name);
-          switch (d_status.status_name) {
-            case "กำลังดูแล":
-              d_status.color = "bg-purple-500";
-              break;
-            case "รอตีราคา":
-              d_status.color = "bg-blue-300";
-              break;
-            case "อยู่ระหว่างดำเนินการ":
-              d_status.color = 'bg-orange-300';
-              break;
-          }
-
-          customer.createdAt = moment(d_status.createdAt).format("DD/MM/YY HH:mm:ss");
-
-        }
         customers.push(customer);
       }
       let customerData = {
@@ -194,6 +177,8 @@ export class SaleController {
     }
   }
 
+
+
   async changeTagStatus(req: Request, res: Response): Promise<any> {
     try {
       console.log("delay");
@@ -220,13 +205,63 @@ export class SaleController {
     }
   }
 
+
+
+  async getAllEstimate(req: Request, res: Response): Promise<any> {
+    try {
+
+      const page = parseInt(req.query.page as string) || 1;
+
+      const perPage = 10;
+      const skip = (page - 1) * perPage;
+      const status = req.query.status as string | undefined;
+      const tag = req.query.tag as string | undefined;
+      const userId  =  req?.userId
+      const RequestData = {
+        ...req.query,
+        status,
+        tag,
+        skip,
+        userId: userId,
+      };
+      const data = await this.saleservice.getAllEstimate(RequestData);
+      let Purchase :any[] = []
+        for(let purchase of data.purchase){
+          if(purchase.d_status === 'อยู่ระหว่างดำเนินการ'){
+            purchase.color = 'bg-blue-500'
+          }
+          if(purchase.d_status === 'CS กำลังดำเนินการ'){
+            purchase.color = 'bg-red-400'
+          }
+          if(purchase.d_status === 'ยกเลิก'){
+            purchase.color = 'bg-red-400'
+          }
+          Purchase.push(purchase)
+        }
+
+      let purchaseData = {
+        purchase: Purchase,
+        total: data.total,
+      };
+
+      const response = {
+        data: purchaseData,
+        message: "ดึงข้อมูลสำเร็จ",
+        statusCode: 200,
+      };
+      res.status(200).json(response);
+    } catch (err: any) {
+      console.log("err", err);
+      res.status(500).json(err);
+    }
+  }
   async getEstimate(req: Request, res: Response): Promise<any> {
     try {
-      const customerId = req.params.id;
-      console.log("errr", customerId);
+      const purchaseId = req.params.id;
+      console.log("errr", purchaseId);
       const userId = req?.userId;
 
-      const data = await this.saleservice.getEstimate(customerId);
+      const data = await this.saleservice.getEstimate(purchaseId);
 
       if (data?.d_product?.d_product_image.length > 0) {
         data.d_product.d_product_image = data.d_product.d_product_image.map(
@@ -238,6 +273,19 @@ export class SaleController {
             return file;
           }
         );
+      }
+
+      if(data.d_status === `อยู่ระหว่างดำเนินการ`){
+        data.color = 'bg-blue-500'
+      }
+      else if(data.d_status === 'CS กำลังดำเนินการ'){
+        data.color = 'bg-red-400'
+      }
+      else if(data.d_status ==='รอ CS อนุมัติราคา'){
+        data.color = 'bg-yellow-[#F7CEAA]'
+      }
+      else if(data.d_status === 'ยกเลิก'){
+        data.color = 'bg-red-400'
       }
       const response = {
         data: data,
@@ -251,10 +299,23 @@ export class SaleController {
     }
   }
 
-  async submitEstimate(req: Request, res: Response): Promise<any> {
+
+  async getCheckBooking(req: Request, res: Response): Promise<any> {
+    try {
+      const response = await this.saleservice.getCheckBooking();
+      res.status(200).json(response);
+    } catch (err: any) {
+      res.status(500).json(err);
+    }
+  }
+
+
+  async submitEstimate(req: Request, res: Response): Promise<any> { //บันทึกใบจองเปิดใหม่
     try {
       const validatedData = ValidationsubmitEstimate.safeParse(req.body);
       const customerId = req.params.id;
+
+      const employee_id = req.userId
       const RequestData = req.body;
       if (!validatedData.success) {
         res.status(400).json({ errors: validatedData.error.issues });
@@ -262,17 +323,13 @@ export class SaleController {
 
       const request = {
         ...RequestData,
+        employee_id: employee_id,
         customer_id: customerId,
         files: req.files,
 
         // userId: userId,
       };
       const response = await this.saleservice.submitEstimate(request);
-      // const response ={
-      //   message:'เพิ่มข้อมูลสำเร็จ',
-      //   statusCode:201
-
-      // }
       res.status(200).json(response);
     } catch (err: any) {
       res.status(500).json(err);

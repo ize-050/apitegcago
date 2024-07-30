@@ -16,6 +16,7 @@ export interface RequestcustomerDetail {
   customer_id:string;
   cd_company?: string;
   cd_consider?: string;
+  cd_group_id?: string;
   cd_typeinout?: string;
   cd_custype?: string;
   cd_cusservice?: string;
@@ -43,7 +44,6 @@ export interface RequestcustomerStatus {
 
 export interface RequestPurchase{
     book_number: string;
-    customer_number : string;
     customer_id : string;
     d_route : string;
     d_transport:string;

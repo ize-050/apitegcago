@@ -36,13 +36,6 @@ class SaleRepository {
           customer_status: {
             orderBy: { createdAt: "desc" },
           },
-          d_purchase: true,
-          d_status:{
-            where:{
-
-              active:true
-            }
-          }
         },
         where: {
           customer_emp: {
@@ -118,11 +111,6 @@ class SaleRepository {
               user: true,
             },
           },
-          d_status:{
-            where:{
-              active:true
-            }
-          }
         },
       });
     } catch (err: any) {
@@ -149,7 +137,6 @@ class SaleRepository {
           data: {
             customer_id: InsertCustomer.id,
             cd_company: RequestData.cd_company,
-
           },
         });
 
@@ -171,17 +158,18 @@ class SaleRepository {
           },
         });
 
-        const insertStatus = await this.prisma.d_status.create({
-          data: {
-            customer_id: InsertCustomer.id,
-            status_name: "กำลังดูแล",
-            active: true,
-          },
-        });
+        // const insertStatus = await this.prisma.d_purchase_status.create({
+        //   data: {
+        //     customer_id: InsertCustomer.id,
+        //     status_name: "กำลังดูแล",
+        //     active: true,
+        //   },
+        // }); //ยังไม่ได้ใช้แล้ว
       }
 
       return InsertCustomer;
     } catch (err: any) {
+      console.log('createCustomerError',err)
       throw new Error(err);
     }
   }
@@ -228,11 +216,13 @@ class SaleRepository {
         data: customer,
       });
 
+      console.log('cd_group_id',RequestData.cd_group_id)
       if (UpdateCustomer) {
         let CustomerDetail: RequestcustomerDetail = {
           customer_id: RequestData.customer_id,
           cd_consider: RequestData.cd_consider,
           cd_company: RequestData.cd_company,
+          cd_group_id : RequestData.cd_group_id,
           cd_typeinout: RequestData.cd_typeinout,
           cd_custype: RequestData.cd_custype,
           cd_cusservice: RequestData.cd_cusservice,
@@ -258,34 +248,8 @@ class SaleRepository {
           data: CustomerDetail,
         });
 
-        if(UpdateCustomerDetail){
-          const d_status = await this.prisma.d_status.findFirst({
-            where:{
-              customer_id:RequestData.customer_id,
-              active:true
-            }
-          })
 
-          if(d_status){
-            const UpdateStatus = await this.prisma.d_status.update({
-              where:{
-                id:d_status.id
-              },
-              data:{
-                active:false,
-                updatedAt:new Date()
-              }
-            })
-        }
-
-        const insertStatus = await this.prisma.d_status.create({
-          data: {
-            customer_id: RequestData.customer_id,
-            status_name: "รอตีราคา",
-            active: true,
-          },
-        });
-      }
+      // }
     }
 
       return UpdateCustomer;
@@ -326,11 +290,60 @@ class SaleRepository {
     }
   }
 
-  async getEstimate(customerId: string): Promise<any> {
+
+  async getAllEstimate(RequestData:any): Promise<any> {
+    try {
+      console.log('dfgsdfsdfs',RequestData.userId);
+      const purchase =  await this.prisma.d_purchase.findMany({
+        skip: RequestData.skip,
+        take: 10,
+        where:{
+          d_purchase_emp:{
+            some:{
+              user_id: RequestData.userId
+            }
+          }
+        },
+        
+        include: {
+          d_product: {
+            include: {
+              d_product_image: true,
+            },
+          },
+          customer: true,
+          d_purchase_emp:{
+            where:{
+              user_id: RequestData.userId
+            }
+          }
+        },
+      });
+
+      const Total = await this.prisma.d_purchase.findMany({
+          include:{
+            d_purchase_emp:{
+              where: {
+                user_id: RequestData.userId
+              }
+            }
+          }
+      });
+      const data = {
+        purchase: purchase,
+        total: Total.length,
+      };
+
+      return data
+    } catch (err: any) {
+      throw new Error(err);
+    }
+  }
+  async getEstimate(purchaseId: string): Promise<any> {
     try {
       return await this.prisma.d_purchase.findFirst({
         where: {
-          customer_id: customerId,
+          id: purchaseId,
         },
         include: {
           d_product: {
@@ -338,7 +351,33 @@ class SaleRepository {
               d_product_image: true,
             },
           },
-        },
+          d_purchase_status:{
+            where:{
+              active:true
+            }
+          },
+          d_purchase_emp:{
+            include: {
+              user: true
+            },
+          },
+          d_agentcy:{
+            where:{
+              status:true
+            },
+            include:{
+              agentcy:true,
+              d_agentcy_detail:true,
+              d_agentcy_file:true
+            }
+          },
+           d_document:true,
+           customer:{
+            include:{
+              details:true
+            }
+          },
+          },
       });
     } catch (err: any) {
       throw new Error(err);
@@ -386,18 +425,18 @@ class SaleRepository {
     }
   }
 
-  async ChangeStatus(customer_id: string): Promise<any> {
+  async ChangeStatus(tx:any,purchase_id: string): Promise<any> {
     try{
-    
-        const d_status = await this.prisma.d_status.findFirst({
+
+        const d_status = await tx.d_purchase_status.findFirst({
           where:{
-            customer_id:customer_id,
+            d_purchase_id:purchase_id,
             active:true
           }
         })
 
         if(d_status){
-          const UpdateStatus = await this.prisma.d_status.update({
+          const UpdateStatus = await tx.d_purchase_status.update({
             where:{
               id:d_status.id
             },
@@ -407,9 +446,9 @@ class SaleRepository {
             }
           })
         }
-          const insertStatus = await this.prisma.d_status.create({
+          const insertStatus = await tx.d_purchase_status.create({
             data: {
-              customer_id: customer_id,
+              d_purchase_id: purchase_id,
               status_name: "อยู่ระหว่างดำเนินการ",
               active: true,
             },
@@ -421,7 +460,37 @@ class SaleRepository {
       throw new Error(e);
     }
   }
+
+
+  async getCheckbooking(): Promise<any> {
+    try {
+      return await this.prisma.d_purchase.findMany({
+      });
+    } catch (err: any) {
+      throw new Error(err);
+    }
+  }
+
+
+  async submitPurchaseemployee(tx:any,purchase_id:string,employee_id:string):Promise<any>{
+    try{
+      console.log('purchase_id',purchase_id)
+        return    tx.d_purchase_emp.create({
+          data:{
+            user_id:employee_id,
+            d_purchase_id:purchase_id,
+          }
+        })
+    }
+    catch(e:any){
+      throw new Error(e)
+    }
+  }
+
+
+
 }
+
 
 
 export default SaleRepository;

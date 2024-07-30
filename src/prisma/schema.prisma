@@ -72,6 +72,7 @@ model document {
   id                       String      @id @default(uuid())
   document_type_id         String
   key                      String
+  type_master              String?
   documennt_type           String
   document_key             keyDocument
   document_so              Boolean
@@ -136,9 +137,9 @@ model customer_group {
 }
 
 model customer_detail {
-  id              String         @id @default(uuid())
-  customer_id     String         @unique
-  cd_group_id     String         @unique
+  id              String          @id @default(uuid())
+  customer_id     String          @unique
+  cd_group_id     String?         @unique
   cd_consider     String?
   cd_company      String?
   cd_typeinout    String?
@@ -155,12 +156,12 @@ model customer_detail {
   cd_frequency    String?
   cd_leader       String?
   cd_priority     String?
-  status_update   Boolean?       @default(false)
-  customer        customer       @relation(fields: [customer_id], references: [id])
-  createdAt       DateTime       @default(now())
+  status_update   Boolean?        @default(false)
+  customer        customer        @relation(fields: [customer_id], references: [id])
+  createdAt       DateTime        @default(now())
   updatedAt       DateTime?
   deletedAt       DateTime?
-  customer_group  customer_group @relation(fields: [cd_group_id], references: [id])
+  customer_group  customer_group? @relation(fields: [cd_group_id], references: [id])
 
   @@index([customer_id, cd_group_id])
 }
@@ -197,8 +198,8 @@ model customer_emp {
 model d_purchase {
   id                    String    @id @default(uuid())
   book_number           String    @unique
-  customer_number       String
-  customer_id           String
+  customer_number       String?
+  customer_id           String    @default("")
   d_route               String?
   d_transport           String?
   d_term                String?
@@ -215,27 +216,31 @@ model d_purchase {
   createdAt             DateTime  @default(now())
   updatedAt             DateTime?
   deletedAt             DateTime?
-
-  // @@index([customer_id])
-
-  customer customer @relation(fields: [customer_id], references: [id])
+  d_emp_look            String?   @default("")
+  d_group_work          String?   @default("")
+  d_num_date            String? // ระยะเวลา
+  d_end_date            DateTime? // วันเวลาที่สิ้นสุด
+  customer              customer  @relation(fields: [customer_id], references: [id])
 
   d_product         d_product?
   d_product_image   d_product_image[]
   d_document        d_document[]
   d_purchase_emp    d_purchase_emp[]
   d_purchase_status d_purchase_status[]
+  d_agentcy         d_agentcy[]
+
+  @@index([customer_id])
 }
 
 model d_purchase_status {
-  id          String     @id @default(uuid())
-  purchase_id String
-  status_name String
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime?
-  deletedAt   DateTime?
-  active      Boolean
-  d_purchase  d_purchase @relation(fields: [purchase_id], references: [id])
+  id            String     @id @default(uuid())
+  d_purchase_id String
+  status_name   String
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime?
+  deletedAt     DateTime?
+  active        Boolean
+  d_purchase    d_purchase @relation(fields: [d_purchase_id], references: [id])
 }
 
 model d_purchase_emp {
@@ -293,4 +298,80 @@ model d_document {
   updatedAt       DateTime?
   deletedAt       DateTime?
   d_purchase      d_purchase @relation(fields: [d_purchase_id], references: [id])
+
+  d_document_file d_document_file[]
+}
+
+model d_document_file {
+  id            String    @id @default(uuid())
+  d_document_id String
+  file_name     String
+  file_path     String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime?
+  deletedAt     DateTime?
+
+  d_document d_document @relation(fields: [d_document_id], references: [id])
+}
+
+model agentcy {
+  id          String    @id @default(uuid())
+  agent_name  String
+  agent_phone String
+  agent_email String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime?
+  deletedAt   DateTime?
+
+  d_agentcy d_agentcy[]
+}
+
+model d_agentcy {
+  id            String    @id @default(uuid())
+  d_purchase_id String
+  agentcy_id    String
+  status        Boolean?  @default(false)
+  agent_boat    String? // สายเรือ
+  agentcy_tit   String? // tit
+  agentcy_etd   String? // etd
+  agentcy_eta   String? // eta
+  agentcy_etc   String? // etc
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime?
+  deletedAt     DateTime?
+
+  agentcy          agentcy            @relation(fields: [agentcy_id], references: [id])
+  d_purchase       d_purchase         @relation(fields: [d_purchase_id], references: [id])
+  d_agentcy_detail d_agentcy_detail[]
+  d_agentcy_file   d_agentcy_file[]
+}
+
+model d_agentcy_detail {
+  id            String  @id @default(uuid())
+  d_agentcy_id  String
+  d_purchase_id String
+  d_type        String? // หัวข้อ
+  d_type_text   String?
+  d_price       String?
+  d_currency    String? // สกุลเงิน
+  d_nettotal    Int? // ยอดค่าใช้จ่าย
+  d_discount    String? // ส่วนลด
+  d_net_balance Int? // ยอดใช้จ่ายที่เซลล์เห็น
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime?
+  deletedAt DateTime?
+  d_agentcy d_agentcy @relation(fields: [d_agentcy_id], references: [id])
+}
+
+model d_agentcy_file {
+  id           String    @id @default(uuid())
+  d_agentcy_id String
+  file_name    String
+  file_path    String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime?
+  deletedAt    DateTime?
+
+  d_agentcy d_agentcy @relation(fields: [d_agentcy_id], references: [id])
 }
