@@ -117,7 +117,6 @@ export class SaleController {
 
   async createCustomer(req: Request, res: Response): Promise<any> {
     try {
-      console.log("reqqq", req.body);
       const validatedData = ValidationCreateCustomer.safeParse(req.body);
 
       if (!validatedData.success) {

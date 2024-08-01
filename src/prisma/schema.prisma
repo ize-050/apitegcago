@@ -105,6 +105,7 @@ model document {
 
 model customer {
   id                String            @id @default(uuid())
+  cus_code          String            @unique
   cus_fullname      String?
   cus_phone         String?
   cus_line          String?
@@ -208,7 +209,9 @@ model d_purchase {
   d_size_cabinet        String?
   d_weight              String?
   d_address_origin      String?
+  d_address_origin_location String? // ตำแหน่งต้นทาง
   d_address_destination String?
+  d_address_destination_location String? //ตำแหน่งปลายทาง
   d_refund_tag          String?
   d_truck               String?
   d_etc                 String?
@@ -222,13 +225,15 @@ model d_purchase {
   d_end_date            DateTime? // วันเวลาที่สิ้นสุด
   customer              customer  @relation(fields: [customer_id], references: [id])
 
-  d_product         d_product?
-  d_product_image   d_product_image[]
-  d_document        d_document[]
-  d_purchase_emp    d_purchase_emp[]
-  d_purchase_status d_purchase_status[]
-  d_agentcy         d_agentcy[]
-
+  d_product          d_product?
+  d_product_image    d_product_image[]
+  d_document         d_document[]
+  d_purchase_emp     d_purchase_emp[]
+  d_purchase_status  d_purchase_status[]
+  d_agentcy          d_agentcy[]
+  d_payment_type     d_payment_type[]  //ค่าใช้จ่าย ต้นทางปลายทาง
+  d_purchase_customer_payment d_purchase_customer_payment[] // การชำระเงินของลูกค้า
+  
   @@index([customer_id])
 }
 
@@ -255,6 +260,41 @@ model d_purchase_emp {
   d_purchase d_purchase @relation(fields: [d_purchase_id], references: [id])
 
   @@index([d_purchase_id])
+}
+
+model d_payment_type{
+  id         String    @id @default(uuid())
+  d_purchase_id String
+  payment_type String? //ต้นทาง ปลายทาง
+  payment_name String? 
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime?
+  deletedAt  DateTime?
+
+  d_purchase d_purchase @relation(fields: [d_purchase_id], references: [id])
+}
+
+
+model d_payment_customer_type {
+  id             String    @id @default(uuid())
+  d_payment_type String
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime?
+  deletedAt      DateTime?
+}
+
+model d_purchase_customer_payment {
+  id              String    @id @default(uuid())
+  d_purchase_id   String // รหัสการสั่งซื้อ
+  payment_type_id String // ประเภทการชำระเงิน
+  payment_name    String // ชื่อการชำระเงิน
+  payment_date    DateTime // วันที่ชำระเงิน
+  payment_price   String // จำนวนเงิน
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime?
+  deletedAt       DateTime?
+
+  d_purchase d_purchase @relation(fields: [d_purchase_id], references: [id])
 }
 
 model d_product {

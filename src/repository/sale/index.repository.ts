@@ -304,7 +304,6 @@ class SaleRepository {
             }
           }
         },
-        
         include: {
           d_product: {
             include: {
