@@ -172,6 +172,16 @@ class SaleService {
     }
   }
 
+
+  async cancelEstimate(RequestData: Partial<any>): Promise<any> {
+    try {
+      const response = await this.saleRepo.cancelEstimate(RequestData);
+      return response;
+    } catch (err: any) {
+      throw err;
+    }
+  }
+
   async getCheckBooking():Promise<any>{ //เช็ค Booking +1 ถ้าไม่ให้เริ่มใหม่ต่อวัน
     try{
         const today = moment().format('YYYY-MM-DD');
@@ -206,12 +216,18 @@ class SaleService {
   async submitEstimate(RequestData: Partial<any>): Promise<any> {
     try {
       const d_purchase: RequestPurchase = {
+
         book_number: RequestData.book_number,
         customer_id: RequestData.customer_id,
         d_route: RequestData.d_route,
         d_transport: RequestData.d_transport,
+        d_group_work: RequestData.d_group_work,
         d_term: RequestData.d_term,
         d_origin: RequestData.d_origin,
+        d_address_destination_la: RequestData.d_address_destination_la,
+        d_address_destination_long: RequestData.d_address_destination_long,
+        d_address_origin_la: RequestData.d_address_origin_la,
+        d_address_origin_long: RequestData.d_address_origin_long,
         d_destination: RequestData.d_destination,
         d_size_cabinet: RequestData.d_size_cabinet,
         d_weight: RequestData.d_weight,
@@ -220,7 +236,7 @@ class SaleService {
         d_refund_tag: RequestData.d_refund_tag,
         d_truck: RequestData.d_truck,
         d_etc: RequestData.d_etc,
-        d_status:"อยู่ระหว่างดำเนินการ",
+        d_status:"Sale ตีราคา",
       };
 
       await this.prisma.$transaction(async (tx) => {

@@ -30,6 +30,8 @@ async function main() {
     });
 
 
+ 
+
     await prisma.customer_group.createMany({
       data: [
         {

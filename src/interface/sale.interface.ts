@@ -1,4 +1,5 @@
 export interface Requestcustomer {
+  cus_code: string;
   cus_fullname: string;
   cus_phone: string;
   cus_line: string;
@@ -45,8 +46,13 @@ export interface RequestcustomerStatus {
 export interface RequestPurchase{
     book_number: string;
     customer_id : string;
+    d_group_work?: string;
     d_route : string;
     d_transport:string;
+    d_address_origin_la?: string;
+    d_address_origin_long?: string;
+    d_address_destination_la?: string;
+    d_address_destination_long?: string;
     d_term : string;
     d_origin : string;
     d_destination : string;

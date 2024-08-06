@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import CsRepository from "../../repository/cs/index.repository";
+import NotificationRepository from "../../repository/notification/index.repository";
 
 
 import { PrismaClient } from "@prisma/client";
@@ -12,11 +13,13 @@ import {RequestProductImage} from "../../interface/sale.interface";
 
 class Csservice {
   private csRepo: CsRepository;
+  private notificationRepo: NotificationRepository;
   private prisma: PrismaClient;
 
   constructor() {
     this.csRepo = new CsRepository();
     this.prisma = new PrismaClient();
+    this.notificationRepo = new NotificationRepository();
   }
 
 
@@ -68,8 +71,33 @@ class Csservice {
   async updateTriggleStatus(user_id: string, purchase_id: string): Promise<any> {
     try {
       const data = await this.csRepo.updateTriggleStatus(user_id, purchase_id);
+
+
+      const purchase_detail  = await this.csRepo.getPurchaseByid(purchase_id);
+
+      console.log('purchase_detail',purchase_detail)
+
+      let RequestSentNotifaction ={
+        user_id: purchase_detail.d_purchase_emp[0].user_id,
+        purchase_id: purchase_id,
+        link_to :`purchase/content/`,
+        title :'Cs รับงาน',
+        subject_key :purchase_id,
+        message :`Cs รับงาน เลขที่:${purchase_detail.book_number}`,
+        status: false,
+        data :{},
+      }
+
+      
+      RequestSentNotifaction.data =  JSON.stringify(RequestSentNotifaction)
+
+
+      const notification = await this.notificationRepo.sendNotification(RequestSentNotifaction);
+
+
       return data;
     } catch (err: any) {
+      console.log('err', err)
       throw new Error(err)
     }
   }

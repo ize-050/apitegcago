@@ -33,18 +33,22 @@ export class CSController {
       };
       const data = await this.csservice.getPurchase(RequestData);
       let Purchase :any[] = []
-      for(let purchase of data.purchase){
-        if(purchase.d_status === `อยู่ระหว่างดำเนินการ`){
+      for (let purchase of data.purchase) {
+        if (purchase.d_status === 'Sale ตีราคา') {
           purchase.color = 'bg-blue-500'
         }
-        if(purchase.d_status === 'CS กำลังดำเนินการ'){
+        if (purchase.d_status === 'Cs ร้องขอเอกสาร') {
           purchase.color = 'bg-red-400'
         }
-        if(purchase.d_status === 'ยกเลิก'){
+        if (purchase.d_status === 'Sale แนบเอกสาร') {
+          purchase.color = 'bg-red-400'
+        }
+        if (purchase.d_status === 'Cs เสนอราคา') {
           purchase.color = 'bg-red-400'
         }
         Purchase.push(purchase)
       }
+
 
       let purchaseData = {
         purchase: Purchase,
@@ -84,16 +88,18 @@ export class CSController {
         );
       }
 
-        if(data.d_status === `อยู่ระหว่างดำเนินการ`){
-          data.color = 'bg-blue-500'
-        }
-        else if(data.d_status === 'CS กำลังดำเนินการ'){
-          data.color = 'bg-red-400'
-        }
-        else if(data.d_status === 'ยกเลิก'){
-          data.color = 'bg-red-400'
-        }
-
+      if (data.d_status === 'Sale ตีราคา') {
+        data.color = 'bg-blue-500'
+      }
+      if (data.d_status === 'Cs ร้องขอเอกสาร') {
+        data.color = 'bg-red-400'
+      }
+      if (data.d_status === 'Sale แนบเอกสาร') {
+        data.color = 'bg-red-400'
+      }
+      if (data.d_status === 'Cs เสนอราคา') {
+        data.color = 'bg-red-400'
+      } 
 
 
 
@@ -201,9 +207,12 @@ export class CSController {
     try {
       const purchase_id = req.params.id;
       const RequestData = req.body
- 
+      const request = {
+        ...RequestData,
+        
+      };
 
-      const data = await this.csservice.SentRequestFile(purchase_id,RequestData);
+      const data = await this.csservice.SentRequestFile(purchase_id,request);
       
       res.status(200).json({
         data: {

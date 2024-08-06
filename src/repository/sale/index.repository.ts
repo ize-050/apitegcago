@@ -121,6 +121,7 @@ class SaleRepository {
   async createCustomer(RequestData: Partial<any>): Promise<any> {
     try {
       const customer: Requestcustomer = {
+        cus_code: RequestData.cus_code,
         cus_fullname: RequestData.cus_fullname,
         cus_phone: RequestData.cus_phone,
         cus_line: RequestData.cus_line,
@@ -169,7 +170,7 @@ class SaleRepository {
 
       return InsertCustomer;
     } catch (err: any) {
-      console.log('createCustomerError',err)
+      console.log('createCustomerError', err)
       throw new Error(err);
     }
   }
@@ -195,7 +196,8 @@ class SaleRepository {
         console.log("not change");
       }
 
-      const customer: Requestcustomer = {
+      const customer = {
+
         cus_fullname: RequestData.cus_fullname,
         cus_phone: RequestData.cus_phone,
         cus_line: RequestData.cus_line,
@@ -216,13 +218,13 @@ class SaleRepository {
         data: customer,
       });
 
-      console.log('cd_group_id',RequestData.cd_group_id)
+      console.log('cd_group_id', RequestData.cd_group_id)
       if (UpdateCustomer) {
         let CustomerDetail: RequestcustomerDetail = {
           customer_id: RequestData.customer_id,
           cd_consider: RequestData.cd_consider,
           cd_company: RequestData.cd_company,
-          cd_group_id : RequestData.cd_group_id,
+          cd_group_id: RequestData.cd_group_id,
           cd_typeinout: RequestData.cd_typeinout,
           cd_custype: RequestData.cd_custype,
           cd_cusservice: RequestData.cd_cusservice,
@@ -249,8 +251,8 @@ class SaleRepository {
         });
 
 
-      // }
-    }
+        // }
+      }
 
       return UpdateCustomer;
     } catch (err: any) {
@@ -291,15 +293,15 @@ class SaleRepository {
   }
 
 
-  async getAllEstimate(RequestData:any): Promise<any> {
+  async getAllEstimate(RequestData: any): Promise<any> {
     try {
-      console.log('dfgsdfsdfs',RequestData.userId);
-      const purchase =  await this.prisma.d_purchase.findMany({
+      console.log('dfgsdfsdfs', RequestData.userId);
+      const purchase = await this.prisma.d_purchase.findMany({
         skip: RequestData.skip,
         take: 10,
-        where:{
-          d_purchase_emp:{
-            some:{
+        where: {
+          d_purchase_emp: {
+            some: {
               user_id: RequestData.userId
             }
           }
@@ -311,8 +313,8 @@ class SaleRepository {
             },
           },
           customer: true,
-          d_purchase_emp:{
-            where:{
+          d_purchase_emp: {
+            where: {
               user_id: RequestData.userId
             }
           }
@@ -320,13 +322,13 @@ class SaleRepository {
       });
 
       const Total = await this.prisma.d_purchase.findMany({
-          include:{
-            d_purchase_emp:{
-              where: {
-                user_id: RequestData.userId
-              }
+        include: {
+          d_purchase_emp: {
+            where: {
+              user_id: RequestData.userId
             }
           }
+        }
       });
       const data = {
         purchase: purchase,
@@ -350,35 +352,53 @@ class SaleRepository {
               d_product_image: true,
             },
           },
-          d_purchase_status:{
-            where:{
-              active:true
+          d_purchase_status: {
+            where: {
+              active: true
             }
           },
-          d_purchase_emp:{
+          d_purchase_emp: {
             include: {
               user: true
             },
           },
-          d_agentcy:{
-            where:{
-              status:true
+          d_agentcy: {
+            where: {
+              status: true
             },
-            include:{
-              agentcy:true,
-              d_agentcy_detail:true,
-              d_agentcy_file:true
+            include: {
+              agentcy: true,
+              d_agentcy_detail: true,
+              d_agentcy_file: true
             }
           },
-           d_document:true,
-           customer:{
-            include:{
-              details:true
+          d_document: true,
+          customer: {
+            include: {
+              details: true
             }
           },
-          },
+        },
       });
     } catch (err: any) {
+      throw new Error(err);
+    }
+  }
+
+
+  async cancelEstimate(RequestData: Partial<any>): Promise<any> {
+    try {
+
+      await this.prisma.$transaction(async (tx) => {
+        const purchaseId = RequestData.purchase_id;
+          await this.ChangePurchaseStatus(tx, purchaseId,"Cancel", "ยกเลิกคำสั่งซื้อ")
+      }).catch((err: any) => {
+        throw new Error(err);
+      });
+
+      return true;
+    } catch (err: any) {
+      console.log('eeeeee',err)
       throw new Error(err);
     }
   }
@@ -424,38 +444,44 @@ class SaleRepository {
     }
   }
 
-  async ChangeStatus(tx:any,purchase_id: string): Promise<any> {
-    try{
 
-        const d_status = await tx.d_purchase_status.findFirst({
-          where:{
-            d_purchase_id:purchase_id,
-            active:true
+
+
+  async ChangeStatus(tx: any, purchase_id: string): Promise<any> {
+    try {
+
+      const d_status = await tx.d_purchase_status.findFirst({
+        where: {
+          d_purchase_id: purchase_id,
+          active: true
+        }
+      })
+
+      if (d_status) {
+        const UpdateStatus = await tx.d_purchase_status.update({
+          where: {
+            id: d_status.id
+          },
+          data: {
+            active: false,
+            updatedAt: new Date()
           }
         })
+      }
 
-        if(d_status){
-          const UpdateStatus = await tx.d_purchase_status.update({
-            where:{
-              id:d_status.id
-            },
-            data:{
-              active:false,
-              updatedAt:new Date()
-            }
-          })
-        }
-          const insertStatus = await tx.d_purchase_status.create({
-            data: {
-              d_purchase_id: purchase_id,
-              status_name: "อยู่ระหว่างดำเนินการ",
-              active: true,
-            },
-          });
-        
+
+      const insertStatus = await tx.d_purchase_status.create({
+        data: {
+          d_purchase_id: purchase_id,
+          status_key: "Estimate",
+          status_name: "Sale ตีราคา",
+          active: true,
+        },
+      });
+
       return insertStatus;
     }
-    catch(e:any){
+    catch (e: any) {
       throw new Error(e);
     }
   }
@@ -471,22 +497,64 @@ class SaleRepository {
   }
 
 
-  async submitPurchaseemployee(tx:any,purchase_id:string,employee_id:string):Promise<any>{
-    try{
-      console.log('purchase_id',purchase_id)
-        return    tx.d_purchase_emp.create({
-          data:{
-            user_id:employee_id,
-            d_purchase_id:purchase_id,
-          }
-        })
+  async submitPurchaseemployee(tx: any, purchase_id: string, employee_id: string): Promise<any> {
+    try {
+      console.log('purchase_id', purchase_id)
+      return tx.d_purchase_emp.create({
+        data: {
+          user_id: employee_id,
+          d_purchase_id: purchase_id,
+        }
+      })
     }
-    catch(e:any){
+    catch (e: any) {
       throw new Error(e)
     }
   }
 
 
+
+
+  async ChangePurchaseStatus(tx: any, purchase_id: string, status_key :string, status: string): Promise<any> { //ปรับสถานะเสมอ
+    try {
+      const data = await tx.d_purchase.update({
+        where: {
+          id: purchase_id,
+        },
+        data: {
+          d_status: status,
+          updatedAt: new Date(),
+        },
+      });
+      
+
+      if (data) {
+        await tx.d_purchase_status.updateMany({
+          where: {
+            d_purchase_id: purchase_id,
+            updatedAt: new Date(),
+          },
+          data: {
+            active: false,
+          },
+        });
+
+        await tx.d_purchase_status.create({
+          data: {
+            d_purchase_id: purchase_id,
+            status_key: status_key,
+            status_name: status,
+            active: true,
+            createdAt: new Date(),
+          },
+        });
+      }
+
+      return data;
+    } catch (err: any) {
+      throw new Error(err);
+    }
+  }
 
 }
 

@@ -215,7 +215,7 @@ export class SaleController {
       const skip = (page - 1) * perPage;
       const status = req.query.status as string | undefined;
       const tag = req.query.tag as string | undefined;
-      const userId  =  req?.userId
+      const userId = req?.userId
       const RequestData = {
         ...req.query,
         status,
@@ -224,19 +224,25 @@ export class SaleController {
         userId: userId,
       };
       const data = await this.saleservice.getAllEstimate(RequestData);
-      let Purchase :any[] = []
-        for(let purchase of data.purchase){
-          if(purchase.d_status === 'อยู่ระหว่างดำเนินการ'){
-            purchase.color = 'bg-blue-500'
-          }
-          if(purchase.d_status === 'CS กำลังดำเนินการ'){
-            purchase.color = 'bg-red-400'
-          }
-          if(purchase.d_status === 'ยกเลิก'){
-            purchase.color = 'bg-red-400'
-          }
-          Purchase.push(purchase)
+      let Purchase: any[] = []
+      for (let purchase of data.purchase) {
+        if (purchase.d_status === 'Sale ตีราคา') {
+          purchase.color = 'bg-blue-500'
         }
+        if (purchase.d_status === 'Cs ร้องขอเอกสาร') {
+          purchase.color = 'bg-red-400'
+        }
+        if (purchase.d_status === 'Sale แนบเอกสาร') {
+          purchase.color = 'bg-red-400'
+        }
+        if (purchase.d_status === 'Cs เสนอราคา') {
+          purchase.color = 'bg-orange-300'
+        }
+        if (purchase.d_status === 'ยกเลิกคำสั่งซื้อ') {
+          purchase.color = 'bg-red-500'
+        }
+        Purchase.push(purchase)
+      }
 
       let purchaseData = {
         purchase: Purchase,
@@ -254,6 +260,7 @@ export class SaleController {
       res.status(500).json(err);
     }
   }
+
   async getEstimate(req: Request, res: Response): Promise<any> {
     try {
       const purchaseId = req.params.id;
@@ -274,17 +281,20 @@ export class SaleController {
         );
       }
 
-      if(data.d_status === `อยู่ระหว่างดำเนินการ`){
+      if (data.d_status === 'Sale ตีราคา') {
         data.color = 'bg-blue-500'
       }
-      else if(data.d_status === 'CS กำลังดำเนินการ'){
+      else if (data.d_status === 'Cs ร้องขอเอกสาร') {
         data.color = 'bg-red-400'
       }
-      else if(data.d_status ==='รอ CS อนุมัติราคา'){
-        data.color = 'bg-yellow-[#F7CEAA]'
-      }
-      else if(data.d_status === 'ยกเลิก'){
+      else if (data.d_status === 'Sale แนบเอกสาร') {
         data.color = 'bg-red-400'
+      }
+      else if (data.d_status === 'Cs เสนอราคา') {
+        data.color = 'bg-red-400'
+      }
+      else if (data.d_status === 'ยกเลิกคำสั่งซื้อ') {
+        data.color = 'bg-red-500'
       }
       const response = {
         data: data,
@@ -297,6 +307,30 @@ export class SaleController {
       res.status(500).json(err);
     }
   }
+
+  async cancelEstimate(req: Request, res: Response): Promise<any> {
+    try{
+      const purchaseId = req.params.id;
+
+      const userId = req?.userId;
+
+      const RequestData = req.body;
+
+      const request = {
+        ...RequestData,
+        purchase_id: purchaseId,
+        userId: userId,
+      };
+
+      const response = await this.saleservice.cancelEstimate(request);
+
+      res.status(200).json(response);
+    }
+    catch(err:any){
+      console.log('errCancelEstimate',err)
+      res.status(500).json(err);  
+    }
+  } 
 
 
   async getCheckBooking(req: Request, res: Response): Promise<any> {

@@ -38,6 +38,7 @@ router.post('/submitEstimate/:id',authMiddleware,upload.array('d_image',10), (re
 
 router.get('/getAllEstimate',authMiddleware, (req, res) => saleController.getAllEstimate(req, res));
 router.get('/getEstimate/:id',authMiddleware, (req, res) => saleController.getEstimate(req, res));
+router.put('/cancelEstimate/:id',authMiddleware, (req, res) => saleController.cancelEstimate(req, res));
 
 
 //util
