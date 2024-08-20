@@ -35,6 +35,7 @@ class NotificationRepository {
                     data: Request.data,
                     user_id: Request.user_id,
                     status: Request.status,
+                    link_to: Request.link_to,
                 },
             });
 

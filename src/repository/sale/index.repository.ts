@@ -368,17 +368,52 @@ class SaleRepository {
             },
             include: {
               agentcy: true,
-              d_agentcy_detail: true,
+              d_agentcy_detail: {
+                orderBy:{
+                  id: 'desc'
+                }
+              },
               d_agentcy_file: true
             }
           },
-          d_document: true,
+          d_document: {
+            include: {
+              d_document_file: true
+            }
+          },
           customer: {
             include: {
               details: true
             }
           },
+          d_sale_agentcy: {
+            where: {
+              status: true,
+            },
+            include: {
+              d_agentcy: {
+                include:{
+                  d_agentcy_detail: {
+                    orderBy:{
+                      id: 'desc'
+                    },
+                  },
+                agentcy: true,
+                }
+              },
+              d_sale_agentcy_file: true
+            }
+          },
+          payment_purchase: true,
+          d_confirm_purchase:{
+            include: {
+              d_confirm_purchase_file: true,
+            }
+          },
+          d_purchase_customer_payment: true,
+         
         },
+       
       });
     } catch (err: any) {
       throw new Error(err);
@@ -391,14 +426,14 @@ class SaleRepository {
 
       await this.prisma.$transaction(async (tx) => {
         const purchaseId = RequestData.purchase_id;
-          await this.ChangePurchaseStatus(tx, purchaseId,"Cancel", "ยกเลิกคำสั่งซื้อ")
+        await this.ChangePurchaseStatus(tx, purchaseId, "Cancel", "ยกเลิกคำสั่งซื้อ")
       }).catch((err: any) => {
         throw new Error(err);
       });
 
       return true;
     } catch (err: any) {
-      console.log('eeeeee',err)
+      console.log('eeeeee', err)
       throw new Error(err);
     }
   }
@@ -417,6 +452,23 @@ class SaleRepository {
     }
   }
 
+  async updateEstimate(tx: any, id: string, RequestData: RequestPurchase): Promise<any> {
+    try {
+
+      const data = await tx.d_purchase.update({
+        where: {
+          id: id
+        },
+        data: RequestData
+      })
+
+      return data;
+
+    } catch (err: any) {
+      throw new Error(err);
+    }
+  }
+
   async submitEstimateProduct(
     tx: any,
     RequestData: RequestProduct
@@ -430,6 +482,21 @@ class SaleRepository {
     }
   }
 
+  async updateEstimateProduct(tx: any, id: string, RequestData: RequestProduct): Promise<any> {
+    try {
+      const data = await tx.d_product.update({
+        where: {
+          d_purchase_id: id
+        },
+        data: RequestData
+      })
+
+      return data;
+
+    } catch (err: any) {
+      throw new Error(err);
+    }
+  }
   async submitEstimateProductImage(
     tx: any,
     RequestData: RequestProductImage
@@ -444,6 +511,61 @@ class SaleRepository {
     }
   }
 
+
+
+  async checkEdit(tx: any, id: string, IdnoChange: any): Promise<any> {
+    try {
+      return await this.prisma.d_product_image.findMany({
+        where: {
+          d_purchase_id: id,
+          id: {
+            notIn: IdnoChange
+          }
+        }
+      })
+    }
+    catch (err: any) {
+      throw new Error(err);
+    }
+
+  }
+
+  async submitEstimateDocumentfile(data: any): Promise<any> {
+    try {
+      return await this.prisma.d_document_file.create({
+        data: data
+      })
+    }
+    catch (err: any) {
+      throw new Error(err);
+    }
+  } //บันทึกข้อมูลไฟล 
+
+
+  async deleteImage(tx: any, id: string): Promise<any> {
+    try {
+      return await tx.d_product_image.delete({
+        where: {
+          id: id
+        }
+      })
+    } catch (err: any) {
+      throw new Error(err);
+    }
+  }
+
+  async updateEstimateProductImage(tx: any, id: string, RequestData: RequestProductImage): Promise<any> {
+    try {
+      const data = await tx.d_product_image.create({
+        data: RequestData
+      })
+
+      return data;
+
+    } catch (err: any) {
+      throw new Error(err);
+    }
+  }
 
 
 
@@ -487,6 +609,18 @@ class SaleRepository {
   }
 
 
+  async getImageName(tx: any, purchase_id: string): Promise<any> {
+    try {
+      return await tx.d_product_image.findMany({
+        where: {
+          d_purchase_id: purchase_id
+        }
+      })
+    } catch (err: any) {
+      throw new Error(err);
+    }
+  }
+
   async getCheckbooking(): Promise<any> {
     try {
       return await this.prisma.d_purchase.findMany({
@@ -495,6 +629,7 @@ class SaleRepository {
       throw new Error(err);
     }
   }
+
 
 
   async submitPurchaseemployee(tx: any, purchase_id: string, employee_id: string): Promise<any> {
@@ -515,7 +650,7 @@ class SaleRepository {
 
 
 
-  async ChangePurchaseStatus(tx: any, purchase_id: string, status_key :string, status: string): Promise<any> { //ปรับสถานะเสมอ
+  async ChangePurchaseStatus(tx: any, purchase_id: string, status_key: string, status: string): Promise<any> { //ปรับสถานะเสมอ
     try {
       const data = await tx.d_purchase.update({
         where: {
@@ -526,7 +661,7 @@ class SaleRepository {
           updatedAt: new Date(),
         },
       });
-      
+
 
       if (data) {
         await tx.d_purchase_status.updateMany({
@@ -556,6 +691,23 @@ class SaleRepository {
     }
   }
 
+  async submitAddorderPurchase(tx: any, RequestData: Partial<any>): Promise<any> {
+    try {
+      return await tx.d_sale_agentcy.create({
+        data: {
+          d_agentcy_id: RequestData.d_agentcy_id,
+          d_purchase_id: RequestData.d_purchase_id,
+          status: RequestData.status
+        }
+      })
+
+
+    }
+    catch (err: any) {
+      console.log("errorsubmitorder", err);
+      throw new Error(err);
+    }
+  }
 }
 
 

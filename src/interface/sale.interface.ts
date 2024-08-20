@@ -63,12 +63,12 @@ export interface RequestPurchase{
     d_refund_tag :string;
     d_truck : string;
     d_etc :string;
-    d_status:string;
+    d_status?:string;
 }
 
 export interface RequestProduct{
     d_product_name :string;
-    d_purchase_id : string;
+    d_purchase_id? : string;
     review_date? : string;
     performance_rating? :string;
 

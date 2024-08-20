@@ -20,6 +20,18 @@ class CsRepository {
             },
           },
           d_purchase_status: true,
+          
+        },
+        where: {
+          OR: [
+            { d_status: 'Sale ตีราคา' },
+            {
+              d_emp_look: Request.userId,
+              NOT: {
+                d_status: 'Sale ตีราคา'
+              }
+            }
+          ]
         },
       });
 
@@ -48,6 +60,7 @@ class CsRepository {
               d_product_image: true,
             },
           },
+          payment_purchase: true,
           d_purchase_status: {
             where: {
               active: true,
@@ -65,12 +78,42 @@ class CsRepository {
               d_agentcy_file: true,
             },
           },
+          d_document: {
+            include: {
+              d_document_file: true,
+            }
+          },
           customer: {
             include: {
               details: true,
             },
           },
+          d_confirm_purchase:{
+            include: {
+              d_confirm_purchase_file: true,
+            }
+          },
+          d_purchase_customer_payment: true,
+          d_sale_agentcy: {
+            where: {
+              status: true,
+            },
+            include: {
+              d_agentcy: {
+                include:{
+                  d_agentcy_detail: {
+                    orderBy:{
+                      id: 'desc'
+                    },
+                  },
+                  agentcy: true,
+                }
+              },
+              d_sale_agentcy_file: true
+            }
+          },
         },
+
       });
     } catch (err: any) {
       throw new Error(err);
@@ -79,7 +122,7 @@ class CsRepository {
 
   async getPurchaseByid(id: string): Promise<any> {
     try {
-      const data = await this.prisma.d_purchase.findUnique({
+      const data = await this.prisma.d_purchase.findFirst({
         where: {
           id: id,
         },
@@ -105,19 +148,36 @@ class CsRepository {
 
   async updateTriggleStatus(
     user_id: string,
-    purchase_id: string
+    purchase_id: string,
+    key: string,
+    status: string
   ): Promise<any> {
     try {
-      const data = await this.prisma.d_purchase.update({
-        where: {
-          id: purchase_id,
-        },
-        data: {
-          d_emp_look: user_id,
-          d_status: "Cs เสนอราคา",
-          updatedAt: new Date(),
-        },
-      });
+      let data;
+      if (user_id != "") {
+        data = await this.prisma.d_purchase.update({
+          where: {
+            id: purchase_id,
+          },
+          data: {
+            d_status: status,
+            d_emp_look: user_id,
+            updatedAt: new Date(),
+          },
+        });
+
+      }
+      else {
+        data = await this.prisma.d_purchase.update({
+          where: {
+            id: purchase_id,
+          },
+          data: {
+            d_status: status,
+            updatedAt: new Date(),
+          },
+        });
+      }
 
       if (data) {
         await this.prisma
@@ -134,8 +194,8 @@ class CsRepository {
             await tx.d_purchase_status.create({
               data: {
                 d_purchase_id: purchase_id,
-                status_key: "Bid",
-                status_name: "Cs เสนอราคา",
+                status_key: key,
+                status_name: status,
                 active: true,
                 createdAt: new Date(),
               },
@@ -148,6 +208,7 @@ class CsRepository {
 
       return data;
     } catch (err: any) {
+      console.log("error update status", err)
       throw new Error(err);
     }
   }
@@ -224,7 +285,6 @@ class CsRepository {
 
   async updateAgencytoSale(Request: Partial<any>): Promise<any> {
     try {
-      console.log("Request", Request);
       return await this.prisma.d_agentcy.update({
         where: {
           id: Request.d_agentcy_id,
@@ -256,9 +316,11 @@ class CsRepository {
               d_group_work: Request.d_group_work,
               d_end_date: Dates,
               d_num_date: Request.d_num_date,
+              d_status: "CS ร้องขอเอกสาร",
             },
           });
-          console.log("requet", Request);
+
+
           const Document = Request.document_type;
           await tx.d_document.createMany({
             data: [
@@ -269,15 +331,72 @@ class CsRepository {
               })),
             ],
           });
+
+          await tx.d_purchase_status.updateMany({
+            where: {
+              d_purchase_id: purchase_id,
+            },
+            data: {
+              active: false,
+            },
+          });
+
+          await tx.d_purchase_status.create({
+            data: {
+              d_purchase_id: purchase_id,
+              status_key: "Wait_document",
+              status_name: "CS ร้องขอเอกสาร",
+              active: true,
+              createdAt: new Date(),
+            },
+          });
         } catch (err: any) {
           throw new Error(err);
         }
+
+
       });
 
       return true;
     } catch (err: any) {
       console.log("errorSentRequestFile", err);
       throw new Error(err);
+    }
+  }
+
+  async submitAddpayment(RequestData: Partial<any>): Promise<any> {
+    try {
+
+      await this.prisma.$transaction(async (tx) => {
+
+        const payment = await tx.payment_purchase.findMany({
+          where: {
+            d_purchase_id: RequestData[0].d_purchase_id,
+          },
+        });
+
+        if (payment.length > 0) {
+          await tx.payment_purchase.deleteMany({
+            where: {
+              d_purchase_id: RequestData[0].d_purchase_id,
+            },
+          });
+        }
+
+        await tx.payment_purchase.createMany({
+          data: [
+            ...RequestData.map((item: any) => ({
+              ...item,
+            })),
+          ],
+        })
+      }).catch((err) => {
+        throw new Error(err);
+      })
+    }
+    catch (err: any) {
+      console.log("Faied payment")
+      throw new Error(err)
     }
   }
 }

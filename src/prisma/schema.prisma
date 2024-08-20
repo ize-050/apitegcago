@@ -14,8 +14,6 @@ model roles {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime?
   deletedAt  DateTime?
-
-  
 }
 
 model user {
@@ -31,7 +29,7 @@ model user {
   updatedAt      DateTime?
   deletedAt      DateTime?
 
-  notification notification[]
+  notification   notification[]
   d_purchase_log d_purchase_log[]
 
   @@index([roles_id])
@@ -202,60 +200,92 @@ model customer_emp {
 }
 
 model d_purchase {
-  id                    String    @id @default(uuid())
-  book_number           String    @unique
-  customer_number       String?
-  customer_id           String    @default("")
-  d_route               String?
-  d_transport           String?
-  d_term                String?
-  d_origin              String?
-  d_destination         String?
-  d_size_cabinet        String?
-  d_weight              String?
-  d_address_origin      String?
-  d_address_origin_la   String?
-  d_address_origin_long   String?
-  d_address_destination String?
-  d_address_destination_la String? //ตำแหน่งปลายทาง
+  id                         String    @id @default(uuid())
+  book_number                String    @unique
+  customer_number            String?
+  customer_id                String    @default("")
+  d_route                    String?
+  d_transport                String?
+  d_term                     String?
+  d_origin                   String?
+  d_destination              String?
+  d_size_cabinet             String?
+  d_weight                   String?
+  d_address_origin           String?
+  d_address_origin_la        String?
+  d_address_origin_long      String?
+  d_address_destination      String?
+  d_address_destination_la   String? //ตำแหน่งปลายทาง
   d_address_destination_long String? //ตำแหน่งปลายทาง
-  d_refund_tag          String?
-  d_truck               String?
-  d_etc                 String?
-  d_status              String?
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime?
-  deletedAt             DateTime?
-  d_emp_look            String?   @default("")
-  d_group_work          String?   @default("")
-  d_num_date            String? // ระยะเวลา
-  d_end_date            DateTime? // วันเวลาที่สิ้นสุด
-  customer              customer  @relation(fields: [customer_id], references: [id])
+  d_refund_tag               String?
+  d_truck                    String?
+  d_etc                      String?
+  d_purchase_ref             String?
+  d_status                   String?
+  createdAt                  DateTime  @default(now())
+  updatedAt                  DateTime?
+  deletedAt                  DateTime?
+  d_emp_look                 String?   @default("")
+  d_group_work               String?   @default("")
+  d_num_date                 String? // ระยะเวลา
+  d_end_date                 DateTime? // วันเวลาที่สิ้นสุด
+  customer                   customer  @relation(fields: [customer_id], references: [id])
 
-  d_product          d_product?
-  d_product_image    d_product_image[]
-  d_document         d_document[]
-  d_purchase_emp     d_purchase_emp[]
-  d_purchase_status  d_purchase_status[]
-  d_agentcy          d_agentcy[]
-  d_payment_type     d_payment_type[]  //ค่าใช้จ่าย ต้นทางปลายทาง
+  d_product                   d_product?
+  d_product_image             d_product_image[]
+  d_document                  d_document[]
+  d_purchase_emp              d_purchase_emp[]
+  payment_purchase            payment_purchase[]
+  d_purchase_status           d_purchase_status[]
+  d_agentcy                   d_agentcy[]
+  d_payment_type              d_payment_type[] //ค่าใช้จ่าย ต้นทางปลายทาง
   d_purchase_customer_payment d_purchase_customer_payment[] // การชำระเงินของลูกค้า
-  d_purchase_log     d_purchase_log[]
-  
+  d_purchase_log              d_purchase_log[]
+  d_sale_agentcy              d_sale_agentcy[]
+  d_confirm_purchase          d_confirm_purchase[]
+
   @@index([customer_id])
 }
 
-model d_purchase_status {
-  id            String     @id @default(uuid())
+
+
+
+model d_confirm_purchase {
+  id            String    @id @default(uuid())
   d_purchase_id String
-  status_key     String // สถานะ
+  type_confirm  String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime?
+  deletedAt     DateTime?
+
+  d_purchase d_purchase @relation(fields: [d_purchase_id], references: [id])
+  d_confirm_purchase_file d_confirm_purchase_file[]
+}
+
+
+model d_confirm_purchase_file {
+  id            String    @id @default(uuid())
+  d_confirm_id  String
+  file_name     String
+  file_path     String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime?
+  deletedAt     DateTime?
+
+  d_confirm_purchase d_confirm_purchase @relation(fields: [d_confirm_id], references: [id])
+}
+
+model d_purchase_status {
+  id            String        @id @default(uuid())
+  d_purchase_id String
+  status_key    String // สถานะ
   status_name   String
-  createdAt     DateTime   @default(now())
+  createdAt     DateTime      @default(now())
   updatedAt     DateTime?
   deletedAt     DateTime?
   active        Boolean
   master_status master_status @relation(fields: [status_key], references: [status_key])
-  d_purchase    d_purchase @relation(fields: [d_purchase_id], references: [id])
+  d_purchase    d_purchase    @relation(fields: [d_purchase_id], references: [id])
 }
 
 model d_purchase_emp {
@@ -272,18 +302,17 @@ model d_purchase_emp {
   @@index([d_purchase_id])
 }
 
-model d_payment_type{
-  id         String    @id @default(uuid())
+model d_payment_type {
+  id            String    @id @default(uuid())
   d_purchase_id String
-  payment_type String? //ต้นทาง ปลายทาง
-  payment_name String? 
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime?
-  deletedAt  DateTime?
+  payment_type  String? //ต้นทาง ปลายทาง
+  payment_name  String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime?
+  deletedAt     DateTime?
 
   d_purchase d_purchase @relation(fields: [d_purchase_id], references: [id])
 }
-
 
 model d_payment_customer_type {
   id             String    @id @default(uuid())
@@ -296,10 +325,12 @@ model d_payment_customer_type {
 model d_purchase_customer_payment {
   id              String    @id @default(uuid())
   d_purchase_id   String // รหัสการสั่งซื้อ
-  payment_type_id String // ประเภทการชำระเงิน
+  payment_type    String // ประเภทการชำระเงิน
   payment_name    String // ชื่อการชำระเงิน
   payment_date    DateTime // วันที่ชำระเงิน
   payment_price   String // จำนวนเงิน
+  payment_image_name   String // รูปภาพ
+  payment_path    String // ที่อยู่ไฟล์
   createdAt       DateTime  @default(now())
   updatedAt       DateTime?
   deletedAt       DateTime?
@@ -376,8 +407,7 @@ model d_purchase_log {
   deletedAt     DateTime?
 
   d_purchase d_purchase @relation(fields: [d_purchase_id], references: [id])
-  user      user      @relation(fields: [user_id], references: [id])
-
+  user       user       @relation(fields: [user_id], references: [id])
 }
 
 model agentcy {
@@ -410,6 +440,8 @@ model d_agentcy {
   d_purchase       d_purchase         @relation(fields: [d_purchase_id], references: [id])
   d_agentcy_detail d_agentcy_detail[]
   d_agentcy_file   d_agentcy_file[]
+
+  d_sale_agentcy d_sale_agentcy[]
 }
 
 model d_agentcy_detail {
@@ -442,21 +474,17 @@ model d_agentcy_file {
   d_agentcy d_agentcy @relation(fields: [d_agentcy_id], references: [id])
 }
 
-
-
-model master_status{
+model master_status {
   id           String    @id @default(uuid())
-  status_key   String @unique 
+  status_key   String    @unique
   status_name  String?
-  status_color  String?
+  status_color String?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime?
   deletedAt    DateTime?
 
-
   d_purchase_status d_purchase_status[]
 }
-
 
 model notification {
   id          String    @id @default(uuid())
@@ -464,7 +492,7 @@ model notification {
   title       String
   subject_key String
   link_to     String?
-  data        Json 
+  data        Json
   message     String
   status      Boolean
   createdAt   DateTime  @default(now())
@@ -473,3 +501,66 @@ model notification {
 
   user user @relation(fields: [user_id], references: [id])
 }
+
+model payment_purchase {
+  id                  String    @id @default(uuid())
+  d_purchase_id       String
+  payment_type        String
+  payment_name        String
+  payment_currency    String
+  payment_date        DateTime
+  payment_price       String
+  payment_discount    String
+  payment_total_price Int
+  payment_net_balance Int
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime?
+  deletedAt           DateTime?
+
+  d_purchase d_purchase @relation(fields: [d_purchase_id], references: [id])
+
+  // payment_purchase_detail payment_purchase_detail[]
+}
+
+model d_sale_agentcy {
+  id           String    @id @default(uuid())
+  d_purchase_id  String
+  d_agentcy_id String
+  status       Boolean?  @default(false)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime?
+  deletedAt    DateTime?
+
+  d_sale_agentcy_file d_sale_agentcy_file[]
+
+  d_agentcy  d_agentcy  @relation(fields: [d_agentcy_id], references: [id])
+  d_purchase d_purchase @relation(fields: [d_purchase_id], references: [id])
+}
+
+model d_sale_agentcy_file {
+  id           String    @id @default(uuid())
+  d_sale_agent_id String
+  d_purchase_id  String
+  file_name    String
+  file_path    String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime?
+  deletedAt    DateTime?
+
+  d_sale_agentcy d_sale_agentcy @relation(fields: [d_sale_agent_id], references: [id])
+}
+
+// model payment_purchase_detail{
+//   id            String    @id @default(uuid())
+//   payment_id    String
+//   payment_type  String
+//   payment_name  String
+//   payment_date  DateTime
+//   payment_price String
+//   createdAt     DateTime  @default(now())
+//   updatedAt     DateTime?
+//   deletedAt     DateTime?
+
+//   payment_purchase payment_purchase @relation(fields: [payment_id], references: [id])
+
+// }
