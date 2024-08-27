@@ -16,7 +16,7 @@ class CsStatusRepository {
                     d_purchase_id: id
                 },
                 orderBy: {
-                    createdAt: 'desc'
+                    number_key: 'desc',
                 }
             });
             return cs_purchase;
@@ -26,6 +26,20 @@ class CsStatusRepository {
             throw new Error(err);
         }
     }
+
+    async create(tx: any, data: any,key:string): Promise<any> { //create
+        try{
+            const id = await tx[key].create({
+                data: data
+            });
+            return id;
+        }
+        catch(err:any){
+            console.log("error",err)
+            throw new Error(err);
+        }
+    }
+
 
     async getBookcabinet(id: string): Promise<any> {
         try {
@@ -95,18 +109,7 @@ class CsStatusRepository {
 
     }
 
-    async createBookcabinet(tx: any, data: any): Promise<any> {
-        try{
-            const book_cabinet = await tx.bookcabinet.create({
-                data: data
-            });
-            return book_cabinet;
-        }
-        catch(err:any){
-            throw new Error(err);
-        }
-    }
-
+  
     
 
     async createBookcabinetPicture(tx: any, data: any): Promise<any> {
@@ -122,24 +125,41 @@ class CsStatusRepository {
     }
 
 
-    async createReceive(tx: any, data: any): Promise<any> {
-        try{
-            const receive = await tx.receive.create({
-                data: data
-            });
-            return receive;
-        }
-        catch(err:any){
-            throw new Error(err);
-        }
-    }
-
     async createReceivePicture(tx: any, data: any): Promise<any> {
         try{
             const receive_picture = await tx.Receive_picture.create({
                 data: data
             });
             return receive_picture;
+        }
+        catch(err:any){
+            throw new Error(err);
+        }
+    }
+
+    async createContainProduct(tx: any, data: any,id:string): Promise<any> { //createProduct
+        try{
+            const contain = await tx.Contain_product.createMany({
+                data: data.map((item:any) => {
+                    return {
+                        ...item,
+                        contain_id: id
+                    }
+                })
+            });
+            return contain;
+        }
+        catch(err:any){
+            throw new Error(err);
+        }
+    }
+
+    async createContainPicture(tx: any, data: any): Promise<any> {
+        try{
+            const contain_picture = await tx.Contain_picture.create({
+                data: data
+            });
+            return contain_picture;
         }
         catch(err:any){
             throw new Error(err);

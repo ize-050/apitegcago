@@ -38,6 +38,7 @@ router.post('/createReceive/:id',authMiddleware, upload.array("receive_picture",
 
 //contain
 router.get("/getContain/:id",authMiddleware, (req, res) => csStatusController.getContain(req, res));
+router.post('/createContain/:id',authMiddleware, upload.any(),(req, res)=> csStatusController.createContain(req, res));
 
 
 module.exports = router

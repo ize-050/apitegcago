@@ -75,6 +75,8 @@ async getDataCsStatus(req: Request, res: Response): Promise<any> {
             files : req.files
         }
 
+        
+
         const csStatusData = await this.csStatusService.createReceive(data);
         return res.status(200).json(csStatusData);
     }
@@ -83,7 +85,6 @@ async getDataCsStatus(req: Request, res: Response): Promise<any> {
         res.status(500).json(err)
     }
  }  
-
 
 
  async getReceipt(req: Request, res: Response): Promise<any> {
@@ -97,6 +98,22 @@ async getDataCsStatus(req: Request, res: Response): Promise<any> {
         res.status(500).json(err)
     }
  }
+
+ async createContain(req: Request, res: Response): Promise<any> {
+    try{
+        const data = {
+            ...req.body,
+            files : req.files
+        }
+        const csStatusData = await this.csStatusService.createContain(data);
+        return res.status(200).json(csStatusData);
+    }
+    catch(err:any){
+        console.log('Error Notification', err)
+        res.status(500).json(err)
+    }
+}
+ 
 
 }
 

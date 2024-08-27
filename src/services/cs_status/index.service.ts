@@ -65,18 +65,18 @@ export class CSStatusService {
   }
 
   async getContain(id: string): Promise<any> {
-    try{
-        const getContain = await this.csStatusRepository.getContain(id);
-        const response = {
-            data: getContain,
-            statusCode: 200,
-        };
-        return response;
-    }catch(err:any){
-        console.log('Error getContain', err)
-        throw new Error(err);
+    try {
+      const getContain = await this.csStatusRepository.getContain(id);
+      const response = {
+        data: getContain,
+        statusCode: 200,
+      };
+      return response;
+    } catch (err: any) {
+      console.log("Error getContain", err);
+      throw new Error(err);
     }
-    }
+  }
 
   async createBookcabinet(RequestData: Partial<any>): Promise<any> {
     try {
@@ -95,7 +95,7 @@ export class CSStatusService {
           const cs_purchaseData = {
             d_purchase_id: RequestData.d_purchase_id,
             status_key: "Bookcabinet",
-            number_key:1,
+            number_key: 1,
             status_name: "จองตู้",
             status_active: true,
           };
@@ -113,9 +113,10 @@ export class CSStatusService {
             data_entering: RequestData.data_entering,
           };
 
-          const book_cabinet = await this.csStatusRepository.createBookcabinet(
+          const book_cabinet = await this.csStatusRepository.create(
             tx,
-            create_book_cabinet
+            create_book_cabinet,
+            "bookcabinet"
           );
 
           if (RequestData.files.length > 0) {
@@ -193,7 +194,7 @@ export class CSStatusService {
           const cs_purchaseData = {
             d_purchase_id: RequestData.d_purchase_id,
             status_key: "Receive",
-            number_key:2,
+            number_key: 2,
             status_name: "รับตู้",
             status_active: true,
           };
@@ -209,9 +210,10 @@ export class CSStatusService {
             container_no: RequestData.container_no,
           };
 
-          const receive_id = await this.csStatusRepository.createReceive(
+          const receive_id = await this.csStatusRepository.create(
             tx,
-            create_book_cabinet
+            create_book_cabinet,
+            "receive"
           );
 
           if (RequestData.files.length > 0) {
@@ -240,6 +242,108 @@ export class CSStatusService {
                 title: "CS (รับตู้)",
                 subject_key: RequestData.d_purchase_id,
                 message: `Cs รับตู้ เลขที่:${purchase_detail.book_number}`,
+                status: false,
+                data: {},
+              };
+              RequestSentNotifaction.data = JSON.stringify(
+                RequestSentNotifaction
+              );
+              const notification = await this.notificationRepo.sendNotification(
+                RequestSentNotifaction
+              );
+            }
+          }
+        } catch (err: any) {
+          console.log("createFail", err);
+          throw new Error(err);
+        }
+      });
+      const response = {
+        message: "บันทึกข้อมูลสำเร็จ",
+        statusCode: 200,
+      };
+      return response;
+    } catch (err: any) {
+      console.log("createFail", err);
+      throw new Error(err);
+    }
+  }
+
+  async createContain(RequestData: Partial<any>): Promise<any> {
+    try {
+      const uploadDir = path.join(
+        "public",
+        "images",
+        "contain",
+        `${RequestData.d_purchase_id}`
+      );
+
+      await fs.mkdirSync(uploadDir, { recursive: true });
+
+      await this.prisma.$transaction(async (tx) => {
+        try {
+          console.log("RequestData", RequestData);
+          const cs_purchaseData = {
+            d_purchase_id: RequestData.d_purchase_id,
+            status_key: "Contain",
+            number_key: 3,
+            status_name: "บรรจุตู้",
+            status_active: true,
+          };
+
+          const cs_purchase = await this.csStatusRepository.createCsPurchase(
+            tx,
+            cs_purchaseData
+          );
+          const create_contain = {
+            cs_purchase_id: cs_purchase.id,
+            date_booking: RequestData.date_booking,
+            catbon_total: RequestData.catbon_total,
+            cmb_total: RequestData.cmb_total,
+            nw_total: RequestData.nw_total,
+            gw_total: RequestData.gw_total,
+          };
+
+          const contain = await this.csStatusRepository.create(
+            tx,
+            create_contain,
+            "contain"
+          );
+
+          const contain_product =
+            await this.csStatusRepository.createContainProduct(
+              tx,
+              JSON.parse(RequestData.items),
+              contain.id
+            );
+
+          if (RequestData.files.length > 0) {
+            for (let file of RequestData.files) {
+              const tempFilePath = file.path;
+
+              const d_image = {
+                contain_id: contain.id,
+                picture_name: file.filename,
+                picture_path: `/images/contain/${RequestData.d_purchase_id}/${file.filename}`,
+                key: file.fieldname,
+              };
+              const contain_picture =
+                await this.csStatusRepository.createContainPicture(tx, d_image);
+
+              if (contain_picture) {
+                const newFilePath = path.join(uploadDir, file.filename);
+                await fs.renameSync(tempFilePath, newFilePath);
+              }
+              const purchase_detail = await this.csService.getPurchaseDetail(
+                RequestData.d_purchase_id
+              );
+              let RequestSentNotifaction = {
+                user_id: purchase_detail.d_purchase_emp[0].user_id,
+                purchase_id: RequestData.d_purchase_id,
+                link_to: `purchase/content/` + RequestData.d_purchase_id,
+                title: "CS (บรรจุตู้)",
+                subject_key: RequestData.d_purchase_id,
+                message: `Cs บรรจุตู้ เลขที่:${purchase_detail.book_number}`,
                 status: false,
                 data: {},
               };

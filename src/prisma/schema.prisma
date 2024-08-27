@@ -643,7 +643,7 @@ model Receive_picture{
 model  Contain{ //บรรจุตู้
   id              String    @id @default(uuid())
   cs_purchase_id  String  @unique
-  date_booking    DateTime? // วันที่บรรจุตู้
+  date_booking    String? // วันที่บรรจุตู้
   carbon_total    String? // คาร์บอนทั้งหมด
   cmb_total       String? // คิวบิคเมตรทั้งหมด
   nw_total        String? // น้ำหนักสุทธิทั้งหมด
