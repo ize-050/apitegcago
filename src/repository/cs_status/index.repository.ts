@@ -81,9 +81,10 @@ class CsStatusRepository {
         try {
             const getContain = await this.prisma.contain.findFirst({
                 where: {
-                    id: id
+                    cs_purchase_id: id
                 },
                 include: {
+                    Contain_product: true,
                     Contain_picture: true
                 }
             });
