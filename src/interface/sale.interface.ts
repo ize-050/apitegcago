@@ -50,6 +50,9 @@ export interface RequestPurchase{
     d_route : string;
     d_transport:string;
     d_address_origin_la?: string;
+    date_cabinet?: string;
+    link_d_origin?: string;
+    link_d_destination?: string;
     d_address_origin_long?: string;
     d_address_destination_la?: string;
     d_address_destination_long?: string;

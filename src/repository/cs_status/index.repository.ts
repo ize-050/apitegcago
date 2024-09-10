@@ -27,6 +27,57 @@ class CsStatusRepository {
         }
     }
 
+    async getDocumentStatus(id: string): Promise<any> {
+        try {
+            const document = await this.prisma.cs_document.findFirst({
+                where: {
+                    cs_purchase_id: id
+                },
+                include: {
+                    Cs_document_file: true
+                }
+            });
+            return document;
+        }
+        catch (err: any) {
+            console.log('Error getDocumentStatus', err)
+            throw new Error(err);
+        }
+    }
+
+    async getDeparture(id: string): Promise<any> {
+        try {
+            const departure = await this.prisma.proveDeparture.findFirst({
+                where: {
+                    cs_purchase_id: id
+                },
+            });
+            return departure;
+        }
+        catch (err: any) {
+            console.log('Error getDeparture', err)
+            throw new Error(err);
+        }
+    }
+
+    async getWaitRelease(id: string): Promise<any> {
+        try {
+            const wait_release = await this.prisma.waitrelease.findFirst({
+                where: {
+                    cs_purchase_id: id
+                },
+                include: {
+                    waitrelease_file: true
+                }
+            });
+            return wait_release;
+        }
+        catch (err: any) {
+            console.log('Error getWaitRelease', err)
+            throw new Error(err);
+        }
+    }
+
     async create(tx: any, data: any,key:string): Promise<any> { //create
         try{
             const id = await tx[key].create({
@@ -163,6 +214,19 @@ class CsStatusRepository {
             return contain_picture;
         }
         catch(err:any){
+            throw new Error(err);
+        }
+    }
+
+    async createDocument(tx: any, data: any,key:string): Promise<any> { //create
+        try{
+            const id = await tx[key].create({
+                data: data
+            });
+            return id;
+        }
+        catch(err:any){
+            console.log("errorcreateDocument",err)
             throw new Error(err);
         }
     }

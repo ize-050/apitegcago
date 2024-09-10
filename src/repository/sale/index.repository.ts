@@ -306,6 +306,9 @@ class SaleRepository {
             }
           }
         },
+        orderBy:{
+          createdAt: 'desc'
+        },
         include: {
           d_product: {
             include: {

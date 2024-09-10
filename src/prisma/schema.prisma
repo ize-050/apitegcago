@@ -210,6 +210,7 @@ model d_purchase {
   d_origin                   String?
   d_destination              String?
   d_size_cabinet             String?
+  date_cabinet               String? //วันที่โหลดตู้
   d_weight                   String?
   d_address_origin           String?
   d_address_origin_la        String?
@@ -217,6 +218,8 @@ model d_purchase {
   d_address_destination      String?
   d_address_destination_la   String? //ตำแหน่งปลายทาง
   d_address_destination_long String? //ตำแหน่งปลายทาง
+  link_d_origin              String?
+  link_d_destination         String?
   d_refund_tag               String?
   d_truck                    String?
   d_etc                      String?
@@ -576,11 +579,17 @@ model CS_Purchase{
   deletedAt       DateTime?
 
   d_purchase  d_purchase @relation(fields: [d_purchase_id], references: [id])
-  Bookcabinet Bookcabinet?
-  Receive  Receive?
-  Contain Contain?
-  Cs_document Cs_document?
-  ProveDeparture ProveDeparture?
+  Bookcabinet Bookcabinet? //จองตู้
+  Receive  Receive? //รับตู้
+  Contain Contain? //บรรจุตู้
+  Cs_document Cs_document? //จัดทำเอกสาร
+  ProveDeparture ProveDeparture? //ยืนยันวันที่ออกเดินทาง
+  waitrelease waitrelease? //รอตรวจปล่อย
+  cs_inspection cs_inspection? //ปล่อยตรวจเรียบร้อย
+  cs_wait_destination cs_wait_destination? //กำลังส่งไปยังปลายทาง
+  cs_already_sent cs_already_sent? //ส่งเรียบร้อย
+  cs_return_cabinet cs_return_cabinet? //คืนตู้
+  
 }
 
 model Bookcabinet{ //จองตู้
@@ -591,6 +600,7 @@ model Bookcabinet{ //จองตู้
   agentcy_id      String? // บริษัทเรือ
   agentcy_etc     String? // สายเรือ
   date_entering   DateTime? // วันที่เข้าบรรจุตู้
+  time_entering   String? // เวลาเข้าบรรจุตู้
   createdAt       DateTime  @default(now())
   updatedAt       DateTime?
   deletedAt       DateTime?
@@ -616,14 +626,16 @@ model Receive{ //รับตู้
   id              String    @id @default(uuid())
   cs_purchase_id  String  @unique
   date_booking  String? // วันที่รับตู้
-  so_no    String? // SO/NO
+  so_no           String? // SO/NO
   container_no      String? // Container No
+  phone_no        String? // เบอร์โทรศัพท์คนขับรถ
+  license_plate  String? // ทะเบียนรถ
   createdAt       DateTime  @default(now())
   updatedAt       DateTime?
   deletedAt       DateTime?
 
   CS_Purchase  CS_Purchase @relation(fields: [cs_purchase_id], references: [id])
-
+  
 
   Receive_picture Receive_picture[]
 }
@@ -688,13 +700,13 @@ model Contain_picture{
 model  Cs_document{ //จัดทำเอกสาร
   id              String    @id @default(uuid())
   cs_purchase_id  String  @unique
-  document_invoice_date   DateTime? // วันที่ออกใบแจ้งหนี้
-  document_packinglist     DateTime? // เลขที่ใบแจ้งหนี้
-  document_draft   DateTime? // F/e
-  document_etc     DateTime? // ใบอนุญาตอื่นๆ
-  document_draft_invoice DateTime? // ใบแจ้งหนี้
-  document_draft_bl DateTime? // Draft BL
-  document_master_bl DateTime? // Master BL
+  document_invoice_date   String? // วันที่ออกใบแจ้งหนี้
+  document_packinglist     String? // เลขที่ใบแจ้งหนี้
+  document_draft   String? // F/e
+  document_etc     String? // ใบอนุญาตอื่นๆ
+  document_draft_invoice String? // ใบแจ้งหนี้
+  document_draft_bl String? // Draft BL
+  document_master_bl String? // Master BL
 
   CS_Purchase  CS_Purchase @relation(fields: [cs_purchase_id], references: [id])
   Cs_document_file Cs_document_file[]
@@ -719,8 +731,8 @@ model Cs_document_file{
 model ProveDeparture{ //ยืนยันวันที่ออกเดินทาง
   id              String    @id @default(uuid())
   cs_purchase_id  String  @unique
-  date_etd        DateTime? // วันที่ออกเรือ
-  date_eta        DateTime? // วันที่เข้าเรือ
+  date_etd        String? // วันที่ออกเรือ
+  date_eta        String? // วันที่เข้าเรือ
   post_origin     String? // ต้นทาง
   post_destination String? // ปลายทาง
   vessel_name     String? // ชื่อเรือ
@@ -729,4 +741,167 @@ model ProveDeparture{ //ยืนยันวันที่ออกเดิ�
   deletedAt       DateTime?
 
   CS_Purchase  CS_Purchase @relation(fields: [cs_purchase_id], references: [id])
+}
+
+model waitrelease { //รอตรวจปล่อย
+  id              String    @id @default(uuid())
+  cs_purchase_id  String  @unique
+  date_planing  String? // วันที่วางแผน
+  date_receive  String? // วันที่รับ
+  dem_free_time  String? // วันที่ฟรี
+  demurrage_dem_date  String? // วันที่ค่าเช่า
+  detention_det_date  String? // วันที่ค่าปรับ
+  license_plate  String? // ทะเบียนรถ
+  location_exchange  String? // สถานที่แลกเปลี่ยน
+  phone_number  String? // เบอร์โทรศัพท์
+  terminal_release  String? // สถานที่ปล่อย
+  type_car  String? // ประเภทรถ
+  company_car  String? // บริษัทรถ
+
+  det_free_time  String? // วันที่ฟรี
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime?
+  deletedAt       DateTime?
+  
+
+  CS_Purchase  CS_Purchase @relation(fields: [cs_purchase_id], references: [id])
+  waitrelease_file waitrelease_file[]
+
+}
+
+model waitrelease_file{ //รอตรวจปล่อยไฟล์
+  id              String    @id @default(uuid())
+  waitrelease_id  String
+  file_name       String
+  file_path       String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime?
+  deletedAt       DateTime?
+  waitrelease waitrelease @relation(fields: [waitrelease_id], references: [id])
+}
+
+model cs_inspection{
+  id              String    @id @default(uuid())
+  cs_purchase_id  String  @unique
+  shipping  String? // ผู้ดูแล
+  date_release  String? // วันที่ปล่อย
+  date_do   String? // วันที่ DO
+  date_card  String? // วันที่การ์ดรับตุ้
+  date_return_document  String? // วันที่เอกสารคืนตุ้
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime?
+  deletedAt       DateTime?
+  
+
+  CS_Purchase  CS_Purchase @relation(fields: [cs_purchase_id], references: [id])
+  cs_inspection_file cs_inspection_file[]
+  cs_wait_destination cs_wait_destination?
+
+}
+
+model cs_inspection_file{ //รอตรวจปล่อยไฟล์
+  id              String    @id @default(uuid())
+  cs_inspection_id  String 
+  file_name       String
+  file_key        String
+  file_path       String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime?
+  deletedAt       DateTime?
+  cs_inspection cs_inspection @relation(fields: [cs_inspection_id], references: [id])
+}
+
+model cs_wait_destination{ //กำลังส่งไปยังปลายทาง
+  id             String    @id @default(uuid())
+  cs_purchase_id String    @unique
+  cs_inspection_id String @unique
+  date_receiving_cabinet String? // วันที่รับตู้
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime?
+  deletedAt       DateTime?
+
+  CS_Purchase  CS_Purchase @relation(fields: [cs_purchase_id], references: [id])
+  cs_inspection cs_inspection @relation(fields: [cs_inspection_id], references: [id])
+  cs_wait_destination_file cs_wait_destination_file[]
+
+
+}
+
+model cs_wait_destination_file{ //รอตรวจปล่อยไฟล์
+  id              String    @id @default(uuid())
+  wait_destination_id  String
+  file_name       String
+  file_path       String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime?
+  deletedAt       DateTime?
+
+  cs_wait_destination cs_wait_destination @relation(fields: [wait_destination_id], references: [id])
+}
+
+
+model cs_already_sent { //ส่งเรียบร้อย
+  id             String    @id @default(uuid())
+  cs_purchase_id String    @unique
+  date_out_arrival      String? // วันที่ออกจากท่าเรือ
+  etc   String? // หมายเหตุ
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime?
+  deletedAt       DateTime?
+
+  CS_Purchase  CS_Purchase @relation(fields: [cs_purchase_id], references: [id])
+  cs_already_sent_file cs_already_sent_file[]
+}
+
+model cs_already_sent_file{ //ส่งเรียบร้อยไฟล์
+  id              String    @id @default(uuid())
+  cs_already_sent_id  String
+  file_name       String
+  file_path       String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime?
+  deletedAt       DateTime?
+  
+  cs_already_sent cs_already_sent @relation(fields: [cs_already_sent_id], references: [id])
+}
+
+
+model cs_return_cabinet { 
+  id String @id @default(uuid())
+  cs_purchase_id String @unique
+  date_return_cabinet String? // วันที่คืนตู้
+  cabinet Boolean? // yes / no
+  date_cabinet String? // วันที่ซ่อมตู้
+  return_deposit Boolean? // คืนมัดจำ
+  date_deposit String? // วันที่คืนมัดจำ
+  date_request String? // วันที่ขอมัดจำตู้
+  return_cabinet Boolean? // คืนตมัดจำตู้่
+  price_cabinet String? // ยอดมัดจำ
+  deposit Boolean? // มัดจำ
+  date_d_deposit  String? // วันที่มัดจำ
+  price_d_deposit String? // ยอดมัดจำ
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime?
+  deletedAt DateTime?
+
+  CS_Purchase CS_Purchase @relation(fields: [cs_purchase_id], references: [id])
+  cs_return_cabinet_file cs_return_cabinet_file[]
+}
+
+
+model cs_return_cabinet_file {
+  id String @id @default(uuid())
+  return_cabinet_id String
+  file_name String
+  file_path String
+  key String
+  createdAt DateTime @default(now())
+  updatedAt DateTime?
+  deletedAt DateTime?
+
+  cs_return_cabinet cs_return_cabinet @relation(fields: [return_cabinet_id], references: [id])
 }

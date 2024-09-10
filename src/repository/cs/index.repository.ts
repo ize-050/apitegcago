@@ -19,6 +19,7 @@ class CsRepository {
               user: true,
             },
           },
+          
           d_purchase_status: true,
           
         },
@@ -32,6 +33,9 @@ class CsRepository {
               }
             }
           ]
+        },
+        orderBy:{
+          createdAt: 'desc'
         },
       });
 

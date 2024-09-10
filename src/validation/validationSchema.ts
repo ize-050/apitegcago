@@ -25,6 +25,9 @@ export const ValidationsubmitEstimate =z.object({
   d_route : z.string({ message: "Estimate_route is missing"}),
   d_transport :z.string({message:"Estimate_transport is missing"}),
   d_term : z.string({message:"Estimate_Term is missing"}),
+  link_d_origin:z.string({message:"Estimate_link_origin is missing"}),
+  link_d_destination:z.string({message:"Estimate_link_destination is missing"}),
+  date_cabinet:z.string({message:"Estimate_date_cabinet is missing"}),
   d_product:z.string({message:"Estimate_product is missing"}),
   // d_image: z.instanceof(File, { message: "d_image must be a File object" }),
   d_origin :z.string({message:"Estimate_origin is missing"}), //ต้นทาง

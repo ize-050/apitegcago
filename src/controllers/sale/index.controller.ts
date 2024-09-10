@@ -442,14 +442,8 @@ export class SaleController {
         // userId: userId,
       };
 
-      console.log("req.files", request)
-      //  for (let file of ) {
-      //     console.log('file',file)
-      //   }
       const response = await this.saleservice.updateEstimate(request);
-      res.status(200).json({
-        message: "dddd"
-      });
+      res.status(200).json(response);
     } catch (err: any) {
       res.status(500).json(err);
     }
