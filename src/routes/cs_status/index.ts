@@ -68,4 +68,9 @@ router.get('/getDeparture/:id',authMiddleware, (req, res) =>  csStatusController
 //wait_release
 router.post('/createWaitRelease/:id',  upload.any() ,authMiddleware,(req, res)=> csStatusController.createWaitRelease(req, res));
 router.get('/getWaitRelease/:id', authMiddleware, (req, res) =>  csStatusController.getWaitRelease(req, res));
+
+
+//update
+router.post('/createSuccessRelease/:id', upload.any(), authMiddleware, (req, res) => csStatusController.createSuccessRelease(req, res));
+router.get('/getSuccessRelease/:id', authMiddleware, (req, res) => csStatusController.getSuccessRelease(req, res));
 module.exports = router

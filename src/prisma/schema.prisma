@@ -804,7 +804,7 @@ model cs_inspection_file{ //รอตรวจปล่อยไฟล์
   id              String    @id @default(uuid())
   cs_inspection_id  String 
   file_name       String
-  file_key        String
+  key        String
   file_path       String
   createdAt       DateTime  @default(now())
   updatedAt       DateTime?

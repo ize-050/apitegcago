@@ -107,15 +107,30 @@ export class CSStatusService {
   }
 
   async getWaitRelease(id: string): Promise<any> {
+    try {
+      const getWaitRelease = await this.csStatusRepository.getWaitRelease(id);
+      const response = {
+        data: getWaitRelease,
+        statusCode: 200,
+      };
+      return response;
+    } catch (err: any) {
+      console.log("Error getWaitRelease", err);
+      throw new Error(err);
+    }
+  }
+
+  async getSuccessRelease(id: string): Promise<any> {
     try{
-        const getWaitRelease = await this.csStatusRepository.getWaitRelease(id);
+        const getSuccessRelease = await this.csStatusRepository.getSuccessRelease(id);
         const response = {
-            data: getWaitRelease,
+            data: getSuccessRelease,
             statusCode: 200,
         };
         return response;
-    }catch(err:any){
-        console.log("Error getWaitRelease", err);
+    }
+    catch (err: any) {
+        console.log("Error getSuccessRelease", err);
         throw new Error(err);
     }
 }
@@ -684,4 +699,101 @@ export class CSStatusService {
     }
   }
 
+  async createSuccessRelease(RequestData: Partial<any>): Promise<any> {
+    try {
+        const uploadDir = path.join(
+          "public",
+          "images",
+          "success_release",
+          `${RequestData.d_purchase_id}`
+        );
+        await fs.mkdirSync(uploadDir, { recursive: true });
+  
+        await this.prisma.$transaction(async (tx) => {
+          try {
+            const cs_purchaseData = {
+              d_purchase_id: RequestData.d_purchase_id,
+              status_key: "Released",
+              number_key: 8,
+              status_name: "ปล่อยตรวจเรียบร้อย",
+              status_active: true,
+            };
+  
+            const cs_purchase = await this.csStatusRepository.createCsPurchase(
+              tx,
+              cs_purchaseData
+            );
+            const success_release = {
+              cs_purchase_id: cs_purchase.id,
+              shipping : RequestData.shipping,
+              date_release: RequestData.date_release,
+              date_do: RequestData.date_do,
+              date_card: RequestData.date_card,
+              date_return_document: RequestData.date_return_document,
+              date_return_docu: RequestData.date_return_docu,         
+            };
+  
+            const document = await this.csStatusRepository.create(
+              tx,
+              success_release,
+              "cs_inspection"
+            );
+  
+            if (RequestData.files.length > 0) {
+              for (let file of RequestData.files) {
+                const tempFilePath = file.path;
+  
+                const d_image = {
+                  cs_inspection_id: document.id,
+                  file_name: file.filename,
+                  key: file.fieldname,
+                  file_path: `/images/success_release/${RequestData.d_purchase_id}/${file.filename}`,
+                };
+                const document_picture =
+                  await this.csStatusRepository.createDocument(
+                    tx,
+                    d_image,
+                    "cs_inspection_file"
+                  );
+  
+                if (document_picture) {
+                  const newFilePath = path.join(uploadDir, file.filename);
+                  await fs.renameSync(tempFilePath, newFilePath);
+                }
+                const purchase_detail = await this.csService.getPurchaseDetail(
+                  RequestData.d_purchase_id
+                );
+                let RequestSentNotifaction = {
+                  user_id: purchase_detail.d_purchase_emp[0].user_id,
+                  purchase_id: RequestData.d_purchase_id,
+                  link_to: `purchase/content/` + RequestData.d_purchase_id,
+                  title: "CS (ปล่อยตรวจเรียบร้อย)",
+                  subject_key: RequestData.d_purchase_id,
+                  message: `Cs ปล่อยตรวจเรียบร้อย เลขที่:${purchase_detail.book_number}`,
+                  status: false,
+                  data: {},
+                };
+                RequestSentNotifaction.data = JSON.stringify(
+                  RequestSentNotifaction
+                );
+                const notification = await this.notificationRepo.sendNotification(
+                  RequestSentNotifaction
+                );
+              }
+            }
+          } catch (err: any) {
+            console.log("createFail", err);
+            throw new Error(err);
+          }
+        });
+  
+        const response = {
+          message: "บันทึกข้อมูลสำเร็จ",
+          statusCode: 200,
+        };
+        return response;
+      } catch (err: any) {
+        throw new Error(err);
+      }
+    }
 }

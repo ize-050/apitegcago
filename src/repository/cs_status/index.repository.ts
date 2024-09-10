@@ -78,6 +78,24 @@ class CsStatusRepository {
         }
     }
 
+    async getSuccessRelease(id: string): Promise<any> {
+        try {
+            const success_release = await this.prisma.cs_inspection.findFirst({
+                where: {
+                    cs_purchase_id: id
+                },
+                include: {
+                    cs_inspection_file: true
+                }
+            });
+            return success_release;
+        }
+        catch (err: any) {
+            console.log('Error getSuccessRelease', err)
+            throw new Error(err);
+        }
+    }
+
     async create(tx: any, data: any,key:string): Promise<any> { //create
         try{
             const id = await tx[key].create({

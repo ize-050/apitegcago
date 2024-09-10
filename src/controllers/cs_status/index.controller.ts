@@ -72,6 +72,17 @@ export class CSStatusController {
     }
   }
 
+  async getSuccessRelease(req: Request, res: Response): Promise<any> {
+    try {
+      const id = req.params.id;
+      const csStatusData = await this.csStatusService.getSuccessRelease(id);
+      return res.status(200).json(csStatusData);
+    } catch (err: any) {
+      console.log("Error Notification", err);
+      res.status(500).json(err);
+    }
+  }
+
   async createBookcabinet(req: Request, res: Response): Promise<any> {
     try {
       const userId = req?.userId;
@@ -179,6 +190,22 @@ export class CSStatusController {
       return res.status(200).json(csStatusData);
     } catch (err: any) {
       console.log("Error createWaitRelease", err);
+      res.status(500).json(err);
+    }
+  }
+
+
+  async createSuccessRelease(req: Request, res: Response): Promise<any> { //ปล่อยเรียบร้อย
+    try {
+      const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+      const data = {
+        ...req.body,
+        files: files,
+      };
+      const csStatusData = await this.csStatusService.createSuccessRelease(data);
+      return res.status(200).json(csStatusData);
+    } catch (err: any) {
+      console.log("Error createSuccessRelease", err);
       res.status(500).json(err);
     }
   }
