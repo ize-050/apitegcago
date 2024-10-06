@@ -106,6 +106,20 @@ export class CSStatusService {
     }
   }
 
+  async getLeave(id: string): Promise<any> {
+    try {
+      const getLeave = await this.csStatusRepository.getLeave(id);
+      const response = {
+        data: getLeave,
+        statusCode: 200,
+      };
+      return response;
+    } catch (err: any) {
+      console.log("Error getLeave", err);
+      throw new Error(err);
+    }
+  }
+
   async getWaitRelease(id: string): Promise<any> {
     try {
       const getWaitRelease = await this.csStatusRepository.getWaitRelease(id);
@@ -121,19 +135,48 @@ export class CSStatusService {
   }
 
   async getSuccessRelease(id: string): Promise<any> {
-    try{
-        const getSuccessRelease = await this.csStatusRepository.getSuccessRelease(id);
-        const response = {
-            data: getSuccessRelease,
-            statusCode: 200,
-        };
-        return response;
+    try {
+      const getSuccessRelease = await this.csStatusRepository.getSuccessRelease(
+        id
+      );
+      const response = {
+        data: getSuccessRelease,
+        statusCode: 200,
+      };
+      return response;
+    } catch (err: any) {
+      console.log("Error getSuccessRelease", err);
+      throw new Error(err);
     }
-    catch (err: any) {
-        console.log("Error getSuccessRelease", err);
-        throw new Error(err);
+  }
+
+  async getDestination(id: string): Promise<any> {
+    try {
+      const getDestination = await this.csStatusRepository.getDestination(id);
+      const response = {
+        data: getDestination,
+        statusCode: 200,
+      };
+      return response;
+    } catch (err: any) {
+      console.log("Error getDestination", err);
+      throw new Error(err);
     }
-}
+  }
+
+  async getSentSuccess(id: string): Promise<any> {
+    try {
+      const getSentSuccess = await this.csStatusRepository.getSentSuccess(id);
+      const response = {
+        data: getSentSuccess,
+        statusCode: 200,
+      };
+      return response;
+    } catch (err: any) {
+      console.log("Error getSentSuccess", err);
+      throw new Error(err);
+    }
+  }
 
   async createBookcabinet(RequestData: Partial<any>): Promise<any> {
     try {
@@ -146,7 +189,7 @@ export class CSStatusService {
 
       await fs.mkdirSync(uploadDir, { recursive: true });
 
-      await this.prisma.$transaction(async (tx) => {
+      const id = await this.prisma.$transaction(async (tx) => {
         try {
           console.log("RequestData", RequestData);
           const cs_purchaseData = {
@@ -164,11 +207,11 @@ export class CSStatusService {
           const create_book_cabinet = {
             cs_purchase_id: cs_purchase.id,
             date_receiving: RequestData.date_receiving,
+            date_entering: RequestData.date_entering,
             date_booking: RequestData.date_booking,
             time_entering: RequestData.time_entering,
             agentcy_id: RequestData.agentcy_id,
             agentcy_etc: RequestData.agent_boat,
-            data_entering: RequestData.data_entering,
           };
 
           const book_cabinet = await this.csStatusRepository.create(
@@ -196,35 +239,36 @@ export class CSStatusService {
                 const newFilePath = path.join(uploadDir, file.filename);
                 await fs.renameSync(tempFilePath, newFilePath);
               }
-
-              const purchase_detail = await this.csService.getPurchaseDetail(
-                RequestData.d_purchase_id
-              );
-
-              let RequestSentNotifaction = {
-                user_id: purchase_detail.d_purchase_emp[0].user_id,
-                purchase_id: RequestData.d_purchase_id,
-                link_to: `purchase/content/` + RequestData.d_purchase_id,
-                title: "CS (จองตู้)",
-                subject_key: RequestData.d_purchase_id,
-                message: `Cs จองตู้ เลขที่:${purchase_detail.book_number}`,
-                status: false,
-                data: {},
-              };
-              RequestSentNotifaction.data = JSON.stringify(
-                RequestSentNotifaction
-              );
-              const notification = await this.notificationRepo.sendNotification(
-                RequestSentNotifaction
-              );
             }
+            const purchase_detail = await this.csService.getPurchaseDetail(
+              RequestData.d_purchase_id
+            );
+
+            let RequestSentNotifaction = {
+              user_id: purchase_detail.d_purchase_emp[0].user_id,
+              purchase_id: RequestData.d_purchase_id,
+              link_to: `purchase/content/` + RequestData.d_purchase_id,
+              title: "CS (จองตู้)",
+              subject_key: RequestData.d_purchase_id,
+              message: `Cs จองตู้ เลขที่:${purchase_detail.book_number}`,
+              status: false,
+              data: {},
+            };
+            RequestSentNotifaction.data = JSON.stringify(
+              RequestSentNotifaction
+            );
+            const notification = await this.notificationRepo.sendNotification(
+              RequestSentNotifaction
+            );
           }
+          return cs_purchase.id;
         } catch (err: any) {
           console.log("createFail", err);
           throw new Error(err);
         }
       });
       const response = {
+        id: id,
         message: "บันทึกข้อมูลสำเร็จ",
         statusCode: 200,
       };
@@ -246,7 +290,7 @@ export class CSStatusService {
 
       await fs.mkdirSync(uploadDir, { recursive: true });
 
-      await this.prisma.$transaction(async (tx) => {
+      const id = await this.prisma.$transaction(async (tx) => {
         try {
           console.log("RequestData", RequestData);
           const cs_purchaseData = {
@@ -264,6 +308,8 @@ export class CSStatusService {
           const create_book_cabinet = {
             cs_purchase_id: cs_purchase.id,
             date_booking: RequestData.date_booking,
+            phone_no: RequestData.phone_no,
+            license_plate: RequestData.license_plate,
             so_no: RequestData.so_no,
             container_no: RequestData.container_no,
           };
@@ -290,33 +336,35 @@ export class CSStatusService {
                 const newFilePath = path.join(uploadDir, file.filename);
                 await fs.renameSync(tempFilePath, newFilePath);
               }
-              const purchase_detail = await this.csService.getPurchaseDetail(
-                RequestData.d_purchase_id
-              );
-              let RequestSentNotifaction = {
-                user_id: purchase_detail.d_purchase_emp[0].user_id,
-                purchase_id: RequestData.d_purchase_id,
-                link_to: `purchase/content/` + RequestData.d_purchase_id,
-                title: "CS (รับตู้)",
-                subject_key: RequestData.d_purchase_id,
-                message: `Cs รับตู้ เลขที่:${purchase_detail.book_number}`,
-                status: false,
-                data: {},
-              };
-              RequestSentNotifaction.data = JSON.stringify(
-                RequestSentNotifaction
-              );
-              const notification = await this.notificationRepo.sendNotification(
-                RequestSentNotifaction
-              );
             }
           }
+
+          const purchase_detail = await this.csService.getPurchaseDetail(
+            RequestData.d_purchase_id
+          );
+          let RequestSentNotifaction = {
+            user_id: purchase_detail.d_purchase_emp[0].user_id,
+            purchase_id: RequestData.d_purchase_id,
+            link_to: `purchase/content/` + RequestData.d_purchase_id,
+            title: "CS (รับตู้)",
+            subject_key: RequestData.d_purchase_id,
+            message: `Cs รับตู้ เลขที่:${purchase_detail.book_number}`,
+            status: false,
+            data: {},
+          };
+          RequestSentNotifaction.data = JSON.stringify(RequestSentNotifaction);
+          const notification = await this.notificationRepo.sendNotification(
+            RequestSentNotifaction
+          );
+
+          return cs_purchase.id;
         } catch (err: any) {
           console.log("createFail", err);
           throw new Error(err);
         }
       });
       const response = {
+        id: id,
         message: "บันทึกข้อมูลสำเร็จ",
         statusCode: 200,
       };
@@ -338,7 +386,7 @@ export class CSStatusService {
 
       await fs.mkdirSync(uploadDir, { recursive: true });
 
-      await this.prisma.$transaction(async (tx) => {
+      const id = await this.prisma.$transaction(async (tx) => {
         try {
           console.log("RequestData", RequestData);
           const cs_purchaseData = {
@@ -392,33 +440,34 @@ export class CSStatusService {
                 const newFilePath = path.join(uploadDir, file.filename);
                 await fs.renameSync(tempFilePath, newFilePath);
               }
-              const purchase_detail = await this.csService.getPurchaseDetail(
-                RequestData.d_purchase_id
-              );
-              let RequestSentNotifaction = {
-                user_id: purchase_detail.d_purchase_emp[0].user_id,
-                purchase_id: RequestData.d_purchase_id,
-                link_to: `purchase/content/` + RequestData.d_purchase_id,
-                title: "CS (บรรจุตู้)",
-                subject_key: RequestData.d_purchase_id,
-                message: `Cs บรรจุตู้ เลขที่:${purchase_detail.book_number}`,
-                status: false,
-                data: {},
-              };
-              RequestSentNotifaction.data = JSON.stringify(
-                RequestSentNotifaction
-              );
-              const notification = await this.notificationRepo.sendNotification(
-                RequestSentNotifaction
-              );
             }
           }
+          const purchase_detail = await this.csService.getPurchaseDetail(
+            RequestData.d_purchase_id
+          );
+          let RequestSentNotifaction = {
+            user_id: purchase_detail.d_purchase_emp[0].user_id,
+            purchase_id: RequestData.d_purchase_id,
+            link_to: `purchase/content/` + RequestData.d_purchase_id,
+            title: "CS (บรรจุตู้)",
+            subject_key: RequestData.d_purchase_id,
+            message: `Cs บรรจุตู้ เลขที่:${purchase_detail.book_number}`,
+            status: false,
+            data: {},
+          };
+          RequestSentNotifaction.data = JSON.stringify(RequestSentNotifaction);
+          const notification = await this.notificationRepo.sendNotification(
+            RequestSentNotifaction
+          );
+
+          return cs_purchase.id;
         } catch (err: any) {
           console.log("createFail", err);
           throw new Error(err);
         }
       });
       const response = {
+        id: id,
         message: "บันทึกข้อมูลสำเร็จ",
         statusCode: 200,
       };
@@ -439,7 +488,7 @@ export class CSStatusService {
       );
       await fs.mkdirSync(uploadDir, { recursive: true });
 
-      await this.prisma.$transaction(async (tx) => {
+      const id = await this.prisma.$transaction(async (tx) => {
         try {
           console.log("RequestData", RequestData);
           const cs_purchaseData = {
@@ -492,27 +541,27 @@ export class CSStatusService {
                 const newFilePath = path.join(uploadDir, file.filename);
                 await fs.renameSync(tempFilePath, newFilePath);
               }
-              const purchase_detail = await this.csService.getPurchaseDetail(
-                RequestData.d_purchase_id
-              );
-              let RequestSentNotifaction = {
-                user_id: purchase_detail.d_purchase_emp[0].user_id,
-                purchase_id: RequestData.d_purchase_id,
-                link_to: `purchase/content/` + RequestData.d_purchase_id,
-                title: "CS (จัดทำเอกสาร)",
-                subject_key: RequestData.d_purchase_id,
-                message: `Cs จัดทำเอกสาร เลขที่:${purchase_detail.book_number}`,
-                status: false,
-                data: {},
-              };
-              RequestSentNotifaction.data = JSON.stringify(
-                RequestSentNotifaction
-              );
-              const notification = await this.notificationRepo.sendNotification(
-                RequestSentNotifaction
-              );
             }
           }
+          const purchase_detail = await this.csService.getPurchaseDetail(
+            RequestData.d_purchase_id
+          );
+          let RequestSentNotifaction = {
+            user_id: purchase_detail.d_purchase_emp[0].user_id,
+            purchase_id: RequestData.d_purchase_id,
+            link_to: `purchase/content/` + RequestData.d_purchase_id,
+            title: "CS (จัดทำเอกสาร)",
+            subject_key: RequestData.d_purchase_id,
+            message: `Cs จัดทำเอกสาร เลขที่:${purchase_detail.book_number}`,
+            status: false,
+            data: {},
+          };
+          RequestSentNotifaction.data = JSON.stringify(RequestSentNotifaction);
+          const notification = await this.notificationRepo.sendNotification(
+            RequestSentNotifaction
+          );
+
+          return cs_purchase.id;
         } catch (err: any) {
           console.log("createFail", err);
           throw new Error(err);
@@ -520,6 +569,7 @@ export class CSStatusService {
       });
 
       const response = {
+        id: id,
         message: "บันทึกข้อมูลสำเร็จ",
         statusCode: 200,
       };
@@ -531,7 +581,7 @@ export class CSStatusService {
 
   async createDeparture(RequestData: Partial<any>): Promise<any> {
     try {
-      await this.prisma.$transaction(async (tx) => {
+      const id = await this.prisma.$transaction(async (tx) => {
         try {
           console.log("RequestData", RequestData);
           const cs_purchaseData = {
@@ -578,6 +628,7 @@ export class CSStatusService {
           const notification = await this.notificationRepo.sendNotification(
             RequestSentNotifaction
           );
+          return cs_purchase.id;
         } catch (err: any) {
           console.log("createFail", err);
           throw new Error(err);
@@ -585,6 +636,7 @@ export class CSStatusService {
       });
 
       const response = {
+        id: id,
         message: "บันทึกข้อมูลสำเร็จ",
         statusCode: 200,
       };
@@ -596,6 +648,107 @@ export class CSStatusService {
     }
   }
 
+  async createLeave(RequestData: Partial<any>): Promise<any> {
+    try {
+      const uploadDir = path.join(
+        "public",
+        "images",
+        "leave",
+        `${RequestData.d_purchase_id}`
+      );
+      await fs.mkdirSync(uploadDir, { recursive: true });
+
+      const id = await this.prisma.$transaction(async (tx) => {
+        try {
+          console.log("RequestData", RequestData);
+          const cs_purchaseData = {
+            d_purchase_id: RequestData.d_purchase_id,
+            status_key: "Leave",
+            number_key: 6,
+            status_name: "ออกเดินทาง",
+            status_active: true,
+          };
+
+          const cs_purchase = await this.csStatusRepository.createCsPurchase(
+            tx,
+            cs_purchaseData
+          );
+          const create_document = {
+            cs_purchase_id: cs_purchase.id,
+            date_hbl: RequestData?.date_hbl,
+            date_original_fe: RequestData?.date_original_fe,
+            date_surrender: RequestData?.date_surrender,
+            date_enter_doc: RequestData?.date_enter_doc,
+            file_enter_doc: RequestData?.file_enter_doc,
+            date_payment_do: RequestData?.date_payment_do,
+            amount_payment_do: RequestData?.amount_payment_do,
+          };
+
+          const leave = await this.csStatusRepository.create(
+            tx,
+            create_document,
+            "leave"
+          );
+
+          if (RequestData.files.length > 0) {
+            for (let file of RequestData.files) {
+              const tempFilePath = file.path;
+
+              const d_image = {
+                leave_id: leave.id,
+                file_name: file.filename,
+                key: file.fieldname,
+                file_path: `/images/leave/${RequestData.d_purchase_id}/${file.filename}`,
+              };
+              const document_picture =
+                await this.csStatusRepository.createDocument(
+                  tx,
+                  d_image,
+                  "Leavefile"
+                );
+
+              if (document_picture) {
+                const newFilePath = path.join(uploadDir, file.filename);
+                await fs.renameSync(tempFilePath, newFilePath);
+              }
+            }
+          }
+
+          const purchase_detail = await this.csService.getPurchaseDetail(
+            RequestData.d_purchase_id
+          );
+          let RequestSentNotifaction = {
+            user_id: purchase_detail.d_purchase_emp[0].user_id,
+            purchase_id: RequestData.d_purchase_id,
+            link_to: `purchase/content/` + RequestData.d_purchase_id,
+            title: "CS (ออกเดินทาง)",
+            subject_key: RequestData.d_purchase_id,
+            message: `Cs ออกเดินทาง เลขที่:${purchase_detail.book_number}`,
+            status: false,
+            data: {},
+          };
+          RequestSentNotifaction.data = JSON.stringify(RequestSentNotifaction);
+          const notification = await this.notificationRepo.sendNotification(
+            RequestSentNotifaction
+          );
+
+          return cs_purchase.id;
+        } catch (err: any) {
+          console.log("createFail", err);
+          throw new Error(err);
+        }
+      });
+
+      const response = {
+        id: id,
+        message: "บันทึกข้อมูลสำเร็จ",
+        statusCode: 200,
+      };
+      return response;
+    } catch (err: any) {
+      throw new Error(err);
+    }
+  }
   async createWaitRelease(RequestData: Partial<any>): Promise<any> {
     try {
       const uploadDir = path.join(
@@ -606,7 +759,7 @@ export class CSStatusService {
       );
       await fs.mkdirSync(uploadDir, { recursive: true });
 
-      await this.prisma.$transaction(async (tx) => {
+      const id = await this.prisma.$transaction(async (tx) => {
         try {
           const cs_purchaseData = {
             d_purchase_id: RequestData.d_purchase_id,
@@ -662,27 +815,28 @@ export class CSStatusService {
                 const newFilePath = path.join(uploadDir, file.filename);
                 await fs.renameSync(tempFilePath, newFilePath);
               }
-              const purchase_detail = await this.csService.getPurchaseDetail(
-                RequestData.d_purchase_id
-              );
-              let RequestSentNotifaction = {
-                user_id: purchase_detail.d_purchase_emp[0].user_id,
-                purchase_id: RequestData.d_purchase_id,
-                link_to: `purchase/content/` + RequestData.d_purchase_id,
-                title: "CS (รอตรวจปล่อย)",
-                subject_key: RequestData.d_purchase_id,
-                message: `Cs รอตรวจปล่อย เลขที่:${purchase_detail.book_number}`,
-                status: false,
-                data: {},
-              };
-              RequestSentNotifaction.data = JSON.stringify(
-                RequestSentNotifaction
-              );
-              const notification = await this.notificationRepo.sendNotification(
-                RequestSentNotifaction
-              );
             }
           }
+
+          const purchase_detail = await this.csService.getPurchaseDetail(
+            RequestData.d_purchase_id
+          );
+          let RequestSentNotifaction = {
+            user_id: purchase_detail.d_purchase_emp[0].user_id,
+            purchase_id: RequestData.d_purchase_id,
+            link_to: `purchase/content/` + RequestData.d_purchase_id,
+            title: "CS (รอตรวจปล่อย)",
+            subject_key: RequestData.d_purchase_id,
+            message: `Cs รอตรวจปล่อย เลขที่:${purchase_detail.book_number}`,
+            status: false,
+            data: {},
+          };
+          RequestSentNotifaction.data = JSON.stringify(RequestSentNotifaction);
+          const notification = await this.notificationRepo.sendNotification(
+            RequestSentNotifaction
+          );
+
+          return cs_purchase.id;
         } catch (err: any) {
           console.log("createFail", err);
           throw new Error(err);
@@ -690,6 +844,7 @@ export class CSStatusService {
       });
 
       const response = {
+        id: id,
         message: "บันทึกข้อมูลสำเร็จ",
         statusCode: 200,
       };
@@ -701,99 +856,311 @@ export class CSStatusService {
 
   async createSuccessRelease(RequestData: Partial<any>): Promise<any> {
     try {
-        const uploadDir = path.join(
-          "public",
-          "images",
-          "success_release",
-          `${RequestData.d_purchase_id}`
-        );
-        await fs.mkdirSync(uploadDir, { recursive: true });
-  
-        await this.prisma.$transaction(async (tx) => {
-          try {
-            const cs_purchaseData = {
-              d_purchase_id: RequestData.d_purchase_id,
-              status_key: "Released",
-              number_key: 8,
-              status_name: "ปล่อยตรวจเรียบร้อย",
-              status_active: true,
-            };
-  
-            const cs_purchase = await this.csStatusRepository.createCsPurchase(
-              tx,
-              cs_purchaseData
-            );
-            const success_release = {
-              cs_purchase_id: cs_purchase.id,
-              shipping : RequestData.shipping,
-              date_release: RequestData.date_release,
-              date_do: RequestData.date_do,
-              date_card: RequestData.date_card,
-              date_return_document: RequestData.date_return_document,
-              date_return_docu: RequestData.date_return_docu,         
-            };
-  
-            const document = await this.csStatusRepository.create(
-              tx,
-              success_release,
-              "cs_inspection"
-            );
-  
-            if (RequestData.files.length > 0) {
-              for (let file of RequestData.files) {
-                const tempFilePath = file.path;
-  
-                const d_image = {
-                  cs_inspection_id: document.id,
-                  file_name: file.filename,
-                  key: file.fieldname,
-                  file_path: `/images/success_release/${RequestData.d_purchase_id}/${file.filename}`,
-                };
-                const document_picture =
-                  await this.csStatusRepository.createDocument(
-                    tx,
-                    d_image,
-                    "cs_inspection_file"
-                  );
-  
-                if (document_picture) {
-                  const newFilePath = path.join(uploadDir, file.filename);
-                  await fs.renameSync(tempFilePath, newFilePath);
-                }
-                const purchase_detail = await this.csService.getPurchaseDetail(
-                  RequestData.d_purchase_id
+      const uploadDir = path.join(
+        "public",
+        "images",
+        "success_release",
+        `${RequestData.d_purchase_id}`
+      );
+      await fs.mkdirSync(uploadDir, { recursive: true });
+
+      const id = await this.prisma.$transaction(async (tx) => {
+        try {
+          const cs_purchaseData = {
+            d_purchase_id: RequestData.d_purchase_id,
+            status_key: "Released",
+            number_key: 8,
+            status_name: "ปล่อยตรวจเรียบร้อย",
+            status_active: true,
+          };
+
+          const cs_purchase = await this.csStatusRepository.createCsPurchase(
+            tx,
+            cs_purchaseData
+          );
+          const success_release = {
+            cs_purchase_id: cs_purchase.id,
+            shipping: RequestData.shipping,
+            date_release: RequestData.date_release,
+            date_do: RequestData.date_do,
+            date_card: RequestData.date_card,
+            date_return_document: RequestData.date_return_document,
+            date_return_docu: RequestData.date_return_docu,
+          };
+
+          const document = await this.csStatusRepository.create(
+            tx,
+            success_release,
+            "cs_inspection"
+          );
+
+          if (RequestData.files.length > 0) {
+            for (let file of RequestData.files) {
+              const tempFilePath = file.path;
+
+              const d_image = {
+                cs_inspection_id: document.id,
+                file_name: file.filename,
+                key: file.fieldname,
+                file_path: `/images/success_release/${RequestData.d_purchase_id}/${file.filename}`,
+              };
+              const document_picture =
+                await this.csStatusRepository.createDocument(
+                  tx,
+                  d_image,
+                  "cs_inspection_file"
                 );
-                let RequestSentNotifaction = {
-                  user_id: purchase_detail.d_purchase_emp[0].user_id,
-                  purchase_id: RequestData.d_purchase_id,
-                  link_to: `purchase/content/` + RequestData.d_purchase_id,
-                  title: "CS (ปล่อยตรวจเรียบร้อย)",
-                  subject_key: RequestData.d_purchase_id,
-                  message: `Cs ปล่อยตรวจเรียบร้อย เลขที่:${purchase_detail.book_number}`,
-                  status: false,
-                  data: {},
-                };
-                RequestSentNotifaction.data = JSON.stringify(
-                  RequestSentNotifaction
-                );
-                const notification = await this.notificationRepo.sendNotification(
-                  RequestSentNotifaction
-                );
+
+              if (document_picture) {
+                const newFilePath = path.join(uploadDir, file.filename);
+                await fs.renameSync(tempFilePath, newFilePath);
               }
             }
-          } catch (err: any) {
-            console.log("createFail", err);
-            throw new Error(err);
           }
-        });
-  
-        const response = {
-          message: "บันทึกข้อมูลสำเร็จ",
-          statusCode: 200,
-        };
-        return response;
-      } catch (err: any) {
-        throw new Error(err);
-      }
+
+          const purchase_detail = await this.csService.getPurchaseDetail(
+            RequestData.d_purchase_id
+          );
+          let RequestSentNotifaction = {
+            user_id: purchase_detail.d_purchase_emp[0].user_id,
+            purchase_id: RequestData.d_purchase_id,
+            link_to: `purchase/content/` + RequestData.d_purchase_id,
+            title: "CS (ปล่อยตรวจเรียบร้อย)",
+            subject_key: RequestData.d_purchase_id,
+            message: `Cs ปล่อยตรวจเรียบร้อย เลขที่:${purchase_detail.book_number}`,
+            status: false,
+            data: {},
+          };
+          RequestSentNotifaction.data = JSON.stringify(RequestSentNotifaction);
+          const notification = await this.notificationRepo.sendNotification(
+            RequestSentNotifaction
+          );
+
+          return cs_purchase.id;
+        } catch (err: any) {
+          console.log("createFail", err);
+          throw new Error(err);
+        }
+      });
+
+      const response = {
+        id: id,
+        message: "บันทึกข้อมูลสำเร็จ",
+        statusCode: 200,
+      };
+      return response;
+    } catch (err: any) {
+      throw new Error(err);
     }
+  }
+
+  async createDestination(RequestData: Partial<any>): Promise<any> {
+    try {
+      const uploadDir = path.join(
+        "public",
+        "images",
+        "destination",
+        `${RequestData.d_purchase_id}`
+      );
+      await fs.mkdirSync(uploadDir, { recursive: true });
+
+      const id = await this.prisma.$transaction(async (tx) => {
+        try {
+          const cs_purchaseData = {
+            d_purchase_id: RequestData.d_purchase_id,
+            status_key: "Destination",
+            number_key: 9,
+            status_name: "จัดส่งปลายทาง",
+            status_active: true,
+          };
+
+          const cs_purchase = await this.csStatusRepository.createCsPurchase(
+            tx,
+            cs_purchaseData
+          );
+
+          const re: any = await tx.cS_Purchase.findFirst({
+            select: {
+              id: true,
+            },
+            where: {
+              d_purchase_id: RequestData.d_purchase_id,
+              status_key: "WaitRelease",
+            },
+          });
+
+          const getData: any = await tx.waitrelease.findFirst({
+            where: {
+              cs_purchase_id: re.id,
+            },
+          });
+
+          const create_release = {
+            cs_purchase_id: cs_purchase.id,
+            waitrelease_id: getData.id,
+            date_receiving_cabinet: RequestData.date_receiving_cabinet,
+          };
+
+          const document = await this.csStatusRepository.create(
+            tx,
+            create_release,
+            "cs_wait_destination"
+          );
+
+          if (RequestData.files.length > 0) {
+            for (let file of RequestData.files) {
+              const tempFilePath = file.path;
+
+              const d_image = {
+                wait_destination_id: document.id,
+                file_name: file.filename,
+                file_path: `/images/destination/${RequestData.d_purchase_id}/${file.filename}`,
+              };
+              const document_picture =
+                await this.csStatusRepository.createDocument(
+                  tx,
+                  d_image,
+                  "cs_wait_destination_file"
+                );
+
+              if (document_picture) {
+                const newFilePath = path.join(uploadDir, file.filename);
+                await fs.renameSync(tempFilePath, newFilePath);
+              }
+            }
+            const purchase_detail = await this.csService.getPurchaseDetail(
+              RequestData.d_purchase_id
+            );
+            let RequestSentNotifaction = {
+              user_id: purchase_detail.d_purchase_emp[0].user_id,
+              purchase_id: RequestData.d_purchase_id,
+              link_to: `purchase/content/` + RequestData.d_purchase_id,
+              title: "CS (จัดส่งปลายทาง)",
+              subject_key: RequestData.d_purchase_id,
+              message: `Cs จัดส่งปลายทาง เลขที่:${purchase_detail.book_number}`,
+              status: false,
+              data: {},
+            };
+            RequestSentNotifaction.data = JSON.stringify(
+              RequestSentNotifaction
+            );
+            const notification = await this.notificationRepo.sendNotification(
+              RequestSentNotifaction
+            );
+          }
+          return cs_purchase.id;
+        } catch (err: any) {
+          console.log("createFail", err);
+          throw new Error(err);
+        }
+      });
+
+      const response = {
+        id: id,
+        message: "บันทึกข้อมูลสำเร็จ",
+        statusCode: 200,
+      };
+      return response;
+    } catch (err: any) {
+      throw new Error(err);
+    }
+  }
+
+  async createSentSuccess(RequestData: Partial<any>): Promise<any> {
+    try {
+      const uploadDir = path.join(
+        "public",
+        "images",
+        "sent_success",
+        `${RequestData.d_purchase_id}`
+      );
+      await fs.mkdirSync(uploadDir, { recursive: true });
+
+      const id = await this.prisma.$transaction(async (tx) => {
+        try {
+          const cs_purchaseData = {
+            d_purchase_id: RequestData.d_purchase_id,
+            status_key: "SentSuccess",
+            number_key: 10,
+            status_name: "ส่งเรียบร้อย",
+            status_active: true,
+          };
+
+          const cs_purchase = await this.csStatusRepository.createCsPurchase(
+            tx,
+            cs_purchaseData
+          );
+
+          console.log("cs_purchase", cs_purchase);
+
+          const create_release = {
+            cs_purchase_id: cs_purchase.id,
+            date_out_arrival: RequestData.date_out_arrival,
+            etc: RequestData.etc,
+          };
+
+          const cs_already_sent = await this.csStatusRepository.create(
+            tx,
+            create_release,
+            "cs_already_sent"
+          );
+
+          if (RequestData.files.length > 0) {
+            for (let file of RequestData.files) {
+              const tempFilePath = file.path;
+
+              const d_image = {
+                cs_already_sent_id: cs_already_sent.id,
+                file_name: file.filename,
+                file_path: `/images/sent_success/${RequestData.d_purchase_id}/${file.filename}`,
+              };
+              const document_picture =
+                await this.csStatusRepository.createDocument(
+                  tx,
+                  d_image,
+                  "cs_already_sent_file"
+                );
+
+              if (document_picture) {
+                const newFilePath = path.join(uploadDir, file.filename);
+                await fs.renameSync(tempFilePath, newFilePath);
+              }
+            }
+            const purchase_detail = await this.csService.getPurchaseDetail(
+              RequestData.d_purchase_id
+            );
+            let RequestSentNotifaction = {
+              user_id: purchase_detail.d_purchase_emp[0].user_id,
+              purchase_id: RequestData.d_purchase_id,
+              link_to: `purchase/content/` + RequestData.d_purchase_id,
+              title: "CS (ส่งเรียบร้อย)",
+              subject_key: RequestData.d_purchase_id,
+              message: `Cs ส่งเรียบร้อย เลขที่:${purchase_detail.book_number}`,
+              status: false,
+              data: {},
+            };
+            RequestSentNotifaction.data = JSON.stringify(
+              RequestSentNotifaction
+            );
+            const notification = await this.notificationRepo.sendNotification(
+              RequestSentNotifaction
+            );
+          }
+          return cs_purchase.id;
+        } catch (err: any) {
+          console.log("createFail", err);
+          throw new Error(err);
+        }
+      });
+
+      const response = {
+        message: "บันทึกข้อมูลสำเร็จ",
+        id: id,
+        statusCode: 200,
+      };
+      return response;
+    } catch (err: any) {
+      throw new Error(err);
+    }
+  }
 }

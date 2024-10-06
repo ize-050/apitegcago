@@ -61,6 +61,17 @@ export class CSStatusController {
     }
   }
 
+  async getLeave(req: Request, res: Response): Promise<any> {
+    try {
+      const id = req.params.id;
+      const csStatusData = await this.csStatusService.getLeave(id);
+      return res.status(200).json(csStatusData);
+    } catch (err: any) {
+      console.log("Error Notification", err);
+      res.status(500).json(err);
+    }
+  }
+
   async getWaitRelease(req: Request, res: Response): Promise<any> {
     try {
       const id = req.params.id;
@@ -76,6 +87,29 @@ export class CSStatusController {
     try {
       const id = req.params.id;
       const csStatusData = await this.csStatusService.getSuccessRelease(id);
+      return res.status(200).json(csStatusData);
+    } catch (err: any) {
+      console.log("Error Notification", err);
+      res.status(500).json(err);
+    }
+  }
+
+
+  async getDestination(req: Request, res: Response): Promise<any> {
+    try {
+      const id = req.params.id;
+      const csStatusData = await this.csStatusService.getDestination(id);
+      return res.status(200).json(csStatusData);
+    } catch (err: any) {
+      console.log("Error Notification", err);
+      res.status(500).json(err);
+    }
+  }
+
+  async getSentSuccess(req: Request, res: Response): Promise<any> {
+    try {
+      const id = req.params.id;
+      const csStatusData = await this.csStatusService.getSentSuccess(id);
       return res.status(200).json(csStatusData);
     } catch (err: any) {
       console.log("Error Notification", err);
@@ -178,6 +212,20 @@ export class CSStatusController {
     }
   }
 
+   async createLeave(req: Request, res: Response): Promise<any> { //ยื่นคำร้องไฟล
+    try {
+      const data = {
+        ...req.body,
+        files: req.files,
+      };
+      const csStatusData = await this.csStatusService.createLeave(data);
+      return res.status(200).json(csStatusData);
+    } catch (err: any) {
+      console.log("Error createLeave", err);
+      res.status(500).json(err);
+    }
+ }
+
   async createWaitRelease(req: Request, res: Response): Promise<any> { //รอตรวจปล่อย
     try {
 
@@ -208,5 +256,37 @@ export class CSStatusController {
       console.log("Error createSuccessRelease", err);
       res.status(500).json(err);
     }
+  }
+
+  async createDestination(req: Request, res: Response): Promise<any> { //ปล่อยเรียบร้อย
+    try {
+        const data = {
+          ...req.body,
+          files: req.files,
+        };
+        console.log("data",data)
+        const csStatusData = await this.csStatusService.createDestination(data);
+        return res.status(200).json(csStatusData);
+      } catch (err: any) {
+        console.log("Error createWaitRelease", err);
+        res.status(500).json(err);
+      }
+
+  }
+
+  async createSentSuccess(req: Request, res: Response): Promise<any> { //ปล่อยเรียบร้อย
+    try {
+        const data = {
+          ...req.body,
+          files: req.files,
+        };
+        console.log("data",data)
+        const csStatusData = await this.csStatusService.createSentSuccess(data);
+        return res.status(200).json(csStatusData);
+      } catch (err: any) {
+        console.log("Error createWaitRelease", err);
+        res.status(500).json(err);
+      }
+
   }
 }

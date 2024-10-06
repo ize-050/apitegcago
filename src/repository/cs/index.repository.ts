@@ -310,7 +310,7 @@ class CsRepository {
     try {
       await this.prisma.$transaction(async (tx) => {
         try {
-          const Dates = new Date(Request.d_end_date);
+          
 
           await tx.d_purchase.update({
             where: {
@@ -318,8 +318,8 @@ class CsRepository {
             },
             data: {
               d_group_work: Request.d_group_work,
-              d_end_date: Dates,
-              d_num_date: Request.d_num_date,
+              d_end_date: new Date(),
+              d_num_date: "30",
               d_status: "CS ร้องขอเอกสาร",
             },
           });

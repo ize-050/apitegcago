@@ -251,6 +251,13 @@ class SaleService {
               d_product_name: RequestData.d_product,
             };
 
+            await this.saleRepo.ChangeStatus(tx, purchase.id);
+            await this.saleRepo.submitPurchaseemployee(
+              tx,
+              purchase.id,
+              RequestData.employee_id
+            );
+
             const purchase_products = await this.saleRepo.submitEstimateProduct(
               tx,
               d_product
@@ -285,12 +292,7 @@ class SaleService {
                   }
                 }
 
-                await this.saleRepo.ChangeStatus(tx, purchase.id);
-                await this.saleRepo.submitPurchaseemployee(
-                  tx,
-                  purchase.id,
-                  RequestData.employee_id
-                );
+             
               }
             }
           }

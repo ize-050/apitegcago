@@ -65,6 +65,11 @@ router.post('/createDeparture/:id',authMiddleware,(req, res)=> csStatusControlle
 router.get('/getDeparture/:id',authMiddleware, (req, res) =>  csStatusController.getDeparture(req, res));
 
 
+//createLeave
+router.post('/createLeave/:id', upload.any(), authMiddleware,(req, res)=> csStatusController.createLeave(req, res));
+router.get('/getLeave/:id', authMiddleware, (req, res) =>  csStatusController.getLeave(req, res));
+
+
 //wait_release
 router.post('/createWaitRelease/:id',  upload.any() ,authMiddleware,(req, res)=> csStatusController.createWaitRelease(req, res));
 router.get('/getWaitRelease/:id', authMiddleware, (req, res) =>  csStatusController.getWaitRelease(req, res));
@@ -73,4 +78,15 @@ router.get('/getWaitRelease/:id', authMiddleware, (req, res) =>  csStatusControl
 //update
 router.post('/createSuccessRelease/:id', upload.any(), authMiddleware, (req, res) => csStatusController.createSuccessRelease(req, res));
 router.get('/getSuccessRelease/:id', authMiddleware, (req, res) => csStatusController.getSuccessRelease(req, res));
+
+//Destination
+
+router.post('/createDestination/:id', upload.any(), authMiddleware, (req, res) => csStatusController.createDestination(req, res));
+router.get('/getDestination/:id', authMiddleware, (req, res) => csStatusController.getDestination(req, res));
+
+//sentSuccess
+router.post('/createSendSuccess/:id', upload.any(), authMiddleware, (req, res) => csStatusController.createSentSuccess(req, res));
+router.get('/getSendSuccess/:id', authMiddleware, (req, res) => csStatusController.getSentSuccess(req, res));
+
+
 module.exports = router
