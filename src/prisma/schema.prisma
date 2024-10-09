@@ -592,7 +592,7 @@ model Bookcabinet {
   date_booking        String?
   agentcy_id          String?
   agentcy_etc         String?
-  date_entering       DateTime?
+  date_entering       String?
   createdAt           DateTime              @default(now())
   updatedAt           DateTime?
   deletedAt           DateTime?
@@ -650,6 +650,7 @@ model Contain {
   cmb_total       String?
   nw_total        String?
   gw_total        String?
+  type_contain    String?
   createdAt       DateTime          @default(now())
   updatedAt       DateTime?
   deletedAt       DateTime?
@@ -735,8 +736,10 @@ model Leave {
   date_surrender   String?
   date_enter_doc   String?
   file_enter_doc   String?
-  date_payment_do  String?
+  date_payment_do   String?
   amount_payment_do String?
+  check_price_deposit Boolean?
+  price_deposit    String?
   createdAt        DateTime    @default(now())
   updatedAt        DateTime?
   deletedAt        DateTime?
