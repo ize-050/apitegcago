@@ -39,6 +39,7 @@ router.post('/createReceive/:id',authMiddleware, upload.array("receive_picture",
 //contain
 router.get("/getContain/:id",authMiddleware, (req, res) => csStatusController.getContain(req, res));
 router.post('/createContain/:id',authMiddleware, upload.any(),(req, res)=> csStatusController.createContain(req, res));
+router.put('/editContain/:id',authMiddleware, upload.any(),(req, res)=> csStatusController.editContain(req, res));
 
 //document
 const fileUploadFields = [
@@ -56,7 +57,7 @@ const fileUploadFields = [
 router.post('/createDocumentStatus/:id',authMiddleware,  upload.any(),(req, res)=> {
     console.log("req.files",req.files)
     csStatusController.createDocuments(req, res)});
-
+router.put('/editDocumentStatus/:id',authMiddleware, upload.any(),(req, res)=> csStatusController.editDocumentStatus(req, res));
 router.get('/getDocumentStatus/:id',authMiddleware, (req, res) =>  csStatusController.getDocumentStatus(req, res));
 
 
@@ -88,5 +89,10 @@ router.get('/getDestination/:id', authMiddleware, (req, res) => csStatusControll
 router.post('/createSendSuccess/:id', upload.any(), authMiddleware, (req, res) => csStatusController.createSentSuccess(req, res));
 router.get('/getSendSuccess/:id', authMiddleware, (req, res) => csStatusController.getSentSuccess(req, res));
 
+
+//return 
+router.get('/getReturn/:id', authMiddleware, (req, res) => csStatusController.getReturn(req, res));
+router.post('/createReturn/:id', upload.any(), authMiddleware, (req, res) => csStatusController.createReturn(req, res));
+router.put('/editreturn/:id', upload.any(), authMiddleware, (req, res) => csStatusController.editReturn(req, res));
 
 module.exports = router

@@ -117,6 +117,18 @@ export class CSStatusController {
     }
   }
 
+  async getReturn(req: Request, res: Response): Promise<any> {
+    try{
+      const id = req.params.id;
+      const csStatusData = await this.csStatusService.getReturn(id);
+      return res.status(200).json(csStatusData);
+    }
+    catch(err:any){
+      console.log("Error Notification",err)
+      res.status(500).json(err)
+    }
+  }
+
   async createBookcabinet(req: Request, res: Response): Promise<any> {
     try {
       const userId = req?.userId;
@@ -176,7 +188,22 @@ export class CSStatusController {
       res.status(500).json(err);
     }
   }
-  
+
+  async editContain(req: Request, res: Response): Promise<any> {
+    try{
+        const data = {
+            ...req.body,
+            id:req.params.id,
+            files: req.files,
+        }
+        const csStatusData = await this.csStatusService.editContain(data)
+        return res.status(200).json(csStatusData);
+    }
+    catch (err: any) {
+      console.log("Error Notification", err);
+      res.status(500).json(err);
+    }
+  }
 
   async createDocuments(req: Request, res: Response): Promise<any> {
     try{
@@ -191,6 +218,27 @@ export class CSStatusController {
         const csStatusData = await this.csStatusService.createDocument(request)
         return res.status(200).json(csStatusData);
         
+    }
+    catch(err:any){
+        console.log('Error Notification', err)
+        res.status(500).json(err)
+    }
+  }
+
+  async editDocumentStatus(req: Request, res: Response): Promise<any> {
+    try{
+      const RequestData = req.body
+      const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+
+
+      const request ={
+        ...RequestData,
+        id: req.params.id,
+        files: files
+    }
+    console.log("request",request)
+    const csStatusData = await this.csStatusService.editDocument(request)
+    return res.status(200).json(csStatusData);
     }
     catch(err:any){
         console.log('Error Notification', err)
@@ -288,5 +336,37 @@ export class CSStatusController {
         res.status(500).json(err);
       }
 
+  }
+
+  async createReturn(req: Request, res: Response): Promise<any> { //ปล่อยเรียบร้อย
+    try{
+        const data = {
+            ...req.body,
+            files: req.files,
+        }
+        const csStatusData = await this.csStatusService.createReturn(data)
+        return res.status(200).json(csStatusData)
+    }
+    catch(err:any){
+      console.log("Error createWaitRelease",err);
+      res.status(500).json(err);
+    }
+
+  }
+
+  async editReturn(req: Request, res: Response): Promise<any> {
+    try{
+        const data = {
+            ...req.body,
+            id:req.params.id,
+            files: req.files,
+        }
+        const csStatusData = await this.csStatusService.editReturn(data)
+        return res.status(200).json(csStatusData);
+    }
+    catch (err: any) {
+      console.log("Error Notification", err);
+      res.status(500).json(err);
+    }
   }
 }

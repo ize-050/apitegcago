@@ -882,16 +882,15 @@ model cs_return_cabinet {
   id                     String                   @id @default(uuid())
   cs_purchase_id         String                   @unique
   date_return_cabinet    String?
-  cabinet                Boolean?
+  cabinet                Boolean? //ซ่อมตู้
   date_cabinet           String?
-  return_deposit         Boolean?
-  date_deposit           String?
-  date_request           String?
-  return_cabinet         Boolean?
-  price_cabinet          String?
-  deposit                Boolean?
-  date_d_deposit         String?
-  price_d_deposit        String?
+  price_repair_cabinet  String? //ราคาซ่อมตู้
+  request_return         Boolean?
+  date_request_return    String?
+  price_request_return   String? //ราคาขอคืน
+  return_cabinet         Boolean? //คืนมัดจำตู้
+  price_deposit           String? //ยอดค่ามัดจำตู้
+  price_return_cabinet    String? //ยอดคืนมัดจำตู้
   createdAt              DateTime                 @default(now())
   updatedAt              DateTime?
   deletedAt              DateTime?

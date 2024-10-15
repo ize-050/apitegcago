@@ -178,6 +178,21 @@ export class CSStatusService {
     }
   }
 
+  async getReturn(id:string):Promise<any>{
+    try{
+      const getReturn = await this.csStatusRepository.getReturn(id);
+      const response = {
+        data: getReturn,
+        statusCode: 200,
+      };
+      return response;
+    }
+    catch(err:any){
+      console.log("Error getReturn",err)
+      throw new Error(err)
+    }
+  }
+
   async createBookcabinet(RequestData: Partial<any>): Promise<any> {
     try {
       const uploadDir = path.join(
@@ -403,8 +418,9 @@ export class CSStatusService {
           );
           const create_contain = {
             cs_purchase_id: cs_purchase.id,
+            type_contain: RequestData.type_contain,
             date_booking: RequestData.date_booking,
-            catbon_total: RequestData.catbon_total,
+            carbon_total: RequestData.carbon_total,
             cmb_total: RequestData.cmb_total,
             nw_total: RequestData.nw_total,
             gw_total: RequestData.gw_total,
@@ -461,6 +477,116 @@ export class CSStatusService {
           );
 
           return cs_purchase.id;
+        } catch (err: any) {
+          console.log("createFail", err);
+          throw new Error(err);
+        }
+      });
+      const response = {
+        id: id,
+        message: "บันทึกข้อมูลสำเร็จ",
+        statusCode: 200,
+      };
+      return response;
+    } catch (err: any) {
+      console.log("createFail", err);
+      throw new Error(err);
+    }
+  }
+
+  async editContain(RequestData: Partial<any>): Promise<any> {
+    try {
+      const uploadDir = path.join(
+        "public",
+        "images",
+        "contain",
+        `${RequestData.d_purchase_id}`
+      );
+
+      await fs.mkdirSync(uploadDir, { recursive: true });
+
+      const id = await this.prisma.$transaction(async (tx) => {
+        try {
+          const contain_id = RequestData?.id;
+          delete RequestData.id;
+
+          const edit_contain = {
+            type_contain: RequestData?.type_contain,
+            date_booking: RequestData?.date_booking,
+            carbon_total: RequestData?.carbon_total,
+            cmb_total: RequestData?.cmb_total,
+            nw_total: RequestData?.nw_total,
+            gw_total: RequestData?.gw_total,
+          };
+
+          const contain = await this.csStatusRepository.update(
+            tx,
+            contain_id,
+            edit_contain,
+            "contain"
+          );
+
+         if(RequestData?.existingImageIds?.length > 0){
+            
+          const dataRequest  :any =  await  this. csStatusRepository.getDataContainPicture(tx,contain_id, RequestData.existingImageIds);
+          console.log(dataRequest,"dataRequest")
+          if(dataRequest.length > 0){
+            for (let file of dataRequest) {
+              const tempFilePath = file.picture_path;
+               const newFilePath = path.join(uploadDir, file.picture_name);
+
+              await fs.unlinkSync(newFilePath)
+                
+              await this.csStatusRepository.delete(tx, file.id,"Contain_picture");
+
+            }
+          }
+        }
+
+          // const contain_product = await this.csStatusRepository.createOrupdate(
+          //     tx,
+          //     JSON.parse(RequestData.items),
+          //     id
+          //   );
+
+          if (RequestData.files.length > 0) {
+            for (let file of RequestData.files) {
+              const tempFilePath = file.path;
+
+              const d_image = {
+                contain_id: contain.id,
+                picture_name: file.filename,
+                picture_path: `/images/contain/${RequestData.d_purchase_id}/${file.filename}`,
+                key: file.fieldname,
+              };
+              const contain_picture =
+                await this.csStatusRepository.createContainPicture(tx, d_image);
+
+              if (contain_picture) {
+                const newFilePath = path.join(uploadDir, file.filename);
+                await fs.renameSync(tempFilePath, newFilePath);
+              }
+            }
+          }
+          const purchase_detail = await this.csService.getPurchaseDetail(
+            RequestData.d_purchase_id
+          );
+          let RequestSentNotifaction = {
+            user_id: purchase_detail.d_purchase_emp[0].user_id,
+            purchase_id: RequestData.d_purchase_id,
+            link_to: `purchase/content/` + RequestData.d_purchase_id,
+            title: "CS (บรรจุตู้)",
+            subject_key: RequestData.d_purchase_id,
+            message: `Cs บรรจุตู้ เลขที่:${purchase_detail.book_number}`,
+            status: false,
+            data: {},
+          };
+          RequestSentNotifaction.data = JSON.stringify(RequestSentNotifaction);
+          const notification = await this.notificationRepo.sendNotification(
+            RequestSentNotifaction
+          );
+
+          return contain;
         } catch (err: any) {
           console.log("createFail", err);
           throw new Error(err);
@@ -579,6 +705,112 @@ export class CSStatusService {
     }
   }
 
+
+  async editDocument(RequestData: Partial<any>): Promise<any> {
+    try {
+      const uploadDir = path.join(
+        "public",
+        "images",
+        "cs_document",
+        `${RequestData.d_purchase_id}`
+      );
+      await fs.mkdirSync(uploadDir, { recursive: true });
+      const id = await this.prisma.$transaction(async (tx) => {
+        try {
+          console.log("RequestData", RequestData);
+          const edit = {
+            cs_purchase_id: RequestData.cs_purchase_id,
+            document_invoice_date: RequestData?.document_invoice_date,
+            document_packinglist: RequestData?.document_packinglist,
+            document_draft: RequestData?.document_draft,
+            document_etc: RequestData?.document_etc,
+            document_draft_invoice: RequestData?.document_draft_invoice,
+            document_draft_bl: RequestData?.document_draft_bl,
+            document_master_bl: RequestData?.document_master_bl,
+          };
+
+          const document = await this.csStatusRepository.update(
+            tx,
+            RequestData.id,
+            edit,
+            "cs_document"
+          );
+
+          if(RequestData?.existingImageIds?.length > 0){
+            
+            const dataRequest  :any =  await  this. csStatusRepository.getDatadocument(tx,RequestData.id, RequestData.existingImageIds);
+            if(dataRequest.length > 0){
+              for (let file of dataRequest) {
+                const tempFilePath = file.file_path;
+                 const newFilePath = path.join(uploadDir, file.file_name);
+  
+                await fs.unlinkSync(newFilePath)
+                  
+                await this.csStatusRepository.delete(tx, file.id,"cs_document_file");
+  
+              }
+            }
+          }
+
+          if (RequestData.files.length > 0) {
+            for (let file of RequestData.files) {
+              const tempFilePath = file.path;
+
+              const d_image = {
+                cs_document_id: document.id,
+                file_name: file.filename,
+                key: file.fieldname,
+                file_path: `/images/cs_document/${RequestData.d_purchase_id}/${file.filename}`,
+              };
+              const document_picture =
+                await this.csStatusRepository.createDocument(
+                  tx,
+                  d_image,
+                  "cs_document_file"
+                );
+
+              if (document_picture) {
+                const newFilePath = path.join(uploadDir, file.filename);
+                await fs.renameSync(tempFilePath, newFilePath);
+              }
+            }
+          }
+          const purchase_detail = await this.csService.getPurchaseDetail(
+            RequestData.d_purchase_id
+          );
+          let RequestSentNotifaction = {
+            user_id: purchase_detail.d_purchase_emp[0].user_id,
+            purchase_id: RequestData.d_purchase_id,
+            link_to: `purchase/content/` + RequestData.d_purchase_id,
+            title: "CS (จัดทำเอกสาร)",
+            subject_key: RequestData.d_purchase_id,
+            message: `Cs จัดทำเอกสาร เลขที่:${purchase_detail.book_number}`,
+            status: false,
+            data: {},
+          };
+          RequestSentNotifaction.data = JSON.stringify(RequestSentNotifaction);
+          const notification = await this.notificationRepo.sendNotification(
+            RequestSentNotifaction
+          );
+
+          return true;
+        } catch (err: any) {
+          console.log("createFail", err);
+          throw new Error(err);
+        }
+      });
+
+      const response = {
+        id: id,
+        message: "บันทึกข้อมูลสำเร็จ",
+        statusCode: 200,
+      };
+      return response;
+    } catch (err: any) {
+      throw new Error(err);
+    }
+  }
+
   async createDeparture(RequestData: Partial<any>): Promise<any> {
     try {
       const id = await this.prisma.$transaction(async (tx) => {
@@ -678,6 +910,8 @@ export class CSStatusService {
             date_hbl: RequestData?.date_hbl,
             date_original_fe: RequestData?.date_original_fe,
             date_surrender: RequestData?.date_surrender,
+            check_price_deposit: Boolean(RequestData?.check_price_deposit),
+            price_deposit: RequestData?.price_deposit,
             date_enter_doc: RequestData?.date_enter_doc,
             file_enter_doc: RequestData?.file_enter_doc,
             date_payment_do: RequestData?.date_payment_do,
@@ -1160,6 +1394,234 @@ export class CSStatusService {
       };
       return response;
     } catch (err: any) {
+      throw new Error(err);
+    }
+  }
+
+  async createReturn(RequestData: Partial<any>): Promise<any> {
+    try{
+      const uploadDir = path.join(
+        "public",
+        "images",
+        "return_cabinet",
+        `${RequestData.d_purchase_id}`
+      );
+      await fs.mkdirSync(uploadDir, { recursive: true });
+
+      const id = await this.prisma.$transaction(async (tx) => {
+        try {
+          const cs_purchaseData = {
+            d_purchase_id: RequestData.d_purchase_id,
+            status_key: "return_cabinet",
+            number_key: 11,
+            status_name: "คืนตู้",
+            status_active: true,
+          };
+
+          const cs_purchase = await this.csStatusRepository.createCsPurchase(
+            tx,
+            cs_purchaseData
+          );
+
+          console.log("cs_purchase", cs_purchase);
+    
+          const create_return = {
+            cs_purchase_id: cs_purchase.id,
+            date_return_cabinet: RequestData?.date_return_cabinet,
+            cabinet: RequestData?.cabinet === 'false' ? false : true,
+            date_cabinet: RequestData?.date_cabinet,
+            price_repair_cabinet: RequestData?.price_repair_cabinet,
+            request_return: RequestData?.request_return ==='false' ? false :true ,
+            date_request_return: RequestData?.date_request_return,
+            price_request_return: RequestData?.price_request_return,
+            return_cabinet:  RequestData?.return_cabinet === 'false' ? false : true,
+            price_deposit: RequestData?.price_deposit,
+            price_return_cabinet: RequestData?.price_return_cabinet
+          };
+          console.log("create_return", create_return);
+
+          const cs_already_sent = await this.csStatusRepository.create(
+            tx,
+            create_return,
+            "cs_return_cabinet"
+          );
+
+          if (RequestData.files.length > 0) {
+            for (let file of RequestData.files) {
+              const tempFilePath = file.path;
+
+              const d_image = {
+                return_cabinet_id: cs_already_sent.id,
+                file_name: file.filename,
+                key: file.fieldname,
+                file_path: `/images/return_cabinet/${RequestData.d_purchase_id}/${file.filename}`,
+              };
+              const document_picture =
+                await this.csStatusRepository.createDocument(
+                  tx,
+                  d_image,
+                  "cs_return_cabinet_file"
+                );
+
+              if (document_picture) {
+                const newFilePath = path.join(uploadDir, file.filename);
+                await fs.renameSync(tempFilePath, newFilePath);
+              }
+            }
+            const purchase_detail = await this.csService.getPurchaseDetail(
+              RequestData.d_purchase_id
+            );
+            let RequestSentNotifaction = {
+              user_id: purchase_detail.d_purchase_emp[0].user_id,
+              purchase_id: RequestData.d_purchase_id,
+              link_to: `purchase/content/` + RequestData.d_purchase_id,
+              title: "CS (คืนตู้)",
+              subject_key: RequestData.d_purchase_id,
+              message: `Cs คืนตู้ เลขที่:${purchase_detail.book_number}`,
+              status: false,
+              data: {},
+            };
+            RequestSentNotifaction.data = JSON.stringify(
+              RequestSentNotifaction
+            );
+            const notification = await this.notificationRepo.sendNotification(
+              RequestSentNotifaction
+            );
+          }
+          return cs_purchase.id;
+        } catch (err: any) {
+          console.log("createFail", err);
+          throw new Error(err);
+        }
+      });
+
+      const response = {
+        message: "บันทึกข้อมูลสำเร็จ",
+        id: id,
+        statusCode: 200,
+      };
+      return response;
+    }
+    catch(err:any){
+
+    }
+
+  }
+
+  async editReturn(RequestData: Partial<any>): Promise<any> {
+    try {
+      const uploadDir = path.join(
+        "public",
+        "images",
+        "return_cabinet",
+        `${RequestData.d_purchase_id}`
+      );
+
+      await fs.mkdirSync(uploadDir, { recursive: true });
+
+      const id = await this.prisma.$transaction(async (tx) => {
+        try {
+          const return_id = RequestData?.id;
+          delete RequestData.id;
+
+          const create_return = {
+            date_return_cabinet: RequestData?.date_return_cabinet,
+            cabinet: RequestData?.cabinet === 'false' ? false : true,
+            date_cabinet: RequestData?.date_cabinet,
+            price_repair_cabinet: RequestData?.price_repair_cabinet,
+            request_return: RequestData?.request_return ==='false' ? false :true ,
+            date_request_return: RequestData?.date_request_return,
+            price_request_return: RequestData?.price_request_return,
+            return_cabinet:  RequestData?.return_cabinet === 'false' ? false : true,
+            price_deposit: RequestData?.price_deposit,
+            price_return_cabinet: RequestData?.price_return_cabinet
+          };
+
+          const contain = await this.csStatusRepository.update(
+            tx,
+            return_id,
+            create_return,
+            "cs_return_cabinet"
+          );
+
+         if(RequestData?.existingImageIds?.length > 0){
+            
+          const dataRequest  :any =  await  this. csStatusRepository.getDatareturnfile(tx,return_id, RequestData.existingImageIds);
+          console.log(dataRequest,"dataRequest")
+          if(dataRequest.length > 0){
+            for (let file of dataRequest) {
+              const tempFilePath = file.file_path;
+               const newFilePath = path.join(uploadDir, file.file_name);
+
+              await fs.unlinkSync(newFilePath)
+                
+              await this.csStatusRepository.delete(tx, file.id,"cs_return_cabinet_file");
+
+            }
+          }
+        }
+
+          // const contain_product = await this.csStatusRepository.createOrupdate(
+          //     tx,
+          //     JSON.parse(RequestData.items),
+          //     id
+          //   );
+
+          if (RequestData.files.length > 0) {
+            for (let file of RequestData.files) {
+              const tempFilePath = file.path;
+
+              const d_image = {
+                return_cabinet_id: return_id,
+                file_name: file.filename,
+                key: file.fieldname,
+                file_path: `/images/return_cabinet/${RequestData.d_purchase_id}/${file.filename}`,
+              };
+              const contain_picture =
+              await this.csStatusRepository.createDocument(
+                tx,
+                d_image,
+                "cs_return_cabinet_file"
+              );
+
+              if (contain_picture) {
+                const newFilePath = path.join(uploadDir, file.filename);
+                await fs.renameSync(tempFilePath, newFilePath);
+              }
+            }
+          }
+          const purchase_detail = await this.csService.getPurchaseDetail(
+            RequestData.d_purchase_id
+          );
+          let RequestSentNotifaction = {
+            user_id: purchase_detail.d_purchase_emp[0].user_id,
+            purchase_id: RequestData.d_purchase_id,
+            link_to: `purchase/content/` + RequestData.d_purchase_id,
+            title: "CS (คืนตู้)",
+            subject_key: RequestData.d_purchase_id,
+            message: `Cs คืนตู้ เลขที่:${purchase_detail.book_number}`,
+            status: false,
+            data: {},
+          };
+          RequestSentNotifaction.data = JSON.stringify(RequestSentNotifaction);
+          const notification = await this.notificationRepo.sendNotification(
+            RequestSentNotifaction
+          );
+
+          return contain;
+        } catch (err: any) {
+          console.log("editeFail", err);
+          throw new Error(err);
+        }
+      });
+      const response = {
+        id: id,
+        message: "บันทึกข้อมูลสำเร็จ",
+        statusCode: 200,
+      };
+      return response;
+    } catch (err: any) {
+      console.log("editeFail", err);
       throw new Error(err);
     }
   }

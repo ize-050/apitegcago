@@ -142,9 +142,27 @@ class CsStatusRepository {
     }
   }
 
+  async getReturn(id: string): Promise<any> {
+    try {
+      const getReturn = await this.prisma.cs_return_cabinet.findFirst({
+        where: {
+          cs_purchase_id: id,
+        },
+        include: {
+          cs_return_cabinet_file: true,
+        },
+      });
+      return getReturn;
+    } catch (err: any) {
+      console.log("Error getReturn", err);
+      throw new Error(err);
+    }
+  }
+
   async create(tx: any, data: any, key: string): Promise<any> {
     //create
     try {
+      
       const id = await tx[key].create({
         data: data,
       });
@@ -155,6 +173,38 @@ class CsStatusRepository {
     }
   }
 
+  
+
+  async update(tx: any,id:string, data: any, key: string): Promise<any> {
+    //update
+    try {
+      const update = await tx[key].update({
+        where: {
+          id: id,
+        },
+        data: data,
+      });
+      return update;
+    } catch (err: any) {
+      console.log("error", err);
+      throw new Error(err);
+    }
+  }
+
+  async delete(tx: any, id: string, key: string): Promise<any> {
+    try{
+      const deleteData = await tx[key].delete({
+        where: {
+          id: id,
+        },
+      });
+      return deleteData;
+    }
+    catch(err:any){
+      console.log("error", err);
+      throw new Error(err);
+    }
+  }
   async getBookcabinet(id: string): Promise<any> {
     try {
       const book_cabinet = await this.prisma.bookcabinet.findFirst({
@@ -189,6 +239,8 @@ class CsStatusRepository {
     }
   }
 
+  
+
   async getContain(id: string): Promise<any> {
     try {
       const getContain = await this.prisma.contain.findFirst({
@@ -207,6 +259,68 @@ class CsStatusRepository {
     }
   }
 
+  async getDataContainPicture(tx:any,contain_id:string,id: string): Promise<any> {
+    try{
+      const contain_picture = await tx.contain_picture.findMany({
+        where: {
+          id: {
+            not : {
+              in: id
+            },
+          },
+          contain_id: contain_id,
+        },
+      });
+      return contain_picture;
+    }
+    catch(err:any){
+      console.log("Error getDataContainPicture", err);
+      throw new Error(err);
+    }
+
+  }
+
+  async getDatareturnfile(tx:any,return_cabinet_id:string,id: string): Promise<any> {
+    try{
+      const contain_picture = await tx.cs_return_cabinet_file.findMany({
+        where: {
+          id: {
+            not : {
+              in: id
+            },
+          },
+          return_cabinet_id: return_cabinet_id,
+        },
+      });
+      return contain_picture;
+    }
+    catch(err:any){
+      console.log("Error getDataContainPicture", err);
+      throw new Error(err);
+    }
+
+  }
+
+  async getDatadocument(tx:any,document_id:string,id: string): Promise<any> {
+    try{
+      const contain_picture = await tx.cs_document_file.findMany({
+        where: {
+          id: {
+            not : {
+              in: id
+            },
+          },
+          cs_document_id: document_id
+        },
+      });
+      return contain_picture;
+    }
+    catch(err:any){
+      console.log("Error getDataContainPicture", err);
+      throw new Error(err);
+    }
+
+  }
   async createCsPurchase(tx: any, data: any): Promise<any> {
     try {
       const cs_purchase = await tx.cS_Purchase.create({
