@@ -30,6 +30,8 @@ async function main() {
     });
 
 
+ 
+
     await prisma.customer_group.createMany({
       data: [
         {
@@ -304,7 +306,7 @@ async function main() {
         document_certificate:false,
         document_world20:false,
         document_tracking:false,
-        document_etc:true,
+        document_etc:false,
         createdAt: new Date(),
       },
     })

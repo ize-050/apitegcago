@@ -80,23 +80,6 @@ export class SaleController {
           }
         }
 
-        for (let d_status of customer.d_status) {
-          console.log('d_status.status_name',d_status.status_name);
-          switch (d_status.status_name) {
-            case "กำลังดูแล":
-              d_status.color = "bg-purple-500";
-              break;
-            case "รอตีราคา":
-              d_status.color = "bg-blue-300";
-              break;
-            case "อยู่ระหว่างดำเนินการ":
-              d_status.color = 'bg-orange-300';
-              break;
-          }
-
-          customer.createdAt = moment(d_status.createdAt).format("DD/MM/YY HH:mm:ss");
-
-        }
         customers.push(customer);
       }
       let customerData = {
@@ -134,7 +117,6 @@ export class SaleController {
 
   async createCustomer(req: Request, res: Response): Promise<any> {
     try {
-      console.log("reqqq", req.body);
       const validatedData = ValidationCreateCustomer.safeParse(req.body);
 
       if (!validatedData.success) {
@@ -194,6 +176,8 @@ export class SaleController {
     }
   }
 
+
+
   async changeTagStatus(req: Request, res: Response): Promise<any> {
     try {
       console.log("delay");
@@ -220,13 +204,82 @@ export class SaleController {
     }
   }
 
+
+
+  async getAllEstimate(req: Request, res: Response): Promise<any> {
+    try {
+
+      const page = parseInt(req.query.page as string) || 1;
+
+      const perPage = 10;
+      const skip = (page - 1) * perPage;
+      const status = req.query.status as string | undefined;
+      const tag = req.query.tag as string | undefined;
+      const userId = req?.userId
+      const RequestData = {
+        ...req.query,
+        status,
+        tag,
+        skip,
+        userId: userId,
+      };
+      const data = await this.saleservice.getAllEstimate(RequestData);
+      let Purchase: any[] = []
+      for (let purchase of data.purchase) {
+        if (purchase.d_status === 'Sale ตีราคา') {
+          purchase.color = 'bg-blue-500'
+        }
+        if (purchase.d_status === 'Cs รับงาน') {
+          purchase.color = 'bg-[#FFC8C8]'
+        }
+        if (purchase.d_status === 'CS ร้องขอเอกสาร') {
+          purchase.color = 'bg-red-400'
+        }
+        if (purchase.d_status === 'Sale แนบเอกสาร') {
+          purchase.color = 'bg-red-400'
+        }
+        if (purchase.d_status === 'Cs เสนอราคา') {
+          purchase.color = 'bg-orange-300'
+        }
+        if (purchase.d_status === 'ยกเลิกคำสั่งซื้อ') {
+          purchase.color = 'bg-red-500'
+        }
+        if (purchase.d_status === 'อยู่ระหว่างทำ Financial') {
+          purchase.color = 'bg-[#946A00]'
+        }
+        if (purchase.d_status === 'ค้างชำระเงิน') {
+          purchase.color = 'bg-red-500'
+        }
+        if (purchase.d_status === 'ปิดการขาย') {
+          purchase.color = 'bg-green-500'
+        }
+        Purchase.push(purchase)
+      }
+
+      let purchaseData = {
+        purchase: Purchase,
+        total: data.total,
+      };
+
+      const response = {
+        data: purchaseData,
+        message: "ดึงข้อมูลสำเร็จ",
+        statusCode: 200,
+      };
+      res.status(200).json(response);
+    } catch (err: any) {
+      console.log("err", err);
+      res.status(500).json(err);
+    }
+  }
+
   async getEstimate(req: Request, res: Response): Promise<any> {
     try {
-      const customerId = req.params.id;
-      console.log("errr", customerId);
+      const purchaseId = req.params.id;
+      console.log("errr", purchaseId);
       const userId = req?.userId;
 
-      const data = await this.saleservice.getEstimate(customerId);
+      const data = await this.saleservice.getEstimate(purchaseId);
 
       if (data?.d_product?.d_product_image.length > 0) {
         data.d_product.d_product_image = data.d_product.d_product_image.map(
@@ -238,6 +291,36 @@ export class SaleController {
             return file;
           }
         );
+      }
+
+
+
+      if (data.d_status === 'Sale ตีราคา') {
+        data.color = 'bg-blue-500'
+      }
+      else if (data.d_status === 'Cs รับงาน') {
+        data.color = 'bg-[#FFC8C8]'
+      }
+      else if (data.d_status === 'CS ร้องขอเอกสาร') {
+        data.color = 'bg-red-400'
+      }
+      else if (data.d_status === 'Sale แนบเอกสาร') {
+        data.color = 'bg-red-400'
+      }
+      else if (data.d_status === 'Cs เสนอราคา') {
+        data.color = 'bg-red-400'
+      }
+      else if (data.d_status === 'ยกเลิกคำสั่งซื้อ') {
+        data.color = 'bg-red-500'
+      }
+      else if (data.d_status === 'อยู่ระหว่างทำ Financial') {
+        data.color = 'bg-[#946A00]'
+      }
+      else if (data.d_status === 'ค้างชำระเงิน') {
+        data.color = 'bg-red-500'
+      }
+      else if (data.d_status === 'ปิดการขาย') {
+        data.color = 'bg-green-500'
       }
       const response = {
         data: data,
@@ -251,10 +334,47 @@ export class SaleController {
     }
   }
 
-  async submitEstimate(req: Request, res: Response): Promise<any> {
+  async cancelEstimate(req: Request, res: Response): Promise<any> {
+    try {
+      const purchaseId = req.params.id;
+
+      const userId = req?.userId;
+
+      const RequestData = req.body;
+
+      const request = {
+        ...RequestData,
+        purchase_id: purchaseId,
+        userId: userId,
+      };
+
+      const response = await this.saleservice.cancelEstimate(request);
+
+      res.status(200).json(response);
+    }
+    catch (err: any) {
+      console.log('errCancelEstimate', err)
+      res.status(500).json(err);
+    }
+  }
+
+
+  async getCheckBooking(req: Request, res: Response): Promise<any> {
+    try {
+      const response = await this.saleservice.getCheckBooking();
+      res.status(200).json(response);
+    } catch (err: any) {
+      res.status(500).json(err);
+    }
+  }
+
+
+  async submitEstimate(req: Request, res: Response): Promise<any> { //บันทึกใบจองเปิดใหม่
     try {
       const validatedData = ValidationsubmitEstimate.safeParse(req.body);
       const customerId = req.params.id;
+
+      const employee_id = req.userId
       const RequestData = req.body;
       if (!validatedData.success) {
         res.status(400).json({ errors: validatedData.error.issues });
@@ -262,20 +382,161 @@ export class SaleController {
 
       const request = {
         ...RequestData,
+        employee_id: employee_id,
         customer_id: customerId,
         files: req.files,
 
         // userId: userId,
       };
       const response = await this.saleservice.submitEstimate(request);
-      // const response ={
-      //   message:'เพิ่มข้อมูลสำเร็จ',
-      //   statusCode:201
-
-      // }
       res.status(200).json(response);
     } catch (err: any) {
       res.status(500).json(err);
     }
+  }
+
+
+  async updateDocument(req: Request, res: Response): Promise<any> { //แก้ไขเอกสาร
+    try {
+
+      const formDataFields = req.body;
+      const uploadedFiles: any = req.files;
+      const purchaseId = req.params.id;
+      const userId = req?.userId;
+
+      const RequestData = {
+        ...formDataFields,
+        purchase_id: purchaseId,
+        userId: userId,
+        files: uploadedFiles,
+      };
+
+      const response = await this.saleservice.updateDocument(RequestData);
+
+      res.status(200).json(true);
+    }
+    catch (err: any) {
+      console.log('err', err)
+      res.status(500).json(err)
+    }
+  }
+
+
+  async updatePreEstimate(req: Request, res: Response): Promise<any> {
+    try {
+      const validatedData = ValidationsubmitEstimate.safeParse(req.body);
+      const purchaseId = req.params.id;
+
+      const employee_id = req.userId
+      const RequestData = req.body;
+      // if (!validatedData.success) {
+      //   res.status(400).json({ errors: validatedData.error.issues });
+      // }
+
+      const request = {
+        ...RequestData,
+        employee_id: employee_id,
+        purchase_id: purchaseId,
+        files: req.files,
+
+        // userId: userId,
+      };
+
+      const response = await this.saleservice.updateEstimate(request);
+      res.status(200).json(response);
+    } catch (err: any) {
+      res.status(500).json(err);
+    }
+  }
+
+
+  async submitAddorderPurchase(req: Request, res: Response): Promise<any> {
+    try {
+
+      const RequestData = req.body
+      const userId = req?.userId;
+      const request = {
+        ...RequestData,
+        userId: userId,
+        files: req.files,
+      };
+
+      const response = await this.saleservice.submitAddorderPurchase(request);
+
+
+      res.status(200).json({
+        data: {
+          message: "บันทึกข้อมูลสำเร็จ",
+          statusCode: 200,
+        },
+      });
+    }
+    catch (err: any) {
+      console.log("errdata", err)
+      res.status(500).json(err)
+    }
+  }
+
+  async updatestatusPurchase(req: Request, res: Response): Promise<any> {
+    try {
+      const purchaseId = req.params.id;
+      const request = {
+        purchase_id: purchaseId,
+      };
+      const response = await this.saleservice.updatestatusPurchase(request);
+      res.status(200).json({
+        data: {
+          message: "เปลี่ยนสถานะสำเร็จ",
+          statusCode: 200,
+        },
+      });
+    } catch (err: any) {
+      res.status(500).json(err);
+    }
+  }
+
+  async submitpayment(req: Request, res: Response): Promise<any> {
+    try {
+
+      const RequestData = req.body
+      const userId = req?.userId;
+
+
+      const purchaseEtcFiles = (req.files as any[]).filter(file => file.fieldname === 'purchase_etc');
+      const conditionFiles = (req.files as any[]).filter(file => file.fieldname === 'condition');
+      const purchaseFiles = (req.files as any[]).filter(file => file.fieldname === 'purchase_file');
+      const type_image = (req.files as any[]).filter(file => file.fieldname === 'type_images');
+
+
+      
+
+      const request = {
+        ...RequestData,
+        userId: userId,
+        purchaseEtcFiles: purchaseEtcFiles,
+        conditionFiles: conditionFiles,
+        purchaseFiles: purchaseFiles,
+        typeImage: type_image,
+
+      };  
+
+      console.log("request", request)
+
+
+      const response = await this.saleservice.submitpayment(request);
+
+      
+      res.status(200).json({
+        data: {
+          message: "บันทึกข้อมูลสำเร็จ",
+          statusCode: 200,
+        },
+      });
+    }
+    catch (err: any) {
+      console.log("erererererer", err)
+      res.status(500).json(err)
+    }
+
   }
 }
