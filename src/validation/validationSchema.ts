@@ -36,7 +36,7 @@ export const ValidationsubmitEstimate =z.object({
   d_weight :z.string({message:"Estimate_weight"}), //น้ำหนัก,
   d_address_origin :z.string({message:"Estimate_address"}), //ที่อยู่ต้นทาง
   d_address_destination:z.string({message:"Estimate_address_destnation"}), //ที่อยู่ปลายทาง
-  d_refund_tag :z.string({message:"Estimate_refund"}), //Refung tax ต้นทาง
+  //d_refund_tag :z.string({message:"Estimate_refund"}), //Refung tax ต้นทาง
   d_truck :z.string({message:"d_truck"}) , //หัวรถลาก
   d_etc :z.string({message:"d_etc"}) , //หมายเหตุุ
 })
