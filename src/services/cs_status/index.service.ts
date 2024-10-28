@@ -1088,6 +1088,127 @@ export class CSStatusService {
     }
   }
 
+  async editWaitRelease(RequestData: Partial<any>): Promise<any> {
+    try {
+      const uploadDir = path.join(
+        "public",
+        "images",
+        "waitrelease_file",
+        `${RequestData.d_purchase_id}`
+      );
+
+      await fs.mkdirSync(uploadDir, { recursive: true });
+
+      const id = await this.prisma.$transaction(async (tx) => {
+        try {
+          const release_id = RequestData?.id;
+          delete RequestData.id;
+
+          const edit_release = {
+            date_planing: RequestData?.date_planing,
+            date_receive: RequestData?.date_receive,
+            dem_free_time: RequestData?.dem_free_time,
+            demurrage_dem_date: RequestData?.demurrage_dem_date,
+            detention_det_date: RequestData?.detention_det_date,
+            license_plate: RequestData?.license_plate,
+            location_exchange: RequestData?.location_exchange,
+            phone_number: RequestData?.phone_number,
+            terminal_release: RequestData?.terminal_release,
+            type_car: RequestData?.type_car,
+            company_car: RequestData?.company_car,
+            det_free_time: RequestData?.det_free_time,
+          };
+
+          const contain = await this.csStatusRepository.update(
+            tx,
+            release_id,
+            edit_release,
+            "waitrelease"
+          );
+
+         if(RequestData?.existingImageIds?.length > 0){
+            
+          const dataRequest  :any =  await  this.csStatusRepository.getDatareleasefile(tx,release_id, RequestData.existingImageIds);
+          console.log(dataRequest,"dataRequest")
+          if(dataRequest.length > 0){
+            for (let file of dataRequest) {
+              const tempFilePath = file.file_path;
+               const newFilePath = path.join(uploadDir, file.file_name);
+
+              await fs.unlinkSync(newFilePath)
+                
+              await this.csStatusRepository.delete(tx, file.id,"waitrelease_file");
+
+            }
+          }
+        }
+
+          // const contain_product = await this.csStatusRepository.createOrupdate(
+          //     tx,
+          //     JSON.parse(RequestData.items),
+          //     id
+          //   );
+
+          if (RequestData.files.length > 0) {
+            for (let file of RequestData.files) {
+              const tempFilePath = file.path;
+
+              const d_image = {
+                return_cabinet_id: release_id,
+                file_name: file.filename,
+                key: file.fieldname,
+                file_path: `/images/waitrelease/${RequestData.d_purchase_id}/${file.filename}`,
+              };
+              const contain_picture =
+              await this.csStatusRepository.createDocument( //คือการอัพเดด ข้อมูล
+                tx,
+                d_image,
+                "waitrelease"
+              );
+
+              if (contain_picture) {
+                const newFilePath = path.join(uploadDir, file.filename);
+                await fs.renameSync(tempFilePath, newFilePath);
+              }
+            }
+          }
+          const purchase_detail = await this.csService.getPurchaseDetail(
+            RequestData.d_purchase_id
+          );
+          let RequestSentNotifaction = {
+            user_id: purchase_detail.d_purchase_emp[0].user_id,
+            purchase_id: RequestData.d_purchase_id,
+            link_to: `purchase/content/` + RequestData.d_purchase_id,
+            title: "CS (รอตรวจปล่อย)",
+            subject_key: RequestData.d_purchase_id,
+            message: `Cs รอตรวจปล่อย เลขที่:${purchase_detail.book_number}`,
+            status: false,
+            data: {},
+          };
+          RequestSentNotifaction.data = JSON.stringify(RequestSentNotifaction);
+          const notification = await this.notificationRepo.sendNotification(
+            RequestSentNotifaction
+          );
+
+          return contain;
+        } catch (err: any) {
+          console.log("editeFail", err);
+          throw new Error(err);
+        }
+      });
+      const response = {
+        id: id,
+        message: "บันทึกข้อมูลสำเร็จ",
+        statusCode: 200,
+      };
+      return response;
+    } catch (err: any) {
+      console.log("editeFail", err);
+      throw new Error(err);
+    }
+  }
+  
+
   async createSuccessRelease(RequestData: Partial<any>): Promise<any> {
     try {
       const uploadDir = path.join(

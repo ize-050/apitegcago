@@ -73,6 +73,7 @@ router.get('/getLeave/:id', authMiddleware, (req, res) =>  csStatusController.ge
 
 //wait_release
 router.post('/createWaitRelease/:id',  upload.any() ,authMiddleware,(req, res)=> csStatusController.createWaitRelease(req, res));
+router.put('/editWaitRelease/:id',  upload.any() ,authMiddleware,(req, res)=> csStatusController.editWaitRelease(req, res));
 router.get('/getWaitRelease/:id', authMiddleware, (req, res) =>  csStatusController.getWaitRelease(req, res));
 
 

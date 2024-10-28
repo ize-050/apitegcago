@@ -168,7 +168,7 @@ class Csservice {
 
           if (agency) {
             const agency_detail = await this.csRepo.SubmitAddAgencyDetail(tx, agency.id, Request.purchase_id, Request.type);
-
+            
             const uploadDir = path.join(
               "public",
               "images",
