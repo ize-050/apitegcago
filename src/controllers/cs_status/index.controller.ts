@@ -291,6 +291,22 @@ export class CSStatusController {
   }
 
 
+  async editWaitRelease(req: Request, res: Response): Promise<any> {
+    try{
+      const data = {
+        ...req.body,
+        id: req.params.id,
+        files: req.files,
+      };
+      const csStatusData = await this.csStatusService.editWaitRelease(data)
+      return res.status(200).json(csStatusData);
+    }
+    catch(err:any){
+      console.log("Error editWaitRelease",err)
+      res.status(500).json(err)
+    }
+  }
+
   async createSuccessRelease(req: Request, res: Response): Promise<any> { //ปล่อยเรียบร้อย
     try {
       const files = req.files as { [fieldname: string]: Express.Multer.File[] };

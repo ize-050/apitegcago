@@ -280,6 +280,26 @@ class CsStatusRepository {
 
   }
 
+  async getDatareleasefile(tx:any,release_id:string,id: string): Promise<any> {
+    try{
+      const releaseFile = await tx.waitrelease_file.findMany({
+        where: {
+          id: {
+            not : {
+              in: id
+            },
+          },
+          waitrelease_id: release_id,
+        },
+      });
+      return releaseFile;
+  }
+  catch(err:any){
+    console.log("Error getDatareleasefile", err);
+    throw new Error(err);
+  }
+}
+
   async getDatareturnfile(tx:any,return_cabinet_id:string,id: string): Promise<any> {
     try{
       const contain_picture = await tx.cs_return_cabinet_file.findMany({
