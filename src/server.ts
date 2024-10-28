@@ -1,6 +1,7 @@
 import express, { Express, Request, Response } from "express";
 import dotenv from "dotenv";
 import bodyParser = require("body-parser");
+import cors from 'cors'
 const router = require("./routes")
 
 dotenv.config();
@@ -15,7 +16,15 @@ declare module "express-serve-static-core" {
     userId?: any;
   }
 }
+
+
+// app.use(cors());
+app.use(cors({
+  origin: ['http://localhost:3003','https://cs.teglogistics.co.th'] 
+}));
+
 app.use(express.static(__dirname + "/public"));
+app.use(express.static('public'))
 app.use(express.json());
 app.use(express.urlencoded({ extended: true })); 
 app.use(router);
