@@ -11,6 +11,7 @@ const router = Router()
 
 import multer from 'multer';
 import path from 'path'
+import { editLeave } from '../../../../front_tegcago/src/services/statusOrder';
 const { v4: uuidv4 } = require('uuid');
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
@@ -64,12 +65,13 @@ router.get('/getDocumentStatus/:id',authMiddleware, (req, res) =>  csStatusContr
 //CreateDeparture
 router.post('/createDeparture/:id',authMiddleware,(req, res)=> csStatusController.createDeparture(req, res));
 router.get('/getDeparture/:id',authMiddleware, (req, res) =>  csStatusController.getDeparture(req, res));
+router.put('/updateDeparture/:id',authMiddleware,(req, res)=> csStatusController.updateDeparture(req, res));
 
 
 //createLeave
 router.post('/createLeave/:id', upload.any(), authMiddleware,(req, res)=> csStatusController.createLeave(req, res));
 router.get('/getLeave/:id', authMiddleware, (req, res) =>  csStatusController.getLeave(req, res));
-
+router.put('/editLeave/:id', upload.any(), authMiddleware,(req, res)=> csStatusController.editLeave(req, res));
 
 //wait_release
 router.post('/createWaitRelease/:id',  upload.any() ,authMiddleware,(req, res)=> csStatusController.createWaitRelease(req, res));
