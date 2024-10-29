@@ -280,6 +280,28 @@ class CsStatusRepository {
 
   }
 
+  async getDataleavefile(tx:any,leave_id:string,id: string): Promise<any> {
+    try{
+      const leaveFile = await tx.leavefile.findMany({
+        where: {
+          id: {
+            not : {
+              in: id
+            },
+          },
+          leave_id: leave_id,
+        },
+      });
+      return leaveFile;
+    }
+  
+  catch(err:any){
+    console.log("Error getDataleavefile", err);
+    throw new Error(err);
+  }
+}
+  
+
   async getDatareleasefile(tx:any,release_id:string,id: string): Promise<any> {
     try{
       const releaseFile = await tx.waitrelease_file.findMany({

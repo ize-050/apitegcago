@@ -771,6 +771,7 @@ model waitrelease {
   demurrage_dem_date String?
   detention_det_date String?
   license_plate      String?
+  location_do        String?  
   location_exchange  String?
   phone_number       String?
   terminal_release   String?

@@ -260,6 +260,20 @@ export class CSStatusController {
     }
   }
 
+  async updateDeparture(req: Request, res: Response): Promise<any> {
+    try {
+      const data = {
+        ...req.body,
+        id: req.params.id,
+      };
+      const csStatusData = await this.csStatusService.updateDeparture(data);
+      return res.status(200).json(csStatusData);
+    } catch (err: any) {
+      console.log("Error updateDeparture", err);
+      res.status(500).json(err);
+    }
+  }
+
    async createLeave(req: Request, res: Response): Promise<any> { //ยื่นคำร้องไฟล
     try {
       const data = {
@@ -273,6 +287,26 @@ export class CSStatusController {
       res.status(500).json(err);
     }
  }
+
+    async editLeave(req:Request,res:Response):Promise<any>{
+      try{
+        const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+        const RequestData = req.body
+
+        const request ={
+          ...RequestData,
+          id: req.params.id,
+          files: files
+        }
+
+        console.log("request",request)
+        const csStatusData = await this.csStatusService.editLeave(request)
+        return res.status(200).json(csStatusData);
+      }
+      catch(err:any){
+        res.status(500).json(err);
+      }
+    }
 
   async createWaitRelease(req: Request, res: Response): Promise<any> { //รอตรวจปล่อย
     try {
@@ -293,6 +327,7 @@ export class CSStatusController {
 
   async editWaitRelease(req: Request, res: Response): Promise<any> {
     try{
+      console.log("req.files,",req.files,)
       const data = {
         ...req.body,
         id: req.params.id,
