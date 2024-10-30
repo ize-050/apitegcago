@@ -178,18 +178,17 @@ export class CSStatusService {
     }
   }
 
-  async getReturn(id:string):Promise<any>{
-    try{
+  async getReturn(id: string): Promise<any> {
+    try {
       const getReturn = await this.csStatusRepository.getReturn(id);
       const response = {
         data: getReturn,
         statusCode: 200,
       };
       return response;
-    }
-    catch(err:any){
-      console.log("Error getReturn",err)
-      throw new Error(err)
+    } catch (err: any) {
+      console.log("Error getReturn", err);
+      throw new Error(err);
     }
   }
 
@@ -526,22 +525,29 @@ export class CSStatusService {
             "contain"
           );
 
-         if(RequestData?.existingImageIds?.length > 0){
-            
-          const dataRequest  :any =  await  this. csStatusRepository.getDataContainPicture(tx,contain_id, RequestData.existingImageIds);
-          console.log(dataRequest,"dataRequest")
-          if(dataRequest.length > 0){
-            for (let file of dataRequest) {
-              const tempFilePath = file.picture_path;
-               const newFilePath = path.join(uploadDir, file.picture_name);
+          if (RequestData?.existingImageIds?.length > 0) {
+            const dataRequest: any =
+              await this.csStatusRepository.getDataContainPicture(
+                tx,
+                contain_id,
+                RequestData.existingImageIds
+              );
+            console.log(dataRequest, "dataRequest");
+            if (dataRequest.length > 0) {
+              for (let file of dataRequest) {
+                const tempFilePath = file.picture_path;
+                const newFilePath = path.join(uploadDir, file.picture_name);
 
-              await fs.unlinkSync(newFilePath)
-                
-              await this.csStatusRepository.delete(tx, file.id,"Contain_picture");
+                await fs.unlinkSync(newFilePath);
 
+                await this.csStatusRepository.delete(
+                  tx,
+                  file.id,
+                  "Contain_picture"
+                );
+              }
             }
           }
-        }
 
           // const contain_product = await this.csStatusRepository.createOrupdate(
           //     tx,
@@ -705,7 +711,6 @@ export class CSStatusService {
     }
   }
 
-
   async editDocument(RequestData: Partial<any>): Promise<any> {
     try {
       const uploadDir = path.join(
@@ -736,18 +741,25 @@ export class CSStatusService {
             "cs_document"
           );
 
-          if(RequestData?.existingImageIds?.length > 0){
-            
-            const dataRequest  :any =  await  this. csStatusRepository.getDatadocument(tx,RequestData.id, RequestData.existingImageIds);
-            if(dataRequest.length > 0){
+          if (RequestData?.existingImageIds?.length > 0) {
+            const dataRequest: any =
+              await this.csStatusRepository.getDatadocument(
+                tx,
+                RequestData.id,
+                RequestData.existingImageIds
+              );
+            if (dataRequest.length > 0) {
               for (let file of dataRequest) {
                 const tempFilePath = file.file_path;
-                 const newFilePath = path.join(uploadDir, file.file_name);
-  
-                await fs.unlinkSync(newFilePath)
-                  
-                await this.csStatusRepository.delete(tx, file.id,"cs_document_file");
-  
+                const newFilePath = path.join(uploadDir, file.file_name);
+
+                await fs.unlinkSync(newFilePath);
+
+                await this.csStatusRepository.delete(
+                  tx,
+                  file.id,
+                  "cs_document_file"
+                );
               }
             }
           }
@@ -880,13 +892,10 @@ export class CSStatusService {
     }
   }
 
-
   async updateDeparture(RequestData: Partial<any>): Promise<any> {
-    try{
+    try {
       const id = await this.prisma.$transaction(async (tx) => {
         try {
-        
-
           const edit_departure = {
             date_etd: RequestData?.date_etd,
             date_eta: RequestData?.date_eta,
@@ -895,9 +904,9 @@ export class CSStatusService {
             vessel_name: RequestData?.vessel_name,
           };
 
-          console.log("edit_departure",edit_departure)
+          console.log("edit_departure", edit_departure);
 
-          console.log("RequestData.id,",RequestData.id)
+          console.log("RequestData.id,", RequestData.id);
 
           const departure = await this.csStatusRepository.update(
             tx,
@@ -972,7 +981,8 @@ export class CSStatusService {
             date_hbl: RequestData?.date_hbl,
             date_original_fe: RequestData?.date_original_fe,
             date_surrender: RequestData?.date_surrender,
-            check_price_deposit: RequestData?.check_price_deposit === "true" ? true : false,
+            check_price_deposit:
+              RequestData?.check_price_deposit === "true" ? true : false,
             price_deposit: RequestData?.price_deposit,
             date_enter_doc: RequestData?.date_enter_doc,
             file_enter_doc: RequestData?.file_enter_doc,
@@ -1046,7 +1056,7 @@ export class CSStatusService {
     }
   }
 
-  async editLeave(RequestData:Partial<any>):Promise<any>{
+  async editLeave(RequestData: Partial<any>): Promise<any> {
     try {
       const uploadDir = path.join(
         "public",
@@ -1065,7 +1075,8 @@ export class CSStatusService {
             date_hbl: RequestData?.date_hbl,
             date_original_fe: RequestData?.date_original_fe,
             date_surrender: RequestData?.date_surrender,
-            check_price_deposit: RequestData?.check_price_deposit === "true" ? true : false,
+            check_price_deposit:
+              RequestData?.check_price_deposit === "true" ? true : false,
             price_deposit: RequestData?.price_deposit,
             date_enter_doc: RequestData?.date_enter_doc,
             file_enter_doc: RequestData?.file_enter_doc,
@@ -1080,13 +1091,18 @@ export class CSStatusService {
             "leave"
           );
 
-          if(RequestData?.existingImageIds?.length > 0){
-            const dataRequest  :any =  await  this.csStatusRepository.getDataleavefile(tx,leave.id, RequestData.existingImageIds);
-            if(dataRequest.length > 0){
+          if (RequestData?.existingImageIds?.length > 0) {
+            const dataRequest: any =
+              await this.csStatusRepository.getDataleavefile(
+                tx,
+                leave.id,
+                RequestData.existingImageIds
+              );
+            if (dataRequest.length > 0) {
               for (let file of dataRequest) {
                 const tempFilePath = file.file_path;
-                await fs.unlinkSync(tempFilePath)
-                await this.csStatusRepository.delete(tx, file.id,"Leavefile");
+                await fs.unlinkSync(tempFilePath);
+                await this.csStatusRepository.delete(tx, file.id, "Leavefile");
               }
             }
           }
@@ -1179,7 +1195,7 @@ export class CSStatusService {
             date_planing: RequestData?.date_planing,
             date_receive: RequestData?.date_receive,
             dem_free_time: RequestData?.dem_free_time,
-            location_do:RequestData?.location_do,
+            location_do: RequestData?.location_do,
             demurrage_dem_date: RequestData?.demurrage_dem_date,
             detention_det_date: RequestData?.detention_det_date,
             license_plate: RequestData?.license_plate,
@@ -1276,7 +1292,7 @@ export class CSStatusService {
             date_planing: RequestData?.date_planing,
             date_receive: RequestData?.date_receive,
             dem_free_time: RequestData?.dem_free_time,
-            location_do:RequestData?.location_do,
+            location_do: RequestData?.location_do,
             demurrage_dem_date: RequestData?.demurrage_dem_date,
             detention_det_date: RequestData?.detention_det_date,
             license_plate: RequestData?.license_plate,
@@ -1295,22 +1311,29 @@ export class CSStatusService {
             "waitrelease"
           );
 
-         if(RequestData?.existingImageIds?.length > 0){
-            
-          const dataRequest  :any =  await  this.csStatusRepository.getDatareleasefile(tx,release_id, RequestData.existingImageIds);
-          console.log(dataRequest,"dataRequest")
-          if(dataRequest.length > 0){
-            for (let file of dataRequest) {
-              const tempFilePath = file.file_path;
-               const newFilePath = path.join(uploadDir, file.file_name);
+          if (RequestData?.existingImageIds?.length > 0) {
+            const dataRequest: any =
+              await this.csStatusRepository.getDatareleasefile(
+                tx,
+                release_id,
+                RequestData.existingImageIds
+              );
+            console.log(dataRequest, "dataRequest");
+            if (dataRequest.length > 0) {
+              for (let file of dataRequest) {
+                const tempFilePath = file.file_path;
+                const newFilePath = path.join(uploadDir, file.file_name);
 
-              await fs.unlinkSync(newFilePath)
-                
-              await this.csStatusRepository.delete(tx, file.id,"waitrelease_file");
+                await fs.unlinkSync(newFilePath);
 
+                await this.csStatusRepository.delete(
+                  tx,
+                  file.id,
+                  "waitrelease_file"
+                );
+              }
             }
           }
-        }
 
           if (RequestData?.files?.length > 0) {
             for (let file of RequestData.files) {
@@ -1322,11 +1345,12 @@ export class CSStatusService {
                 file_path: `/images/wait_release/${RequestData.d_purchase_id}/${file.filename}`,
               };
               const contain_picture =
-              await this.csStatusRepository.createDocument( //คือการอัพเดด ข้อมูล
-                tx,
-                d_image,
-                "waitrelease_file"
-              );
+                await this.csStatusRepository.createDocument(
+                  //คือการอัพเดด ข้อมูล
+                  tx,
+                  d_image,
+                  "waitrelease_file"
+                );
 
               if (contain_picture) {
                 const newFilePath = path.join(uploadDir, file.filename);
@@ -1369,7 +1393,6 @@ export class CSStatusService {
       throw new Error(err);
     }
   }
-  
 
   async createSuccessRelease(RequestData: Partial<any>): Promise<any> {
     try {
@@ -1454,6 +1477,119 @@ export class CSStatusService {
           );
 
           return cs_purchase.id;
+        } catch (err: any) {
+          console.log("createFail", err);
+          throw new Error(err);
+        }
+      });
+
+      const response = {
+        id: id,
+        message: "บันทึกข้อมูลสำเร็จ",
+        statusCode: 200,
+      };
+      return response;
+    } catch (err: any) {
+      throw new Error(err);
+    }
+  }
+
+  async updateSuccessRelease(RequestData: Partial<any>): Promise<any> {
+    try {
+      const uploadDir = path.join(
+        "public",
+        "images",
+        "success_release",
+        `${RequestData.d_purchase_id}`
+      );
+      await fs.mkdirSync(uploadDir, { recursive: true });
+
+      const id = await this.prisma.$transaction(async (tx) => {
+        try {
+
+          const success_release = {
+            cs_purchase_id: RequestData.cs_purchase_id,
+            shipping: RequestData.shipping,
+            date_release: RequestData.date_release,
+            date_do: RequestData.date_do,
+            date_card: RequestData.date_card,
+            date_return_document: RequestData.date_return_document,
+            date_return_docu: RequestData.date_return_docu,
+          };
+
+          const success_release_update = await this.csStatusRepository.update(
+            tx,
+            RequestData.id,
+            success_release,
+            "cs_inspection"
+          );
+
+
+          if (RequestData?.existingImageIds?.length > 0) {
+            const dataRequest: any =
+              await this.csStatusRepository.getDatasuccessreleasefile(
+                tx,
+                RequestData.id,
+                RequestData.existingImageIds
+              );
+            if (dataRequest.length > 0) {
+              for (let file of dataRequest) {
+                const tempFilePath = file.file_path;
+                const newFilePath = path.join(uploadDir, file.file_name);
+
+                await fs.unlinkSync(newFilePath);
+
+                await this.csStatusRepository.delete(
+                  tx,
+                  file.id,
+                  "cs_inspection_file"
+                );
+              }
+            }
+          }
+
+          if (RequestData.files.length > 0) {
+            for (let file of RequestData.files) {
+              const tempFilePath = file.path;
+              const d_image = {
+                cs_inspection_id: success_release_update.id,
+                file_name: file.filename,
+                key: file.fieldname,
+                file_path: `/images/success_release/${RequestData.d_purchase_id}/${file.filename}`,
+              };
+              const document_picture =
+                await this.csStatusRepository.createDocument(
+                  tx,
+                  d_image,
+                  "cs_inspection_file"
+                );
+
+              if (document_picture) {
+                const newFilePath = path.join(uploadDir, file.filename);
+                await fs.renameSync(tempFilePath, newFilePath);
+              }
+            }
+          }
+
+          const purchase_detail = await this.csService.getPurchaseDetail(
+            RequestData.d_purchase_id
+          );
+          let RequestSentNotifaction = {
+            user_id: purchase_detail.d_purchase_emp[0].user_id,
+            purchase_id: RequestData.d_purchase_id,
+            link_to: `purchase/content/` + RequestData.d_purchase_id,
+            title: "CS (ตรวจปล่อยเรียบร้อย)",
+            subject_key: RequestData.d_purchase_id,
+            message: `Cs ตรวจปล่อยเรียบร้อย เลขที่:${purchase_detail.book_number}`,
+            status: false,
+            data: {},
+          };
+          RequestSentNotifaction.data = JSON.stringify(RequestSentNotifaction);
+          const notification = await this.notificationRepo.sendNotification(
+            RequestSentNotifaction
+          );
+
+          return true;
         } catch (err: any) {
           console.log("createFail", err);
           throw new Error(err);
@@ -1682,7 +1818,7 @@ export class CSStatusService {
   }
 
   async createReturn(RequestData: Partial<any>): Promise<any> {
-    try{
+    try {
       const uploadDir = path.join(
         "public",
         "images",
@@ -1707,19 +1843,21 @@ export class CSStatusService {
           );
 
           console.log("cs_purchase", cs_purchase);
-    
+
           const create_return = {
             cs_purchase_id: cs_purchase.id,
             date_return_cabinet: RequestData?.date_return_cabinet,
-            cabinet: RequestData?.cabinet === 'false' ? false : true,
+            cabinet: RequestData?.cabinet === "false" ? false : true,
             date_cabinet: RequestData?.date_cabinet,
             price_repair_cabinet: RequestData?.price_repair_cabinet,
-            request_return: RequestData?.request_return ==='false' ? false :true ,
+            request_return:
+              RequestData?.request_return === "false" ? false : true,
             date_request_return: RequestData?.date_request_return,
             price_request_return: RequestData?.price_request_return,
-            return_cabinet:  RequestData?.return_cabinet === 'false' ? false : true,
+            return_cabinet:
+              RequestData?.return_cabinet === "false" ? false : true,
             price_deposit: RequestData?.price_deposit,
-            price_return_cabinet: RequestData?.price_return_cabinet
+            price_return_cabinet: RequestData?.price_return_cabinet,
           };
           console.log("create_return", create_return);
 
@@ -1784,11 +1922,7 @@ export class CSStatusService {
         statusCode: 200,
       };
       return response;
-    }
-    catch(err:any){
-
-    }
-
+    } catch (err: any) {}
   }
 
   async editReturn(RequestData: Partial<any>): Promise<any> {
@@ -1809,15 +1943,17 @@ export class CSStatusService {
 
           const create_return = {
             date_return_cabinet: RequestData?.date_return_cabinet,
-            cabinet: RequestData?.cabinet === 'false' ? false : true,
+            cabinet: RequestData?.cabinet === "false" ? false : true,
             date_cabinet: RequestData?.date_cabinet,
             price_repair_cabinet: RequestData?.price_repair_cabinet,
-            request_return: RequestData?.request_return ==='false' ? false :true ,
+            request_return:
+              RequestData?.request_return === "false" ? false : true,
             date_request_return: RequestData?.date_request_return,
             price_request_return: RequestData?.price_request_return,
-            return_cabinet:  RequestData?.return_cabinet === 'false' ? false : true,
+            return_cabinet:
+              RequestData?.return_cabinet === "false" ? false : true,
             price_deposit: RequestData?.price_deposit,
-            price_return_cabinet: RequestData?.price_return_cabinet
+            price_return_cabinet: RequestData?.price_return_cabinet,
           };
 
           const contain = await this.csStatusRepository.update(
@@ -1827,22 +1963,29 @@ export class CSStatusService {
             "cs_return_cabinet"
           );
 
-         if(RequestData?.existingImageIds?.length > 0){
-            
-          const dataRequest  :any =  await  this. csStatusRepository.getDatareturnfile(tx,return_id, RequestData.existingImageIds);
-          console.log(dataRequest,"dataRequest")
-          if(dataRequest.length > 0){
-            for (let file of dataRequest) {
-              const tempFilePath = file.file_path;
-               const newFilePath = path.join(uploadDir, file.file_name);
+          if (RequestData?.existingImageIds?.length > 0) {
+            const dataRequest: any =
+              await this.csStatusRepository.getDatareturnfile(
+                tx,
+                return_id,
+                RequestData.existingImageIds
+              );
+            console.log(dataRequest, "dataRequest");
+            if (dataRequest.length > 0) {
+              for (let file of dataRequest) {
+                const tempFilePath = file.file_path;
+                const newFilePath = path.join(uploadDir, file.file_name);
 
-              await fs.unlinkSync(newFilePath)
-                
-              await this.csStatusRepository.delete(tx, file.id,"cs_return_cabinet_file");
+                await fs.unlinkSync(newFilePath);
 
+                await this.csStatusRepository.delete(
+                  tx,
+                  file.id,
+                  "cs_return_cabinet_file"
+                );
+              }
             }
           }
-        }
 
           // const contain_product = await this.csStatusRepository.createOrupdate(
           //     tx,
@@ -1861,11 +2004,11 @@ export class CSStatusService {
                 file_path: `/images/return_cabinet/${RequestData.d_purchase_id}/${file.filename}`,
               };
               const contain_picture =
-              await this.csStatusRepository.createDocument(
-                tx,
-                d_image,
-                "cs_return_cabinet_file"
-              );
+                await this.csStatusRepository.createDocument(
+                  tx,
+                  d_image,
+                  "cs_return_cabinet_file"
+                );
 
               if (contain_picture) {
                 const newFilePath = path.join(uploadDir, file.filename);

@@ -357,6 +357,22 @@ export class CSStatusController {
     }
   }
 
+  async updateSuccessRelease(req: Request, res: Response): Promise<any> {
+    try {
+      const data = {
+        ...req.body,
+        id: req.params.id,
+        files: req.files,
+      };
+      const csStatusData = await this.csStatusService.updateSuccessRelease(data);
+      return res.status(200).json(csStatusData);
+    }
+    catch(err:any){
+      console.log("Error updateSuccessRelease",err)
+      res.status(500).json(err)
+    }
+  } 
+
   async createDestination(req: Request, res: Response): Promise<any> { //ปล่อยเรียบร้อย
     try {
         const data = {

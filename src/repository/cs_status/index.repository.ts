@@ -280,6 +280,26 @@ class CsStatusRepository {
 
   }
 
+  async getDatasuccessreleasefile(tx:any,success_release_id:string,id: string): Promise<any> {
+    try{
+      const success_release_file = await tx.cs_inspection_file.findMany({
+        where: {
+          id: {
+            not : {
+              in: id
+            },
+          },
+          cs_inspection_id: success_release_id,
+        },
+      });
+      return success_release_file;
+    }
+    catch(err:any){
+      console.log("Error getDatasuccessreleasefile", err);
+      throw new Error(err);
+    }
+  }
+
   async getDataleavefile(tx:any,leave_id:string,id: string): Promise<any> {
     try{
       const leaveFile = await tx.leavefile.findMany({
