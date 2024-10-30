@@ -253,6 +253,9 @@ export class SaleController {
         if (purchase.d_status === 'ปิดการขาย') {
           purchase.color = 'bg-green-500'
         }
+        if (purchase.d_status === 'ลูกค้าเครดิต') {
+          purchase.color = 'bg-blue-500'
+        }
         Purchase.push(purchase)
       }
 
@@ -321,6 +324,9 @@ export class SaleController {
       }
       else if (data.d_status === 'ปิดการขาย') {
         data.color = 'bg-green-500'
+      }
+      else if (data.d_status === 'ลูกค้าเครดิต') {
+        data.color = 'bg-blue-500'
       }
       const response = {
         data: data,

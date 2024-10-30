@@ -65,6 +65,9 @@ export class CSController {
         if (purchase.d_status === 'ปิดการขาย') {
           purchase.color = 'bg-green-500'
         }
+        if (purchase.d_status === 'ลูกค้าเครดิต') {
+          purchase.color = 'bg-blue-500'
+        }
         Purchase.push(purchase)
       }
 
@@ -131,6 +134,9 @@ export class CSController {
 
       if (data.d_status === 'ปิดการขาย') {
         data.color = 'bg-green-500'
+      }
+      if (data.d_status === 'ลูกค้าเครดิต') {
+        data.color = 'bg-blue-500'
       }
 
 

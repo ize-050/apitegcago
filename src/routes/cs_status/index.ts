@@ -82,7 +82,7 @@ router.get('/getWaitRelease/:id', authMiddleware, (req, res) =>  csStatusControl
 //update
 router.post('/createSuccessRelease/:id', upload.any(), authMiddleware, (req, res) => csStatusController.createSuccessRelease(req, res));
 router.get('/getSuccessRelease/:id', authMiddleware, (req, res) => csStatusController.getSuccessRelease(req, res));
-
+router.put('/updateSuccessRelease/:id', upload.any(), authMiddleware, (req, res) => csStatusController.updateSuccessRelease(req, res));
 //Destination
 
 router.post('/createDestination/:id', upload.any(), authMiddleware, (req, res) => csStatusController.createDestination(req, res));

@@ -661,6 +661,14 @@ class SaleService {
                 "ค้างชำระเงิน"
               );
             }
+            else if(RequestData.purchase_status === "ลูกค้าเครดิต"){
+              const status = await this.saleRepo.ChangePurchaseStatus(
+                tx,
+                RequestData.d_purchase_id,
+                "Credit",
+                "ลูกค้าเครดิต"
+              );
+            }
           }
 
           if (
