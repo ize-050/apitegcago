@@ -476,12 +476,16 @@ class CsStatusRepository {
   async createEtc(tx: any, data: any): Promise<any> {
     try {
       
-      const dataEtc = {
-        ...data,
-      }
+      // const dataEtc = {
+      //   ...data,
+      //   cs_purchase_id: data.cs_purchase_id,
+      // }
 
       const etc = await tx.cs_etc.create({
-        data: dataEtc,
+        data: {
+          ...data,
+          cs_purchase_id: data.cs_purchase_id,
+        },
       });
       return etc;
     } catch (err: any) {

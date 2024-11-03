@@ -2068,7 +2068,7 @@ export class CSStatusService {
 
   async createEtc(data: any): Promise<any> {
     try {
-      const id = await this.prisma.$transaction(async (tx) => {
+      const id = await this.prisma.$transaction(async (tx:any) => {
         try {
 
           const cs_purchaseData = {

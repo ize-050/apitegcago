@@ -708,7 +708,7 @@ model bookcabinet {
 }
 
 model bookcabinet_picture {
-  id             String      @id
+  id             String      @id @default(uuid())
   bookcabinet_id String
   picture_name   String
   picture_path   String
@@ -721,7 +721,7 @@ model bookcabinet_picture {
 }
 
 model contain {
-  id              String            @id
+  id              String         @id @default(uuid())
   cs_purchase_id  String            @unique(map: "Contain_cs_purchase_id_key")
   date_booking    String?
   carbon_total    String?
@@ -738,7 +738,7 @@ model contain {
 }
 
 model contain_picture {
-  id           String    @id
+  id           String    @id @default(uuid())
   contain_id   String
   key          String
   picture_name String
@@ -752,7 +752,7 @@ model contain_picture {
 }
 
 model contain_product {
-  id             String    @id
+  id             String  @id @default(uuid())
   contain_id     String
   product_name   String
   product_hscode String
@@ -765,7 +765,7 @@ model contain_product {
 }
 
 model cs_document {
-  id                     String             @id
+  id                     String             @id @default(uuid())
   cs_purchase_id         String             @unique(map: "Cs_document_cs_purchase_id_key")
   document_invoice_date  String?
   document_packinglist   String?
@@ -779,7 +779,7 @@ model cs_document {
 }
 
 model cs_document_file {
-  id             String      @id
+  id             String      @id @default(uuid())
   cs_document_id String
   key            String
   file_name      String
@@ -793,7 +793,7 @@ model cs_document_file {
 }
 
 model cs_purchase {
-  id                  String               @id
+  id                  String              @id @default(uuid())
   d_purchase_id       String
   status_key          String?
   status_name         String?
@@ -820,7 +820,7 @@ model cs_purchase {
 }
 
 model currency {
-  id            String    @id
+  id            String    @id @default(uuid())
   currency_name String
   rate_money    Float?
   createdAt     DateTime  @default(now())
@@ -829,7 +829,7 @@ model currency {
 }
 
 model documenttype {
-  id             String              @id
+  id             String            @id @default(uuid())
   type_master_id String
   createdAt      DateTime            @default(now())
   updatedAt      DateTime?
@@ -844,7 +844,7 @@ model documenttype {
 }
 
 model leave {
-  id                  String      @id
+  id                  String      @id @default(uuid())
   cs_purchase_id      String      @unique(map: "Leave_cs_purchase_id_key")
   date_hbl            String?
   date_original_fe    String?
@@ -863,7 +863,7 @@ model leave {
 }
 
 model leavefile {
-  id        String    @id
+  id        String    @id @default(uuid())
   leave_id  String
   file_name String
   file_path String
@@ -877,7 +877,7 @@ model leavefile {
 }
 
 model provedeparture {
-  id               String      @id
+  id               String     @id @default(uuid())
   cs_purchase_id   String      @unique(map: "ProveDeparture_cs_purchase_id_key")
   date_etd         String?
   date_eta         String?
@@ -891,7 +891,7 @@ model provedeparture {
 }
 
 model receive {
-  id              String            @id
+  id              String           @id @default(uuid())
   cs_purchase_id  String            @unique(map: "Receive_cs_purchase_id_key")
   date_booking    String?
   so_no           String?
@@ -906,7 +906,7 @@ model receive {
 }
 
 model receive_picture {
-  id           String    @id
+  id           String    @id @default(uuid())
   receive_id   String
   picture_name String
   picture_path String
@@ -919,7 +919,7 @@ model receive_picture {
 }
 
 model typemaster {
-  id           String         @id
+  id           String        @id @default(uuid())
   type_name    String
   createdAt    DateTime       @default(now())
   updatedAt    DateTime?
