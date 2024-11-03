@@ -3,7 +3,7 @@ import CsStatusRepository from "../../repository/cs_status/index.repository";
 import NotificationRepository from "../../repository/notification/index.repository";
 import Csservice from "../cs/index.service";
 
-import { PrismaClient, cs_purchase } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 
 import moment from "moment";
 import path from "path";
@@ -203,7 +203,7 @@ export class CSStatusService {
 
       await fs.mkdirSync(uploadDir, { recursive: true });
 
-      const id = await this.prisma.$transaction(async (tx) => {
+      const id = await this.prisma.$transaction(async (tx:any) => {
         try {
           console.log("RequestData", RequestData);
           const cs_purchaseData = {
@@ -304,7 +304,7 @@ export class CSStatusService {
 
       await fs.mkdirSync(uploadDir, { recursive: true });
 
-      const id = await this.prisma.$transaction(async (tx) => {
+      const id = await this.prisma.$transaction(async (tx:any) => {
         try {
           console.log("RequestData", RequestData);
           const cs_purchaseData = {
@@ -400,7 +400,7 @@ export class CSStatusService {
 
       await fs.mkdirSync(uploadDir, { recursive: true });
 
-      const id = await this.prisma.$transaction(async (tx) => {
+      const id = await this.prisma.$transaction(async (tx:any) => {
         try {
           console.log("RequestData", RequestData);
           const cs_purchaseData = {
@@ -543,7 +543,7 @@ export class CSStatusService {
                 await this.csStatusRepository.delete(
                   tx,
                   file.id,
-                  "Contain_picture"
+                  "contain_picture"
                 );
               }
             }
@@ -720,7 +720,7 @@ export class CSStatusService {
         `${RequestData.d_purchase_id}`
       );
       await fs.mkdirSync(uploadDir, { recursive: true });
-      const id = await this.prisma.$transaction(async (tx) => {
+      const id = await this.prisma.$transaction(async (tx:any) => {
         try {
           console.log("RequestData", RequestData);
           const edit = {
@@ -825,7 +825,7 @@ export class CSStatusService {
 
   async createDeparture(RequestData: Partial<any>): Promise<any> {
     try {
-      const id = await this.prisma.$transaction(async (tx) => {
+      const id = await this.prisma.$transaction(async (tx:any) => {
         try {
           console.log("RequestData", RequestData);
           const cs_purchaseData = {
@@ -852,7 +852,7 @@ export class CSStatusService {
           const departure = await this.csStatusRepository.create(
             tx,
             create_departure,
-            "ProveDeparture"
+            "provedeparture"
           );
 
           const purchase_detail = await this.csService.getPurchaseDetail(
@@ -912,7 +912,7 @@ export class CSStatusService {
             tx,
             RequestData.id,
             edit_departure,
-            "ProveDeparture"
+            "provedeparture"
           );
 
           const purchase_detail = await this.csService.getPurchaseDetail(
@@ -1010,7 +1010,7 @@ export class CSStatusService {
                 await this.csStatusRepository.createDocument(
                   tx,
                   d_image,
-                  "Leavefile"
+                  "leavefile"
                 );
 
               if (document_picture) {
@@ -1066,7 +1066,7 @@ export class CSStatusService {
       );
       await fs.mkdirSync(uploadDir, { recursive: true });
 
-      const id = await this.prisma.$transaction(async (tx) => {
+      const id = await this.prisma.$transaction(async (tx:any) => {
         try {
           console.log("RequestData", RequestData);
 
@@ -1102,7 +1102,7 @@ export class CSStatusService {
               for (let file of dataRequest) {
                 const tempFilePath = file.file_path;
                 await fs.unlinkSync(tempFilePath);
-                await this.csStatusRepository.delete(tx, file.id, "Leavefile");
+                await this.csStatusRepository.delete(tx, file.id, "leavefile");
               }
             }
           }
@@ -1121,7 +1121,7 @@ export class CSStatusService {
                 await this.csStatusRepository.createDocument(
                   tx,
                   d_image,
-                  "Leavefile"
+                  "leavefile"
                 );
 
               if (document_picture) {
@@ -1283,7 +1283,7 @@ export class CSStatusService {
 
       await fs.mkdirSync(uploadDir, { recursive: true });
 
-      const id = await this.prisma.$transaction(async (tx) => {
+      const id = await this.prisma.$transaction(async (tx:any) => {
         try {
           const release_id = RequestData?.id;
           delete RequestData.id;
@@ -2089,6 +2089,7 @@ export class CSStatusService {
             etc: data.etc,
             date_etc: data.date_etc,
             cs_purchase_id: cs_purchase.id,
+
           }
 
           const etc = await this.csStatusRepository.createEtc(tx, EtcData);
