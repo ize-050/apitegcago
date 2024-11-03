@@ -98,4 +98,9 @@ router.get('/getReturn/:id', authMiddleware, (req, res) => csStatusController.ge
 router.post('/createReturn/:id', upload.any(), authMiddleware, (req, res) => csStatusController.createReturn(req, res));
 router.put('/editreturn/:id', upload.any(), authMiddleware, (req, res) => csStatusController.editReturn(req, res));
 
+//etc
+router.get('/getEtc/:id', authMiddleware, (req, res) => csStatusController.getEtc(req, res));
+router.post('/createEtc/:id', authMiddleware, (req, res) => csStatusController.createEtc(req, res));
+
+
 module.exports = router

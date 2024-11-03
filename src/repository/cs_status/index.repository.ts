@@ -1,5 +1,6 @@
 import { PrismaClient, customer } from "@prisma/client";
 import moment from "moment";
+import { CSStatusService } from '../../services/cs_status/index.service';
 
 class CsStatusRepository {
   private prisma: PrismaClient;
@@ -454,6 +455,37 @@ class CsStatusRepository {
       return id;
     } catch (err: any) {
       console.log("errorcreateDocument", err);
+      throw new Error(err);
+    }
+  }
+
+  async getEtc(id: string): Promise<any> {
+    try {
+      const etc = await this.prisma.cs_etc.findFirst({
+        where: {
+          cs_purchase_id: id,
+        },
+      });
+      return etc;
+    } catch (err: any) {
+      console.log("Error getEtc", err);
+      throw new Error(err);
+    }
+  }
+
+  async createEtc(tx: any, data: any): Promise<any> {
+    try {
+      console.log("data",data)
+      const dataEtc = {
+        ...data,
+      }
+
+      const etc = await tx.cs_etc.create({
+        data: dataEtc,
+      });
+      return etc;
+    } catch (err: any) {
+      console.log("Error createEtc", err);
       throw new Error(err);
     }
   }

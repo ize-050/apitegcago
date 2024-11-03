@@ -43,6 +43,9 @@ router.put('/updateDocument/:id',authMiddleware, upload.any(), (req, res) => sal
 
 router.get('/getAllEstimate',authMiddleware, (req, res) => saleController.getAllEstimate(req, res));
 router.get('/getEstimate/:id',authMiddleware, (req, res) => saleController.getEstimate(req, res));
+router.put('/applyEmployee/:id',authMiddleware, (req, res) => saleController.applyEmployee(req, res));
+router.put('/acceptJob/:id',authMiddleware, (req, res) => saleController.acceptJob(req, res));
+router.delete('/cancelJob/:id',authMiddleware, (req, res) => saleController.cancelJob(req, res));
 router.put('/cancelEstimate/:id',authMiddleware, (req, res) => saleController.cancelEstimate(req, res));
 
 router.post('/submitAddorderPurchase/:id',upload.array('files',10),authMiddleware, (req, res) => saleController.submitAddorderPurchase(req, res));

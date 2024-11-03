@@ -436,4 +436,31 @@ export class CSStatusController {
       res.status(500).json(err);
     }
   }
+
+  async getEtc(req: Request, res: Response): Promise<any> {
+    try{
+      const id = req.params.id
+      const csStatusData = await this.csStatusService.getEtc(id)
+      return res.status(200).json(csStatusData)
+    }
+    catch(err:any){
+      console.log("Error getEtc",err)
+      res.status(500).json(err)
+    }
+  }
+
+  async createEtc(req: Request, res: Response): Promise<any> {
+    try{
+      const data = {
+        ...req.body,
+        cs_purchase_id: req.params.id,
+      }
+      const csStatusData = await this.csStatusService.createEtc(data)
+      return res.status(200).json(csStatusData)
+    }
+    catch(err:any){
+      console.log("Error createEtc",err)
+      res.status(500).json(err)
+    }
+  }
 }
