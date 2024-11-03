@@ -3,7 +3,7 @@ import CsStatusRepository from "../../repository/cs_status/index.repository";
 import NotificationRepository from "../../repository/notification/index.repository";
 import Csservice from "../cs/index.service";
 
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, cs_purchase } from '@prisma/client';
 
 import moment from "moment";
 import path from "path";
@@ -1632,7 +1632,7 @@ export class CSStatusService {
             cs_purchaseData
           );
 
-          const re: any = await tx.cS_Purchase.findFirst({
+          const re: any = await tx.cs_purchase.findFirst({
             select: {
               id: true,
             },

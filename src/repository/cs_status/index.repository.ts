@@ -1,4 +1,4 @@
-import { PrismaClient, customer } from "@prisma/client";
+import { PrismaClient  } from "@prisma/client";
 import moment from "moment";
 import { CSStatusService } from '../../services/cs_status/index.service';
 
@@ -11,7 +11,7 @@ class CsStatusRepository {
 
   async getDataCsStatus(id: string): Promise<any> {
     try {
-      const cs_purchase = await this.prisma.cS_Purchase.findMany({
+      const cs_purchase = await this.prisma.cs_purchase.findMany({
         where: {
           d_purchase_id: id,
         },
@@ -33,7 +33,7 @@ class CsStatusRepository {
           cs_purchase_id: id,
         },
         include: {
-          Cs_document_file: true,
+          cs_document_file: true,
         },
       });
       return document;
@@ -45,7 +45,7 @@ class CsStatusRepository {
 
   async getDeparture(id: string): Promise<any> {
     try {
-      const departure = await this.prisma.proveDeparture.findFirst({
+      const departure = await this.prisma.provedeparture.findFirst({
         where: {
           cs_purchase_id: id,
         },
@@ -116,7 +116,7 @@ class CsStatusRepository {
           cs_purchase_id: id,
         },
         include: {
-          Leavefile: true,
+          leavefile: true,
         },
       });
       return leave;
@@ -213,7 +213,7 @@ class CsStatusRepository {
           cs_purchase_id: id,
         },
         include: {
-          Bookcabinet_picture: true,
+          bookcabinet_picture: true,
         },
       });
       return book_cabinet;
@@ -230,7 +230,7 @@ class CsStatusRepository {
           cs_purchase_id: id,
         },
         include: {
-          Receive_picture: true,
+          receive_picture: true,
         },
       });
       return getReceipt;
@@ -249,8 +249,8 @@ class CsStatusRepository {
           cs_purchase_id: id,
         },
         include: {
-          Contain_product: true,
-          Contain_picture: true,
+          contain_product: true,
+          contain_picture: true,
         },
       });
       return getContain;
@@ -386,7 +386,7 @@ class CsStatusRepository {
   }
   async createCsPurchase(tx: any, data: any): Promise<any> {
     try {
-      const cs_purchase = await tx.cS_Purchase.create({
+      const cs_purchase = await tx.cs_purchase.create({
         data: data,
       });
       return cs_purchase;
@@ -475,7 +475,7 @@ class CsStatusRepository {
 
   async createEtc(tx: any, data: any): Promise<any> {
     try {
-      console.log("data",data)
+      
       const dataEtc = {
         ...data,
       }
