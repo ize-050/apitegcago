@@ -126,7 +126,9 @@ class SaleService {
 
   async getAllEstimate(RequestData: any): Promise<any> {
     try {
-      const PurchaseData = await this.saleRepo.getAllEstimate(RequestData);
+      let PurchaseData = await this.saleRepo.getAllEstimate(RequestData);
+      const employee = await this.saleRepo.getEmployee(RequestData.userId);
+      PurchaseData.employee = employee
       return PurchaseData;
     } catch (err: any) {
       throw err;
@@ -136,6 +138,7 @@ class SaleService {
   async getEstimate(purchaseId: string): Promise<any> {
     try {
       const data = await this.saleRepo.getEstimate(purchaseId);
+
       let response: Partial<any> = {};
       if (data == null) {
         const today = moment().format("YYYY-MM-DD");
@@ -311,6 +314,7 @@ class SaleService {
       throw err;
     }
   }
+  
 
   async updateEstimate(RequestData: Partial<any>): Promise<any> {
     try {
@@ -432,6 +436,32 @@ class SaleService {
     }
   }
 
+  async applyEmployee(RequestData: Partial<any>): Promise<any> {
+    try {
+      const updateEmployee = await this.saleRepo.applyEmployee(RequestData);
+      return updateEmployee
+    } catch (err: any) {
+      throw err;
+    }
+  }
+
+  async acceptJob(id:string,RequestData:Partial<any>): Promise<any> {
+    try {
+      const updateEmployee = await this.saleRepo.acceptJob(id,RequestData);
+      return updateEmployee
+    } catch (err: any) {
+      throw err;
+    }
+  }
+
+  async cancelJob(id:string,user_id:string): Promise<any> {
+    try {
+      const updateEmployee = await this.saleRepo.cancelJob(id,user_id);
+      return updateEmployee
+    } catch (err: any) {
+      throw err;
+    }
+  }
   async updateDocument(RequestData: Partial<any>): Promise<any> {
     try {
       const uploadDir = path.join(
@@ -809,6 +839,21 @@ class SaleService {
               }
             }
           }
+
+          const Notification ={
+            user_id: purchase_detail.d_emp_look,
+            purchase_id: RequestData.d_purchase_id,
+            link_to: `purchase/content/` + RequestData.d_purchase_id,
+            title: "อนุมัติราคา มีปรับสถานะ " + RequestData.purchase_status,
+            subject_key: RequestData.d_purchase_id,
+            message: `อนุมัติราคา มีปรับสถานะ เลขที่:${purchase_detail.book_number}`,
+            status: false,
+            data: {},
+          }
+          Notification.data = JSON.stringify(Notification);
+          const dataNotification = await this.notificationRepo.sendNotification(
+            Notification
+          );
         } catch (err: any) {
           throw err;
         }

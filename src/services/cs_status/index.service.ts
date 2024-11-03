@@ -2051,4 +2051,80 @@ export class CSStatusService {
       throw new Error(err);
     }
   }
+
+  async getEtc(id: any): Promise<any> {
+    try {
+      const data = await this.csStatusRepository.getEtc(id);
+      const response = {
+        data: data,
+        statusCode: 200,
+      };
+      return response;
+      return data;
+    } catch (err: any) {
+      throw new Error(err);
+    }
+  }
+
+  async createEtc(data: any): Promise<any> {
+    try {
+      const id = await this.prisma.$transaction(async (tx) => {
+        try {
+
+          const cs_purchaseData = {
+            d_purchase_id: data.d_purchase_id,
+            status_key: "Etc",
+            number_key: 12,
+            status_name: "หมายเหตุ",
+            status_active: true,
+          };
+
+          const cs_purchase = await this.csStatusRepository.createCsPurchase(
+            tx,
+            cs_purchaseData
+          );
+
+
+          const EtcData = {
+            etc: data.etc,
+            date_etc: data.date_etc,
+            cs_purchase_id: cs_purchase.id,
+          }
+
+          const etc = await this.csStatusRepository.createEtc(tx, EtcData);
+       
+
+         const purchase_detail = await this.csService.getPurchaseDetail(
+            data.d_purchase_id
+          );
+          let RequestSentNotifaction = {
+            user_id: purchase_detail.d_purchase_emp[0].user_id,
+            purchase_id: data.d_purchase_id,
+            link_to: `purchase/content/` + data.d_purchase_id,
+            title: "CS (หมายเหตุ)",
+            subject_key: data.d_purchase_id,
+            message: `Cs หมายเหตุ เลขที่:${purchase_detail.book_number}`,
+            status: false,
+            data: {},
+          };
+          RequestSentNotifaction.data = JSON.stringify(RequestSentNotifaction);
+          const notification = await this.notificationRepo.sendNotification(
+            RequestSentNotifaction
+          );
+          
+          return cs_purchase.id;
+        } catch (err: any) {
+          throw new Error(err);
+        }
+      });
+      const response = {
+        id: id,
+        message: "บันทึกข้อมูลสำเร็จ",
+        statusCode: 200,
+      };
+      return response;
+    } catch (err: any) {
+      throw new Error(err);
+    }
+  }
 }

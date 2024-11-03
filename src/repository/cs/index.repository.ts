@@ -321,6 +321,7 @@ class CsRepository {
               d_end_date: new Date(),
               d_num_date: "30",
               d_status: "CS ร้องขอเอกสาร",
+              input_etc: Request.input_etc,
             },
           });
 

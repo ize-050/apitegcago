@@ -218,6 +218,8 @@ model d_purchase {
   date_cabinet                String?
   link_d_destination          String?
   link_d_origin               String?
+  is_update_emp               Boolean?                    @default(false)
+  input_etc                   String?
   CS_Purchase                 CS_Purchase[]
   d_agentcy                   d_agentcy[]
   d_confirm_purchase          d_confirm_purchase[]
@@ -285,6 +287,7 @@ model d_purchase_emp {
   createdAt     DateTime   @default(now())
   updatedAt     DateTime?
   deletedAt     DateTime?
+  is_active     Boolean    @default(true)
   d_purchase    d_purchase @relation(fields: [d_purchase_id], references: [id])
   user          user       @relation(fields: [user_id], references: [id])
 
@@ -581,6 +584,7 @@ model CS_Purchase {
   cs_wait_destination cs_wait_destination?
   waitrelease         waitrelease?
   Leave               Leave?
+  cs_etc              cs_etc?
 
   @@index([d_purchase_id], map: "CS_Purchase_d_purchase_id_fkey")
 }
@@ -911,6 +915,17 @@ model cs_return_cabinet_file {
   cs_return_cabinet cs_return_cabinet @relation(fields: [return_cabinet_id], references: [id])
 
   @@index([return_cabinet_id], map: "cs_return_cabinet_file_return_cabinet_id_fkey")
+}
+
+model cs_etc {
+  id              String    @id @default(uuid())
+  cs_purchase_id  String    @unique
+  etc             String?
+  date_etc         String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime?
+  deletedAt       DateTime?
+  CS_Purchase     CS_Purchase @relation(fields: [cs_purchase_id], references: [id])
 }
 
 enum TypeIm {

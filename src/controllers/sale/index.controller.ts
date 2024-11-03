@@ -224,8 +224,10 @@ export class SaleController {
         userId: userId,
       };
       const data = await this.saleservice.getAllEstimate(RequestData);
+    
       let Purchase: any[] = []
       for (let purchase of data.purchase) {
+        purchase.employee = data.employee
         if (purchase.d_status === 'Sale ตีราคา') {
           purchase.color = 'bg-blue-500'
         }
@@ -282,8 +284,9 @@ export class SaleController {
       console.log("errr", purchaseId);
       const userId = req?.userId;
 
-      const data = await this.saleservice.getEstimate(purchaseId);
 
+      const data = await this.saleservice.getEstimate(purchaseId);
+      
       if (data?.d_product?.d_product_image.length > 0) {
         data.d_product.d_product_image = data.d_product.d_product_image.map(
           (file: Partial<any>, index: number) => {
@@ -401,6 +404,48 @@ export class SaleController {
     }
   }
 
+  async applyEmployee(req: Request, res: Response): Promise<any> {
+    try {
+      const Requestdata ={
+        id: req.params.id,
+        employeeId: req.body.employeeId
+      }
+      const response = await this.saleservice.applyEmployee(Requestdata);
+      res.status(200).json(response);
+    } catch (err: any) {
+      console.log('err', err)
+      res.status(500).json(err);
+    }
+  }
+
+  async acceptJob(req: Request, res: Response): Promise<any> {
+    try {
+      const id = req.params.id;
+      let RequestData ={
+        is_active: req.body.is_active,
+        userId: req?.userId
+      }
+      console.log('RequestData', RequestData)
+      const response = await this.saleservice.acceptJob(id, RequestData);
+      res.status(200).json(response);
+    } catch (err: any) {
+      console.log('erraccept', err)
+      res.status(500).json(err);
+    }
+  }
+
+
+  async cancelJob(req: Request, res: Response): Promise<any> {
+    try {
+      const id = req.params.id;
+      const user_id = req?.userId;
+      const response = await this.saleservice.cancelJob(id,user_id);
+      res.status(200).json(response);
+    } catch (err: any) {
+      console.log('errcancel', err)
+      res.status(500).json(err);
+    }
+  }
 
   async updateDocument(req: Request, res: Response): Promise<any> { //แก้ไขเอกสาร
     try {
