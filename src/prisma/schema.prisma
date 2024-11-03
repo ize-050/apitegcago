@@ -692,7 +692,7 @@ model cs_etc {
 }
 
 model bookcabinet {
-  id                  String                @id
+  id                  String                @id @default(uuid())
   cs_purchase_id      String                @unique(map: "Bookcabinet_cs_purchase_id_key")
   date_receiving      String?
   date_booking        String?

@@ -409,7 +409,7 @@ class CsStatusRepository {
 
   async createReceivePicture(tx: any, data: any): Promise<any> {
     try {
-      const receive_picture = await tx.Receive_picture.create({
+      const receive_picture = await tx.receive_picture.create({
         data: data,
       });
       return receive_picture;
@@ -421,7 +421,7 @@ class CsStatusRepository {
   async createContainProduct(tx: any, data: any, id: string): Promise<any> {
     //createProduct
     try {
-      const contain = await tx.Contain_product.createMany({
+      const contain = await tx.contain_product.createMany({
         data: data.map((item: any) => {
           return {
             ...item,
@@ -437,7 +437,7 @@ class CsStatusRepository {
 
   async createContainPicture(tx: any, data: any): Promise<any> {
     try {
-      const contain_picture = await tx.Contain_picture.create({
+      const contain_picture = await tx.contain_picture.create({
         data: data,
       });
       return contain_picture;
