@@ -265,8 +265,6 @@ class Csservice {
 
 
       const data = await this.csRepo.SentRequestFile(id, Request);
-
-
       const purchase_detail = await this.csRepo.getPurchaseByid(id);
 
       const notification = {
@@ -322,7 +320,7 @@ class Csservice {
       throw new Error(err)
     }
   }
-  
+
 } 
 
 
