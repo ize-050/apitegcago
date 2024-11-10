@@ -128,7 +128,7 @@ class SaleService {
     try {
       let PurchaseData = await this.saleRepo.getAllEstimate(RequestData);
       const employee = await this.saleRepo.getEmployee(RequestData.userId);
-      PurchaseData.employee = employee
+      PurchaseData.employee = employee;
       return PurchaseData;
     } catch (err: any) {
       throw err;
@@ -294,8 +294,6 @@ class SaleService {
                     await fs.renameSync(tempFilePath, newFilePath);
                   }
                 }
-
-             
               }
             }
           }
@@ -314,7 +312,6 @@ class SaleService {
       throw err;
     }
   }
-  
 
   async updateEstimate(RequestData: Partial<any>): Promise<any> {
     try {
@@ -439,25 +436,25 @@ class SaleService {
   async applyEmployee(RequestData: Partial<any>): Promise<any> {
     try {
       const updateEmployee = await this.saleRepo.applyEmployee(RequestData);
-      return updateEmployee
+      return updateEmployee;
     } catch (err: any) {
       throw err;
     }
   }
 
-  async acceptJob(id:string,RequestData:Partial<any>): Promise<any> {
+  async acceptJob(id: string, RequestData: Partial<any>): Promise<any> {
     try {
-      const updateEmployee = await this.saleRepo.acceptJob(id,RequestData);
-      return updateEmployee
+      const updateEmployee = await this.saleRepo.acceptJob(id, RequestData);
+      return updateEmployee;
     } catch (err: any) {
       throw err;
     }
   }
 
-  async cancelJob(id:string,user_id:string): Promise<any> {
+  async cancelJob(id: string, user_id: string): Promise<any> {
     try {
-      const updateEmployee = await this.saleRepo.cancelJob(id,user_id);
-      return updateEmployee
+      const updateEmployee = await this.saleRepo.cancelJob(id, user_id);
+      return updateEmployee;
     } catch (err: any) {
       throw err;
     }
@@ -690,8 +687,7 @@ class SaleService {
                 "Overduepayment",
                 "ค้างชำระเงิน"
               );
-            }
-            else if(RequestData.purchase_status === "ลูกค้าเครดิต"){
+            } else if (RequestData.purchase_status === "ลูกค้าเครดิต") {
               const status = await this.saleRepo.ChangePurchaseStatus(
                 tx,
                 RequestData.d_purchase_id,
@@ -840,7 +836,7 @@ class SaleService {
             }
           }
 
-          const Notification ={
+          const Notification = {
             user_id: purchase_detail.d_emp_look,
             purchase_id: RequestData.d_purchase_id,
             link_to: `purchase/content/` + RequestData.d_purchase_id,
@@ -849,7 +845,7 @@ class SaleService {
             message: `อนุมัติราคา มีปรับสถานะ เลขที่:${purchase_detail.book_number}`,
             status: false,
             data: {},
-          }
+          };
           Notification.data = JSON.stringify(Notification);
           const dataNotification = await this.notificationRepo.sendNotification(
             Notification

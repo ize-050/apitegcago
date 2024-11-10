@@ -987,6 +987,7 @@ export class CSStatusService {
             date_enter_doc: RequestData?.date_enter_doc,
             file_enter_doc: RequestData?.file_enter_doc,
             date_payment_do: RequestData?.date_payment_do,
+            payment_date: RequestData?.payment_date,
             amount_payment_do: RequestData?.amount_payment_do,
           };
 
@@ -1081,6 +1082,7 @@ export class CSStatusService {
             date_enter_doc: RequestData?.date_enter_doc,
             file_enter_doc: RequestData?.file_enter_doc,
             date_payment_do: RequestData?.date_payment_do,
+            payment_date: RequestData?.payment_date,
             amount_payment_do: RequestData?.amount_payment_do,
           };
 
@@ -1203,6 +1205,7 @@ export class CSStatusService {
             phone_number: RequestData?.phone_number,
             terminal_release: RequestData?.terminal_release,
             type_car: RequestData?.type_car,
+            employee_driver: RequestData?.employee_driver,
             company_car: RequestData?.company_car,
             det_free_time: RequestData?.det_free_time,
           };
@@ -1298,6 +1301,7 @@ export class CSStatusService {
             license_plate: RequestData?.license_plate,
             location_exchange: RequestData?.location_exchange,
             phone_number: RequestData?.phone_number,
+            employee_driver: RequestData?.employee_driver,
             terminal_release: RequestData?.terminal_release,
             type_car: RequestData?.type_car,
             company_car: RequestData?.company_car,

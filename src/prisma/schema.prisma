@@ -539,6 +539,7 @@ model waitrelease {
   detention_det_date  String?
   license_plate       String?
   location_exchange   String?
+  employee_driver    String?
   phone_number        String?
   terminal_release    String?
   type_car            String?
@@ -853,6 +854,7 @@ model leave {
   file_enter_doc      String?
   date_payment_do     String?
   amount_payment_do   String?
+  payment_date        String?
   createdAt           DateTime    @default(now())
   updatedAt           DateTime?
   deletedAt           DateTime?

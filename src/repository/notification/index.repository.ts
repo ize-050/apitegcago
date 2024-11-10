@@ -15,6 +15,9 @@ class NotificationRepository {
                     user_id: id,
                     status: false,
                 },
+                orderBy:{
+                    createdAt: 'desc'
+                },
             });
 
             return data;
