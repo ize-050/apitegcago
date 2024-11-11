@@ -1301,7 +1301,6 @@ export class CSStatusService {
             license_plate: RequestData?.license_plate,
             location_exchange: RequestData?.location_exchange,
             phone_number: RequestData?.phone_number,
-            employee_driver: RequestData?.employee_driver,
             terminal_release: RequestData?.terminal_release,
             type_car: RequestData?.type_car,
             company_car: RequestData?.company_car,

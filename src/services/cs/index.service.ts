@@ -176,15 +176,102 @@ class Csservice {
               `${agency.id}`
             );
             // Create directories if they don't exist
+         
             await fs.mkdirSync(uploadDir, { recursive: true });
-
             if (Request.files.length > 0) {
               for (let file of Request.files) {
                 const tempFilePath = file.path;
                 const d_image = {
                   file_name: file.filename,
-                  file_path: uploadDir,
+                  file_path: `/images/purchase_agentcy/${agency.id}/${file.filename}`,
                   d_agentcy_id: agency.id
+                };
+                console.log('imagesssss', d_image)
+                const fileAgency = await this.csRepo.submitAgencyFile(tx, d_image);
+                if (fileAgency) {
+                  const newFilePath = path.join(uploadDir, file.filename);
+                  console.log("new file path", newFilePath);
+                  await fs.renameSync(tempFilePath, newFilePath);
+                }
+              }
+
+            }
+          }
+
+        } catch (err: any) {
+          console.log('err', err)
+          throw new Error(err)
+        }
+      })
+      const response = {
+        message: "บัันทึกข้อมูลสำเร็จ",
+        statusCode: 200,
+      };
+
+      return response;
+    } catch (err: any) {
+      throw new Error(err);
+    }
+  }
+
+  async updateAgency(Request: Partial<any>, id: string): Promise<any> {
+    try {
+      await this.prisma.$transaction(async (tx:any) => {
+        try {
+          const RequestSubmitAgentCy = {
+            d_purchase_id: Request.purchase_id,
+            agentcy_id: Request.agentcy_id,
+            status: false,
+            agent_boat: Request.agent_boat,
+            agentcy_tit: Request.agentcy_tit,
+            agentcy_etd: Request.agentcy_etd,
+            agentcy_eta: Request.agentcy_eta,
+            agentcy_etc: Request.agentcy_etc,
+
+          }
+          const agency = await this.csRepo.updateAgency(tx,RequestSubmitAgentCy,id);
+
+          if (agency) {
+            const agency_detail = await this.csRepo.updateAgencyDetail(tx, Request.type, id);
+            
+            const uploadDir = path.join(
+              "public",
+              "images",
+              "purchase_agentcy",
+              `${id}`
+            );
+
+            await fs.mkdirSync(uploadDir, { recursive: true });
+            // Create directories if they don't exist
+
+            if (Request.existingImageIds?.length > 0) {
+              const dataRequest: any = await this.csRepo.getDataAgencyPicture(
+                tx,
+                id,
+                Request.existingImageIds
+              );
+              for (let file of dataRequest) {
+                const tempFilePath = file.file_path;
+                const newFilePath = path.join(uploadDir, file.file_name);
+
+                await fs.unlinkSync(newFilePath);
+
+                await this.csRepo.deleteAgencyFile(tx, file.id);
+              }
+
+            
+
+            }
+            console.log('Request.files',Request.files)
+            await fs.mkdirSync(uploadDir, { recursive: true });
+            if (Request?.files?.length > 0) {
+              console.log('Request.files',Request.files)
+              for (let file of Request.files) {
+                const tempFilePath = file.path;
+                const d_image = {
+                  file_name: file.filename,
+                  file_path: `/images/purchase_agentcy/${id}/${file.filename}`,
+                  d_agentcy_id: id
                 };
                 console.log('imagesssss', d_image)
                 const fileAgency = await this.csRepo.submitAgencyFile(tx, d_image);

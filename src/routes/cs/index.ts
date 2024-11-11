@@ -37,6 +37,7 @@ router.get('/getAgentCy',authMiddleware, (req, res) =>  csController.getAgentCy(
 
 router.post('/SubmitAddAgency/:id',authMiddleware,upload.array('d_image',10), (req, res) =>  csController.SubmitAddAgency(req, res));
 
+router.put('/updateAgency/:id',authMiddleware,upload.array('d_image',10), (req, res) =>  csController.updateAgency(req, res));
 router.post('/updateAgencytoSale',authMiddleware, (req, res) =>  csController.updateAgencytoSale(req, res));
 
 router.post('/SentRequestFile/:id' ,authMiddleware, (req, res) =>  csController.SentRequestFile(req, res));
