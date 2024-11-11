@@ -220,6 +220,30 @@ export class CSController {
     }
   }
 
+  async updateAgency(req: Request, res: Response): Promise<any> {
+    try {
+      const RequestData = req.body
+      let request = {
+        ...RequestData,
+        files: req.files,
+      };
+      console.log('request',request?.type)
+      request.type = request?.type?.map((typeItem: any) => JSON.parse(typeItem));
+      const data = await this.csservice.updateAgency(request,req.params.id);
+
+
+      res.status(200).json({
+        data: {
+          message: "อัพเดตข้อมูลสำเร็จ",
+          statusCode: 201,
+        },
+      });
+    } catch (err: any) {
+      console.log('err', err)
+      res.status(500).json(err);
+    }
+  }
+
   async updateAgencytoSale(req: Request, res: Response): Promise<any> {
     try {
 

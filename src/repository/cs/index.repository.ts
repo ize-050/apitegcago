@@ -1,4 +1,4 @@
-import { PrismaClient, customer } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 import moment from "moment";
 
 class CsRepository {
@@ -21,7 +21,6 @@ class CsRepository {
           },
           
           d_purchase_status: true,
-          
         },
         where: {
           OR: [
@@ -252,6 +251,17 @@ class CsRepository {
     }
   }
 
+  async updateAgency(tx:any,Request: Partial<any>, id: string): Promise<any> {
+    try { 
+      return await tx.d_agentcy.update({
+        where: { id },
+        data: Request,
+      });
+    } catch (e: any) {
+      throw new Error(e);
+    }
+  }
+
   async SubmitAddAgencyDetail(
     tx: any,
     agent_id: string,
@@ -270,6 +280,78 @@ class CsRepository {
       });
     } catch (e: any) {
       console.log("ersubmitdetail", e);
+      throw new Error(e);
+    }
+  }
+
+  async updateAgencyDetail(tx: any, RequestData:any[],  id: string): Promise<any> {
+    try {
+
+      const purchase_id = await tx.d_agentcy_detail.findMany({
+        where: { d_agentcy_id: id },
+      })
+   
+      await tx.d_agentcy_detail.deleteMany({
+        where: { d_agentcy_id: id },
+      });
+
+      for (const item of RequestData) {
+        await tx.d_agentcy_detail.createMany({
+          data: {
+            ...item,
+            d_agentcy_id: id,
+            d_purchase_id: purchase_id[0].d_purchase_id,
+            d_nettotal: item.d_nettotal,
+            d_net_balance: item.d_net_balance,
+            d_discount: '',
+            d_price: item.d_price,
+            d_type: item.d_type,
+            d_typePayer: item.d_typePayer,
+            d_type_text: item.d_type_text,
+          },
+        });
+      }
+      return true
+    } catch (e: any) {
+      console.log('err',e)
+      throw new Error(e);
+    }
+  }
+
+  async getDataAgencyPicture(tx: any, id: string, existingImageIds: string[]): Promise<any> {
+    try {
+      return await tx.d_agentcy_file.findMany({
+        where: { 
+          d_agentcy_id: id,
+          id: {
+            not : {
+              in: existingImageIds
+          },
+        }, },
+      });
+    } catch (e: any) {
+      throw new Error(e);
+    }
+  }
+
+  async updateAgencyFile(tx: any, RequestData: Partial<any>): Promise<any> {
+    try {
+      return await tx.d_agentcy_file.update({
+        where: { id: RequestData.id },
+        data: RequestData,
+      });
+    } catch (e: any) {
+      throw new Error(e);
+    }
+  }
+
+
+  async deleteAgencyFile(tx: any, existingImageIds: string): Promise<any> {
+    try {
+      return await tx.d_agentcy_file.delete({
+        where: { id:existingImageIds},
+      });
+    } catch (e: any) {
       throw new Error(e);
     }
   }
