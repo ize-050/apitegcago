@@ -296,6 +296,24 @@ class SaleService {
                 }
               }
             }
+
+          const getEmpAllCS = await this.saleRepo.getEmpAllCS()
+
+          
+          for(const emp of getEmpAllCS){
+            const notification = {
+              user_id: emp.id,
+              link_to: `cs/purchase/content/${purchase.id}`,
+              title: "Sale ตีราคา",
+              subject_key: purchase.id,
+              message: `Sale ตีราคา เลขที่:${purchase.book_number}`,
+              status: false,
+              data: {},
+            };
+            notification.data = JSON.stringify(notification);
+            const dataNotification =
+              await this.notificationRepo.sendNotification(notification);
+            }
           }
         } catch (error) {
           throw error;

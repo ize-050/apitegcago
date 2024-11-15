@@ -259,6 +259,17 @@ class SaleRepository {
     }
   }
 
+
+  async getEmpAllCS(): Promise<any> {
+    return await this.prisma.user.findMany({
+      where: {
+        roles: {
+          is: { roles_name: "Cs" }
+        }
+      }
+    })
+  }
+
   async changeTagStatus(RequestStatus: Partial<any>): Promise<any> {
     try {
       const customerId = RequestStatus.customer_id;
