@@ -22,17 +22,17 @@ class CsRepository {
           
           d_purchase_status: true,
         },
-        where: {
-          OR: [
-            { d_status: 'Sale ตีราคา' },
-            {
-              d_emp_look: Request.userId,
-              NOT: {
-                d_status: 'Sale ตีราคา'
-              }
-            }
-          ]
-        },
+        // where: {
+        //   OR: [
+        //     { d_status: 'Sale ตีราคา' },
+        //     {
+        //       d_emp_look: Request.userId,
+        //       NOT: {
+        //         d_status: 'Sale ตีราคา'
+        //       }
+        //     }
+        //   ]
+        // },
         orderBy:{
           createdAt: 'desc'
         },
@@ -393,7 +393,6 @@ class CsRepository {
       await this.prisma.$transaction(async (tx) => {
         try {
           
-
           await tx.d_purchase.update({
             where: {
               id: purchase_id,
@@ -407,14 +406,15 @@ class CsRepository {
             },
           });
 
-
           const Document = Request.document_type;
+        
           await tx.d_document.createMany({
             data: [
               ...Document.map((item: any) => ({
                 d_document_name: item.value,
                 d_document_key: item.key,
                 d_purchase_id: purchase_id,
+                d_document_etc: item.key === 'document_etc' ? Request.input_etc : null,
               })),
             ],
           });
