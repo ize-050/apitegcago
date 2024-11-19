@@ -178,6 +178,7 @@ model d_purchase {
   d_refund_tag                String?
   d_truck                     String?
   d_etc                       String?
+  d_shipment_number           String?
   createdAt                   DateTime                      @default(now())
   updatedAt                   DateTime?
   deletedAt                   DateTime?
