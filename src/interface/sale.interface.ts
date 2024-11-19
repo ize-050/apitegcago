@@ -49,6 +49,7 @@ export interface RequestPurchase{
     d_group_work?: string;
     d_route : string;
     d_transport:string;
+    d_shipment_number?: string;
     d_address_origin_la?: string;
     date_cabinet?: string;
     link_d_origin?: string;

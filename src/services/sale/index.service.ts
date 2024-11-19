@@ -216,6 +216,22 @@ class SaleService {
       throw new Error(err);
     }
   }
+
+  async checkShipmentNumber(d_transport: string): Promise<any> {
+    const today = moment().format('YYMMDD')
+    const existingBookNumber :any = await this.prisma.d_purchase.findFirst({
+      where: {
+        d_shipment_number: {
+          startsWith: `${d_transport}001-${today}`,
+        },
+      },
+      select: {
+        d_shipment_number: true
+        }
+    });
+    
+    return existingBookNumber?.d_shipment_number
+  }
   async submitEstimate(RequestData: Partial<any>): Promise<any> {
     try {
       const d_purchase: RequestPurchase = {
@@ -226,6 +242,7 @@ class SaleService {
         d_group_work: RequestData.d_group_work,
         d_term: RequestData.d_term,
         d_origin: RequestData.d_origin,
+        d_shipment_number: RequestData.d_shipment_number,
         date_cabinet: RequestData.date_cabinet,
         d_address_destination_la: RequestData.d_address_destination_la,
         d_address_destination_long: RequestData.d_address_destination_long,
@@ -297,22 +314,21 @@ class SaleService {
               }
             }
 
-          const getEmpAllCS = await this.saleRepo.getEmpAllCS()
+            const getEmpAllCS = await this.saleRepo.getEmpAllCS();
 
-          
-          for(const emp of getEmpAllCS){
-            const notification = {
-              user_id: emp.id,
-              link_to: `cs/purchase/content/${purchase.id}`,
-              title: "Sale ตีราคา",
-              subject_key: purchase.id,
-              message: `Sale ตีราคา เลขที่:${purchase.book_number}`,
-              status: false,
-              data: {},
-            };
-            notification.data = JSON.stringify(notification);
-            const dataNotification =
-              await this.notificationRepo.sendNotification(notification);
+            for (const emp of getEmpAllCS) {
+              const notification = {
+                user_id: emp.id,
+                link_to: `cs/purchase/content/${purchase.id}`,
+                title: "Sale ตีราคา",
+                subject_key: purchase.id,
+                message: `Sale ตีราคา เลขที่:${purchase.book_number}`,
+                status: false,
+                data: {},
+              };
+              notification.data = JSON.stringify(notification);
+              const dataNotification =
+                await this.notificationRepo.sendNotification(notification);
             }
           }
         } catch (error) {

@@ -384,9 +384,29 @@ export class SaleController {
       const customerId = req.params.id;
 
       const employee_id = req.userId
-      const RequestData = req.body;
+      let RequestData = req.body;
       if (!validatedData.success) {
         res.status(400).json({ errors: validatedData.error.issues });
+      }
+
+      const checkShipmentNumber = await this.saleservice.checkShipmentNumber(RequestData.d_transport)
+      if (!checkShipmentNumber) {
+        RequestData.d_shipment_number = RequestData.d_transport + '001-' + moment().format('YYMMDD') + '-' + 1;
+      } else {
+        const lastShipmentNumber = checkShipmentNumber;
+        console.log('lastShipmentNumber', lastShipmentNumber)
+        const [prefix, date, sequence] = lastShipmentNumber.split('-');
+        
+        // Find the numeric part of the prefix
+        const prefixMatch = prefix.match(/(\D*)(\d+)/);
+        if (prefixMatch) {
+          const prefixText = prefixMatch[1];
+          const prefixNumber = parseInt(prefixMatch[2]) + 1;
+          const newPrefix = prefixText + prefixNumber.toString().padStart(3, '0'); // Ensure prefix number is always 3 digits
+
+          const newSequence = (parseInt(sequence) + 1).toString(); // Remove padding
+          RequestData.d_shipment_number = newPrefix + '-' + date + '-' + newSequence;
+        }
       }
 
       const request = {
@@ -394,12 +414,12 @@ export class SaleController {
         employee_id: employee_id,
         customer_id: customerId,
         files: req.files,
-
         // userId: userId,
       };
       const response = await this.saleservice.submitEstimate(request);
       res.status(200).json(response);
     } catch (err: any) {
+      console.log('err', err)
       res.status(500).json(err);
     }
   }
