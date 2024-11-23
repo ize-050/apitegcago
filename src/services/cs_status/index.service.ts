@@ -1,8 +1,9 @@
 import { Request, Response } from "express";
 import CsStatusRepository from "../../repository/cs_status/index.repository";
 import NotificationRepository from "../../repository/notification/index.repository";
+import CsRepository from "../../repository/cs/index.repository";
 import Csservice from "../cs/index.service";
-
+import SaleRepository from "../../repository/sale/index.repository";
 import { PrismaClient } from '@prisma/client';
 
 import moment from "moment";
@@ -10,9 +11,12 @@ import path from "path";
 import fs from "fs";
 import { RequestProductImage } from "../../interface/sale.interface";
 
+
 export class CSStatusService {
   private csStatusRepository: CsStatusRepository;
   private csService: Csservice;
+  private saleRepository: SaleRepository;
+  private CsRepository: CsRepository;
   private notificationRepo: NotificationRepository;
   private prisma;
 
@@ -21,6 +25,8 @@ export class CSStatusService {
     this.prisma = new PrismaClient();
     this.csService = new Csservice();
     this.notificationRepo = new NotificationRepository();
+    this.saleRepository = new SaleRepository();
+    this.CsRepository = new CsRepository();
   }
 
   async getDataCsStatus(id: string): Promise<any> {
@@ -327,6 +333,33 @@ export class CSStatusService {
             so_no: RequestData.so_no,
             container_no: RequestData.container_no,
           };
+
+          const getTransport = await this.CsRepository.getTransport(RequestData.d_purchase_id)
+
+          const check = await this.saleRepository.checkShipmentNumber(getTransport.d_transport)
+          if (!check) {
+            RequestData.d_shipment_number = getTransport.d_transport + '001-' + moment().format('YYMMDD') + '-' + RequestData.container_no;
+          } else {
+            const lastShipmentNumber = check;
+            console.log('lastShipmentNumber', lastShipmentNumber)
+            const [prefix, date, sequence] = lastShipmentNumber.split('-');
+            
+            // Find the numeric part of the prefix
+            const prefixMatch = prefix.match(/(\D*)(\d+)/);
+            if (prefixMatch) {
+              const prefixText = prefixMatch[1];
+              const prefixNumber = parseInt(prefixMatch[2]) + 1;
+              const newPrefix = prefixText + prefixNumber.toString().padStart(3, '0'); // Ensure prefix number is always 3 digits
+    
+              RequestData.d_shipment_number = newPrefix + '-' + date + '-' + RequestData.container_no;
+            }
+          }
+
+          const updatePurchase  = await tx.d_purchase.update({
+            where: { id: RequestData.d_purchase_id },
+            data: { d_shipment_number: RequestData.d_shipment_number }
+          })
+    
 
           const receive_id = await this.csStatusRepository.create(
             tx,

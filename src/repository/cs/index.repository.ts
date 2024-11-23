@@ -450,6 +450,13 @@ class CsRepository {
       throw new Error(err);
     }
   }
+  async getTransport(id: string): Promise<any> {
+    return await this.prisma.d_purchase.findFirst({
+      where: { id },
+      select: { d_transport: true },
+    });
+  }
+
 
   async submitAddpayment(RequestData: Partial<any>): Promise<any> {
     try {

@@ -217,21 +217,7 @@ class SaleService {
     }
   }
 
-  async checkShipmentNumber(d_transport: string): Promise<any> {
-    const today = moment().format('YYMMDD')
-    const existingBookNumber :any = await this.prisma.d_purchase.findFirst({
-      where: {
-        d_shipment_number: {
-          startsWith: `${d_transport}001-${today}`,
-        },
-      },
-      select: {
-        d_shipment_number: true
-        }
-    });
-    
-    return existingBookNumber?.d_shipment_number
-  }
+
   async submitEstimate(RequestData: Partial<any>): Promise<any> {
     try {
       const d_purchase: RequestPurchase = {
