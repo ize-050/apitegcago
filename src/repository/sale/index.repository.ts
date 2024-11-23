@@ -11,11 +11,30 @@ import {
   RequestProductImage,
 } from "../../interface/sale.interface";
 
+import moment from "moment";
+
 class SaleRepository {
+  
   private prisma: PrismaClient;
 
   constructor() {
     this.prisma = new PrismaClient();
+  }
+
+  async checkShipmentNumber(d_transport: string): Promise<any> {
+    const today = moment().format('YYMMDD')
+    const existingBookNumber :any = await this.prisma.d_purchase.findFirst({
+      where: {
+        d_shipment_number: {
+          startsWith: `${d_transport}001-${today}`,
+        },
+      },
+      select: {
+        d_shipment_number: true
+        }
+    });
+    
+    return existingBookNumber?.d_shipment_number
   }
 
   async getCustomer(RequestData: Partial<any>): Promise<any> {
