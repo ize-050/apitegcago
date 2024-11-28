@@ -338,7 +338,7 @@ export class CSStatusService {
 
           const check = await this.saleRepository.checkShipmentNumber(getTransport.d_transport)
           if (!check) {
-            RequestData.d_shipment_number = getTransport.d_transport + '001-' + moment().format('YYMMDD') + '-' + RequestData.container_no.slice(-3);
+            RequestData.d_shipment_number = getTransport.d_transport + '001-' + moment().format('YYMMDD') + '-' + RequestData.container_no.slice(-4);
           } else {
             const lastShipmentNumber = check;
             console.log('lastShipmentNumber', lastShipmentNumber)
@@ -351,7 +351,7 @@ export class CSStatusService {
               const prefixNumber = parseInt(prefixMatch[2]) + 1;
               const newPrefix = prefixText + prefixNumber.toString().padStart(3, '0'); // Ensure prefix number is always 3 digits
     
-              RequestData.d_shipment_number = newPrefix + '-' + date + '-' + RequestData.container_no.slice(-3);
+              RequestData.d_shipment_number = newPrefix + '-' + date + '-' + RequestData.container_no.slice(-4);
             }
           }
 
