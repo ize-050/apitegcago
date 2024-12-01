@@ -345,7 +345,7 @@ export class CSStatusService {
             const [prefix, date, sequence] = lastShipmentNumber.split('-');
             
             // Find the numeric part of the prefix
-            const prefixMatch = prefix.match(/(\D*)(\d+)/);
+            const prefixMatch = prefix.match(/^(\D+)(\d+)$/);
             if (prefixMatch) {
               const prefixText = prefixMatch[1];
               const prefixNumber = parseInt(prefixMatch[2]) + 1;
@@ -1822,7 +1822,7 @@ export class CSStatusService {
               user_id: purchase_detail.d_purchase_emp[0].user_id,
               purchase_id: RequestData.d_purchase_id,
               link_to: `purchase/content/` + RequestData.d_purchase_id,
-              title: "CS (ส่งเรียบร้อย)",
+              title: "CS (ส่งเรีย��ร้อย)",
               subject_key: RequestData.d_purchase_id,
               message: `Cs ส่งเรียบร้อย เลขที่:${purchase_detail.book_number}`,
               status: false,
