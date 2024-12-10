@@ -28,7 +28,8 @@ const csController = new CSController();
 
 
 router.get('/getPurchase', authMiddleware,(req, res) =>  csController.getPurchase(req, res));
-
+//cs
+router.get('/getAllCs', authMiddleware,(req, res) =>  csController.getAllCs(req, res));
 router.get('/getPurchaseDetail/:id',authMiddleware, (req, res) =>  csController.getPurchaseDetail(req, res));
 router.put('/updateTriggleStatus/:id',authMiddleware, (req, res) =>  csController.updateTriggleStatus(req, res));
 
@@ -43,4 +44,7 @@ router.post('/updateAgencytoSale',authMiddleware, (req, res) =>  csController.up
 router.post('/SentRequestFile/:id' ,authMiddleware, (req, res) =>  csController.SentRequestFile(req, res));
 
 router.post('/submitAddpayment/:id',authMiddleware, (req, res) =>  csController.submitAddpayment(req, res));
+
+
+
 module.exports = router

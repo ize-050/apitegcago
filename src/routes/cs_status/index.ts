@@ -32,11 +32,11 @@ router.get('/getDataCsStatus/:id',authMiddleware, (req, res) =>  csStatusControl
 //bookcabinet
 router.get("/getDataBookcabinet/:id",authMiddleware, (req, res) => csStatusController.getBookcabinet(req, res));
 router.post('/createBookcabinet/:id',authMiddleware,upload.array("book_picture",10), (req, res)=> csStatusController.createBookcabinet(req, res));
-
+router.put('/updateBookcabinet/:id',authMiddleware,upload.array("book_picture",10), (req, res)=> csStatusController.updateBookcabinet(req, res));
 //receipt
 router.get("/getDataReceive/:id",authMiddleware, (req, res) => csStatusController.getReceipt(req, res));
 router.post('/createReceive/:id',authMiddleware, upload.array("receive_picture", 10),(req, res)=> csStatusController.createReceive(req, res));
-
+router.put('/updateReceive/:id',authMiddleware, upload.array("receive_picture", 10),(req, res)=> csStatusController.updateReceive(req, res));
 //contain
 router.get("/getContain/:id",authMiddleware, (req, res) => csStatusController.getContain(req, res));
 router.post('/createContain/:id',authMiddleware, upload.any(),(req, res)=> csStatusController.createContain(req, res));
@@ -87,11 +87,12 @@ router.put('/updateSuccessRelease/:id', upload.any(), authMiddleware, (req, res)
 
 router.post('/createDestination/:id', upload.any(), authMiddleware, (req, res) => csStatusController.createDestination(req, res));
 router.get('/getDestination/:id', authMiddleware, (req, res) => csStatusController.getDestination(req, res));
+router.put('/updateDestination/:id', upload.any(), authMiddleware, (req, res) => csStatusController.updateDestination(req, res));
 
 //sentSuccess
 router.post('/createSendSuccess/:id', upload.any(), authMiddleware, (req, res) => csStatusController.createSentSuccess(req, res));
 router.get('/getSendSuccess/:id', authMiddleware, (req, res) => csStatusController.getSentSuccess(req, res));
-
+router.put('/updateSendSuccess/:id', upload.any(), authMiddleware, (req, res) => csStatusController.updateSentSuccess(req, res));
 
 //return 
 router.get('/getReturn/:id', authMiddleware, (req, res) => csStatusController.getReturn(req, res));

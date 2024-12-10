@@ -16,6 +16,39 @@ export class CSController {
     this.csservice = new Csservice();
   }
 
+  async getAllCs(req: Request, res: Response): Promise<any> {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const perPage = 10;
+      const skip = (page - 1) * perPage;
+      const status = req.query.status as string | undefined;
+      const userId = req?.userId;
+      const tag = req.query.tag as string | undefined;
+      const RequestData = {
+        ...req.query,
+        status,
+        tag,
+        skip,
+        userId,
+      };
+
+      const data = await this.csservice.getAllCs(RequestData);
+
+      let purchaseData = {
+        purchase: data.data,
+        total: data.total,
+      };
+      const response = {
+        data: purchaseData,
+        message: "ดึงข้อมูลสำเร็จ",
+        statusCode: 200,
+      };
+      res.status(200).json(response);
+      res.status(200).json(data);
+    } catch (err: any) {
+      res.status(500).json(err);
+    }
+  }
 
   
 

@@ -140,8 +140,32 @@ export class CSStatusController {
       };
 
       const csStatusData = await this.csStatusService.createBookcabinet(data);
+      console.log("csStatusData", csStatusData);
 
+    
       return res.status(200).json(csStatusData);
+    } catch (err: any) {
+      console.log("Error Notification", err);
+      res.status(500).json(err);
+    }
+  }
+
+  async updateBookcabinet(req: Request, res: Response): Promise<any> {
+    try {
+      const id = req.params.id;
+      const data = {
+        ...req.body,
+        id: id,
+        files: req.files,
+      };
+      const csStatusData = await this.csStatusService.updateBookcabinet(data);
+
+      const response ={
+        statusCode : 200,
+        message : "success",
+        id : id,
+      }
+      return res.status(200).json(response);
     } catch (err: any) {
       console.log("Error Notification", err);
       res.status(500).json(err);
@@ -160,6 +184,28 @@ export class CSStatusController {
       return res.status(200).json(csStatusData);
     } catch (err: any) {
       console.log("Error createReceive", err);
+      res.status(500).json(err);
+    }
+  }
+
+  async updateReceive(req: Request, res: Response): Promise<any> {
+    try {
+      const id = req.params.id;
+      const data = {
+        ...req.body,
+        id: id,
+        files: req.files,
+      };
+
+      const response = {
+        statusCode : 200,
+        message : "success",
+        id : id,
+      }
+      const csStatusData = await this.csStatusService.updateReceive(data);
+      return res.status(200).json(response);
+    } catch (err: any) {
+      console.log("Error Notification", err);
       res.status(500).json(err);
     }
   }
@@ -386,7 +432,29 @@ export class CSStatusController {
         console.log("Error createWaitRelease", err);
         res.status(500).json(err);
       }
+  }
 
+  async updateDestination(req: Request, res: Response): Promise<any> {
+    try {
+      const data = {
+        ...req.body,
+        id: req.params.id,
+        files: req.files,
+      };
+
+      
+      const csStatusData = await this.csStatusService.updateDestination(data);
+
+      const response = {
+        statusCode : 200,
+        message : "success",
+        id : data.id,
+      }
+      return res.status(200).json(response);
+    } catch (err: any) {
+      console.log("Error updateDestination", err);
+      res.status(500).json(err);
+    }
   }
 
   async createSentSuccess(req: Request, res: Response): Promise<any> { //ปล่อยเรียบร้อย
@@ -403,6 +471,27 @@ export class CSStatusController {
         res.status(500).json(err);
       }
 
+  }
+
+  async updateSentSuccess(req: Request, res: Response): Promise<any> {
+    try{
+      const data = {
+        ...req.body,
+        id: req.params.id,
+        files: req.files,
+      };
+      const csStatusData = await this.csStatusService.updateSentSuccess(data);
+      const response = {
+        statusCode : 200,
+        message : "success",
+        id : data.id,
+      }
+      return res.status(200).json(response);
+    }
+    catch(err:any){
+      console.log("Error updateSentSuccess",err);
+      res.status(500).json(err);
+    }
   }
 
   async createReturn(req: Request, res: Response): Promise<any> { //ปล่อยเรียบร้อย

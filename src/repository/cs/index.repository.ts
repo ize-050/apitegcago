@@ -8,6 +8,34 @@ class CsRepository {
     this.prisma = new PrismaClient();
   }
 
+  async getAllCs(Request: Partial<any>): Promise<any> {
+    try {
+      const data = await this.prisma.d_purchase.findMany({
+        where: {
+          d_status: {
+            in: ['ปิดการขาย', 'ลูกค้าเครดิต', 'ค้างชำระเงิน'] // Include multiple statuses
+          }
+        },
+        take: 10,
+        orderBy: {
+          createdAt: 'desc'
+        },
+        skip: Request.skip,
+      });
+
+      const total = await this.prisma.d_purchase.count({
+        where: {
+          d_status: {
+            in: ['ปิดการขาย', 'ลูกค้าเครดิต', 'ค้างชำระเงิน'] // Include multiple statuses
+          }
+        },
+      });
+      return { data, total };
+    } catch (err: any) {
+      throw new Error(err)
+    }
+  }
+
   async getPurchase(Request: Partial<any>): Promise<any> {
     try {
       const purchase = await this.prisma.d_purchase.findMany({

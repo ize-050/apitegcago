@@ -4,13 +4,12 @@ import NotificationRepository from "../../repository/notification/index.reposito
 import CsRepository from "../../repository/cs/index.repository";
 import Csservice from "../cs/index.service";
 import SaleRepository from "../../repository/sale/index.repository";
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "@prisma/client";
 
 import moment from "moment";
 import path from "path";
 import fs from "fs";
 import { RequestProductImage } from "../../interface/sale.interface";
-
 
 export class CSStatusService {
   private csStatusRepository: CsStatusRepository;
@@ -209,7 +208,7 @@ export class CSStatusService {
 
       await fs.mkdirSync(uploadDir, { recursive: true });
 
-      const id = await this.prisma.$transaction(async (tx:any) => {
+      const id = await this.prisma.$transaction(async (tx: any) => {
         try {
           console.log("RequestData", RequestData);
           const cs_purchaseData = {
@@ -299,6 +298,118 @@ export class CSStatusService {
     }
   }
 
+  async updateBookcabinet(RequestData: Partial<any>): Promise<any> {
+    try {
+      const book_id = RequestData.id;
+      delete RequestData.id;
+
+      const uploadDir = path.join(
+        "public",
+        "images",
+        "bookcabinet",
+        `${RequestData.d_purchase_id}`
+      );
+
+      await fs.mkdirSync(uploadDir, { recursive: true });
+
+      const id = await this.prisma.$transaction(async (tx: any) => {
+        try {
+          const cs_purchaseData = {
+            date_receiving: RequestData?.date_receiving,
+            date_entering: RequestData?.date_entering,
+            date_booking: RequestData?.date_booking,
+            time_entering: RequestData?.time_entering,
+            agentcy_id: RequestData?.agentcy_id,
+            agentcy_etc: RequestData?.agent_boat,
+          };
+
+          console.log("cs_purchaseData", cs_purchaseData);
+          console.log("book_id", book_id);
+
+          const cs_purchase = await this.csStatusRepository.update(
+            tx,
+            book_id,
+            cs_purchaseData,
+            "bookcabinet"
+          );
+
+          if (RequestData?.existingImageIds?.length > 0) {
+            const dataRequest: any =
+              await this.csStatusRepository.getDataBookcabinetPicture(
+                tx,
+                book_id,
+                RequestData.existingImageIds
+              );
+            if (dataRequest.length > 0) {
+              for (let file of dataRequest) {
+                const tempFilePath = file.picture_path;
+                const newFilePath = path.join(uploadDir, file.picture_name);
+
+                await fs.unlinkSync(newFilePath);
+
+                await this.csStatusRepository.delete(
+                  tx,
+                  file.id,
+                  "bookcabinet_picture"
+                );
+              }
+            }
+          }
+
+          if (RequestData.files.length > 0) {
+            for (let file of RequestData.files) {
+              const tempFilePath = file.path;
+
+              const d_image = {
+                bookcabinet_id: book_id,
+                picture_name: file.filename,
+                picture_path: `/images/bookcabinet/${RequestData.d_purchase_id}/${file.filename}`,
+              };
+              const book_cabinet_image =
+                await this.csStatusRepository.createBookcabinetPicture(
+                  tx,
+                  d_image
+                );
+
+              if (book_cabinet_image) {
+                const newFilePath = path.join(uploadDir, file.filename);
+                await fs.renameSync(tempFilePath, newFilePath);
+              }
+            }
+            const purchase_detail = await this.csService.getPurchaseDetail(
+              RequestData.d_purchase_id
+            );
+
+            let RequestSentNotifaction = {
+              user_id: purchase_detail.d_purchase_emp[0].user_id,
+              purchase_id: RequestData.d_purchase_id,
+              link_to: `purchase/content/` + RequestData.d_purchase_id,
+              title: "CS (จองตู้)",
+              subject_key: RequestData.d_purchase_id,
+              message: `Cs จองตู้ เลขที่:${purchase_detail.book_number}`,
+              status: false,
+              data: {},
+            };
+            RequestSentNotifaction.data = JSON.stringify(
+              RequestSentNotifaction
+            );
+            const notification = await this.notificationRepo.sendNotification(
+              RequestSentNotifaction
+            );
+          }
+        } catch (err: any) {
+          console.log("Error updateBookcabinet", err);
+          throw new Error(err);
+        }
+      });
+
+      return id;
+    } catch (err: any) {
+      console.log("Error updateBookcabinet", err);
+      throw new Error(err);
+    }
+  }
+
   async createReceive(RequestData: Partial<any>): Promise<any> {
     try {
       const uploadDir = path.join(
@@ -310,7 +421,7 @@ export class CSStatusService {
 
       await fs.mkdirSync(uploadDir, { recursive: true });
 
-      const id = await this.prisma.$transaction(async (tx:any) => {
+      const id = await this.prisma.$transaction(async (tx: any) => {
         try {
           console.log("RequestData", RequestData);
           const cs_purchaseData = {
@@ -334,32 +445,46 @@ export class CSStatusService {
             container_no: RequestData.container_no,
           };
 
-          const getTransport = await this.CsRepository.getTransport(RequestData.d_purchase_id)
+          const getTransport = await this.CsRepository.getTransport(
+            RequestData.d_purchase_id
+          );
 
-          const check = await this.saleRepository.checkShipmentNumber(getTransport.d_transport)
+          const check = await this.saleRepository.checkShipmentNumber(
+            getTransport.d_transport
+          );
           if (!check) {
-            RequestData.d_shipment_number = getTransport.d_transport + '001-' + moment().format('YYMMDD') + '-' + RequestData.container_no.slice(-4);
+            RequestData.d_shipment_number =
+              getTransport.d_transport +
+              "001-" +
+              moment().format("YYMMDD") +
+              "-" +
+              RequestData.container_no.slice(-4);
           } else {
             const lastShipmentNumber = check;
-            console.log('lastShipmentNumber', lastShipmentNumber)
-            const [prefix, date, sequence] = lastShipmentNumber.split('-');
-            
+            console.log("lastShipmentNumber", lastShipmentNumber);
+            const [prefix, date, sequence] = lastShipmentNumber.split("-");
+
             // Find the numeric part of the prefix
             const prefixMatch = prefix.match(/^(\D+)(\d+)$/);
             if (prefixMatch) {
               const prefixText = prefixMatch[1];
               const prefixNumber = parseInt(prefixMatch[2]) + 1;
-              const newPrefix = prefixText + prefixNumber.toString().padStart(3, '0'); // Ensure prefix number is always 3 digits
-    
-              RequestData.d_shipment_number = newPrefix + '-' + date + '-' + RequestData.container_no.slice(-4);
+              const newPrefix =
+                prefixText + prefixNumber.toString().padStart(3, "0"); // Ensure prefix number is always 3 digits
+
+              RequestData.d_shipment_number =
+                newPrefix +
+                "-" +
+                date +
+                "-" +
+                RequestData.container_no.slice(-4);
             }
           }
 
-          const updatePurchase  = await tx.d_purchase.update({
+          const updatePurchase = await tx.d_purchase.update({
             where: { id: RequestData.d_purchase_id },
-            data: { d_shipment_number: RequestData.d_shipment_number }
-          })
-          
+            data: { d_shipment_number: RequestData.d_shipment_number },
+          });
 
           const receive_id = await this.csStatusRepository.create(
             tx,
@@ -422,6 +547,116 @@ export class CSStatusService {
     }
   }
 
+  async updateReceive(RequestData: Partial<any>): Promise<any> {
+    try {
+      const id = RequestData.id;
+      delete RequestData.id;
+      const uploadDir = path.join(
+        "public",
+        "images",
+        "receive",
+        `${RequestData.d_purchase_id}`
+      );
+
+      await fs.mkdirSync(uploadDir, { recursive: true });
+
+      const updatedRecord = await this.prisma.$transaction(async (tx: any) => {
+        // ตรวจสอบการมีอยู่ของข้อมูล
+        const existingRecord = await tx.receive.findUnique({
+          where: { id: id },
+        });
+
+        if (!existingRecord) {
+          throw new Error(`Record with id ${id} not found in receive`);
+        }
+
+        // ทำการอัปเดต
+        const update = await tx.receive.update({
+          where: { id: id },
+          data: {
+            // ใส่ฟิลด์ที่ต้องการอัปเดต
+            date_booking: RequestData.date_booking,
+            phone_no: RequestData.phone_no,
+            license_plate: RequestData.license_plate,
+            so_no: RequestData.so_no,
+            container_no: RequestData.container_no,
+            // เพิ่มฟิลด์อื่น ๆ ตามที่ต้องการ
+          },
+        });
+        console.log(
+          "RequestData.existingImageIds",
+          RequestData.existingImageIds
+        );
+        if (
+          RequestData.existingImageIds &&
+          RequestData.existingImageIds.length > 0
+        ) {
+          const existingImages =
+            await this.csStatusRepository.getDataReceivePicture(
+              tx,
+              id,
+              RequestData.existingImageIds
+            );
+
+          for (let image of existingImages) {
+            const imagePath = path.join(uploadDir, image.picture_name);
+            await fs.unlinkSync(imagePath); // ลบไฟล์จากระบบไฟล์
+            await this.csStatusRepository.delete(
+              tx,
+              image.id,
+              "receive_picture"
+            ); // ลบข้อมูลจากฐานข้อมูล
+          }
+        }
+
+        // จัดการไฟล์ที่อัปโหลด (ถ้ามี)
+        if (RequestData.files && RequestData.files.length > 0) {
+          for (let file of RequestData.files) {
+            const tempFilePath = file.path;
+            const d_image = {
+              receive_id: id,
+              picture_name: file.filename,
+              picture_path: `/images/receive/${RequestData.d_purchase_id}/${file.filename}`,
+            };
+            const book_cabinet_image =
+              await this.csStatusRepository.createReceivePicture(tx, d_image);
+
+            if (book_cabinet_image) {
+              const newFilePath = path.join(uploadDir, file.filename);
+              await fs.renameSync(tempFilePath, newFilePath);
+            }
+          }
+        }
+
+        return update;
+      });
+
+      // ส่ง Notification
+      const purchase_detail = await this.csService.getPurchaseDetail(
+        RequestData.d_purchase_id
+      );
+      let RequestSentNotifaction = {
+        user_id: purchase_detail.d_purchase_emp[0].user_id,
+        purchase_id: RequestData.d_purchase_id,
+        link_to: `purchase/content/` + RequestData.d_purchase_id,
+        title: "CS (รับตู้)",
+        subject_key: RequestData.d_purchase_id,
+        message: `Cs รับตู้ เลขที่:${purchase_detail.book_number}`,
+        status: false,
+        data: {},
+      };
+      RequestSentNotifaction.data = JSON.stringify(RequestSentNotifaction);
+      const notification = await this.notificationRepo.sendNotification(
+        RequestSentNotifaction
+      );
+
+      return updatedRecord;
+    } catch (err: any) {
+      console.log("Error updateReceive", err);
+      throw new Error(err);
+    }
+  }
+
   async createContain(RequestData: Partial<any>): Promise<any> {
     try {
       const uploadDir = path.join(
@@ -433,7 +668,7 @@ export class CSStatusService {
 
       await fs.mkdirSync(uploadDir, { recursive: true });
 
-      const id = await this.prisma.$transaction(async (tx:any) => {
+      const id = await this.prisma.$transaction(async (tx: any) => {
         try {
           console.log("RequestData", RequestData);
           const cs_purchaseData = {
@@ -753,7 +988,7 @@ export class CSStatusService {
         `${RequestData.d_purchase_id}`
       );
       await fs.mkdirSync(uploadDir, { recursive: true });
-      const id = await this.prisma.$transaction(async (tx:any) => {
+      const id = await this.prisma.$transaction(async (tx: any) => {
         try {
           console.log("RequestData", RequestData);
           const edit = {
@@ -858,7 +1093,7 @@ export class CSStatusService {
 
   async createDeparture(RequestData: Partial<any>): Promise<any> {
     try {
-      const id = await this.prisma.$transaction(async (tx:any) => {
+      const id = await this.prisma.$transaction(async (tx: any) => {
         try {
           console.log("RequestData", RequestData);
           const cs_purchaseData = {
@@ -1100,7 +1335,7 @@ export class CSStatusService {
       );
       await fs.mkdirSync(uploadDir, { recursive: true });
 
-      const id = await this.prisma.$transaction(async (tx:any) => {
+      const id = await this.prisma.$transaction(async (tx: any) => {
         try {
           console.log("RequestData", RequestData);
 
@@ -1270,26 +1505,26 @@ export class CSStatusService {
                 await fs.renameSync(tempFilePath, newFilePath);
               }
             }
+            const purchase_detail = await this.csService.getPurchaseDetail(
+              RequestData.d_purchase_id
+            );
+            let RequestSentNotifaction = {
+              user_id: purchase_detail.d_purchase_emp[0].user_id,
+              purchase_id: RequestData.d_purchase_id,
+              link_to: `purchase/content/` + RequestData.d_purchase_id,
+              title: "CS (จอตรวจปล่อย)",
+              subject_key: RequestData.d_purchase_id,
+              message: `Cs รอตรวจปล่อย เลขที่:${purchase_detail.book_number}`,
+              status: false,
+              data: {},
+            };
+            RequestSentNotifaction.data = JSON.stringify(
+              RequestSentNotifaction
+            );
+            const notification = await this.notificationRepo.sendNotification(
+              RequestSentNotifaction
+            );
           }
-
-          const purchase_detail = await this.csService.getPurchaseDetail(
-            RequestData.d_purchase_id
-          );
-          let RequestSentNotifaction = {
-            user_id: purchase_detail.d_purchase_emp[0].user_id,
-            purchase_id: RequestData.d_purchase_id,
-            link_to: `purchase/content/` + RequestData.d_purchase_id,
-            title: "CS (รอตรวจปล่อย)",
-            subject_key: RequestData.d_purchase_id,
-            message: `Cs รอตรวจปล่อย เลขที่:${purchase_detail.book_number}`,
-            status: false,
-            data: {},
-          };
-          RequestSentNotifaction.data = JSON.stringify(RequestSentNotifaction);
-          const notification = await this.notificationRepo.sendNotification(
-            RequestSentNotifaction
-          );
-
           return cs_purchase.id;
         } catch (err: any) {
           console.log("createFail", err);
@@ -1319,7 +1554,7 @@ export class CSStatusService {
 
       await fs.mkdirSync(uploadDir, { recursive: true });
 
-      const id = await this.prisma.$transaction(async (tx:any) => {
+      const id = await this.prisma.$transaction(async (tx: any) => {
         try {
           const release_id = RequestData?.id;
           delete RequestData.id;
@@ -1542,7 +1777,6 @@ export class CSStatusService {
 
       const id = await this.prisma.$transaction(async (tx) => {
         try {
-
           const success_release = {
             cs_purchase_id: RequestData.cs_purchase_id,
             shipping: RequestData.shipping,
@@ -1559,7 +1793,6 @@ export class CSStatusService {
             success_release,
             "cs_inspection"
           );
-
 
           if (RequestData?.existingImageIds?.length > 0) {
             const dataRequest: any =
@@ -1755,6 +1988,120 @@ export class CSStatusService {
     }
   }
 
+  async updateDestination(RequestData: Partial<any>): Promise<any> {
+    try {
+      const uploadDir = path.join(
+        "public",
+        "images",
+        "destination",
+        `${RequestData.d_purchase_id}`
+      );
+      await fs.mkdirSync(uploadDir, { recursive: true });
+
+      const id = await this.prisma.$transaction(async (tx) => {
+        try {
+          const re: any = await tx.cs_purchase.findFirst({
+            select: {
+              id: true,
+            },
+            where: {
+              d_purchase_id: RequestData.d_purchase_id,
+              status_key: "WaitRelease",
+            },
+          });
+
+          const getData: any = await tx.waitrelease.findFirst({
+            where: {
+              cs_purchase_id: re.id,
+            },
+          });
+
+          const create_release = {
+            date_receiving_cabinet: RequestData.date_receiving_cabinet,
+          };
+
+          console.log("RequestData", RequestData);
+
+          const contain = await this.csStatusRepository.update(
+            tx,
+            RequestData.id,
+            create_release,
+            "cs_wait_destination"
+          );
+
+          if (RequestData.existingImageIds.length > 0) {
+            const dataRequest: any =
+              await this.csStatusRepository.getWaitDestinationFile(
+                tx,
+                RequestData.id,
+                RequestData.existingImageIds
+              );
+
+            if (dataRequest.length > 0) {
+              for (let file of dataRequest) {
+                const tempFilePath = file.file_path;
+                const newFilePath = path.join(uploadDir, file.file_name);
+                await fs.unlinkSync(newFilePath);
+
+                await this.csStatusRepository.delete(
+                  tx,
+                  file.id,
+                  "cs_wait_destination_file"
+                );
+              }
+            }
+          }
+
+          if (RequestData.files.length > 0) {
+            for (let file of RequestData.files) {
+              const tempFilePath = file.path;
+
+              const d_image = {
+                wait_destination_id: contain.id,
+                file_name: file.filename,
+                file_path: `/images/destination/${RequestData.d_purchase_id}/${file.filename}`,
+              };
+              const document_picture =
+                await this.csStatusRepository.createDocument(
+                  tx,
+                  d_image,
+                  "cs_wait_destination_file"
+                );
+
+              if (document_picture) {
+                const newFilePath = path.join(uploadDir, file.filename);
+                await fs.renameSync(tempFilePath, newFilePath);
+              }
+            }
+          }
+
+          const purchase_detail = await this.csService.getPurchaseDetail(
+            RequestData.d_purchase_id
+          );
+
+          let RequestSentNotifaction = {
+            user_id: purchase_detail.d_purchase_emp[0].user_id,
+            purchase_id: RequestData.d_purchase_id,
+            link_to: `purchase/content/` + RequestData.d_purchase_id,
+            title: "CS (จัดส่งปลายทาง)",
+            subject_key: RequestData.d_purchase_id,
+            message: `Cs จัดส่งปลายทาง เลขที่:${purchase_detail.book_number}`,
+            status: false,
+            data: {},
+          };
+          RequestSentNotifaction.data = JSON.stringify(RequestSentNotifaction);
+          const notification = await this.notificationRepo.sendNotification(
+            RequestSentNotifaction
+          );
+        } catch (err: any) {
+          throw new Error(err);
+        }
+      });
+    } catch (err: any) {
+      throw new Error(err);
+    }
+  }
+
   async createSentSuccess(RequestData: Partial<any>): Promise<any> {
     try {
       const uploadDir = path.join(
@@ -1793,6 +2140,8 @@ export class CSStatusService {
             create_release,
             "cs_already_sent"
           );
+
+          console.log("cs_already_sent", cs_already_sent);
 
           if (RequestData.files.length > 0) {
             for (let file of RequestData.files) {
@@ -1848,6 +2197,105 @@ export class CSStatusService {
         statusCode: 200,
       };
       return response;
+    } catch (err: any) {
+      throw new Error(err);
+    }
+  }
+
+  async updateSentSuccess(RequestData: Partial<any>): Promise<any> {
+    try {
+      const id = RequestData.id;
+      delete RequestData.id;
+      const uploadDir = path.join(
+        "public",
+        "images",
+        "sent_success",
+        `${RequestData.d_purchase_id}`
+      );
+      await fs.mkdirSync(uploadDir, { recursive: true });
+
+      const datas = await this.prisma.$transaction(async (tx) => {
+        try {
+          const create_release = {
+            date_out_arrival: RequestData.date_out_arrival,
+            etc: RequestData.etc,
+          };
+
+          const contain = await this.csStatusRepository.update(
+            tx,
+            id,
+            create_release,
+            "cs_already_sent"
+          );
+
+          // if (RequestData.existingImageIds.length > 0) {
+          //   const dataRequest: any =
+          //     await this.csStatusRepository.getSentSuccessFile(
+          //       tx,
+          //       RequestData.id,
+          //       RequestData.existingImageIds
+          //     );
+
+          //   if (dataRequest.length > 0) {
+          //     for (let file of dataRequest) {
+          //       const tempFilePath = file.file_path;
+          //       const newFilePath = path.join(uploadDir, file.file_name);
+          //       await fs.unlinkSync(newFilePath);
+
+          //       await this.csStatusRepository.delete(
+          //         tx,
+          //         file.id,
+          //         "cs_already_sent_file"
+          //       );
+          //     }
+          //   }
+          // }
+
+          if (RequestData.files.length > 0) {
+            for (let file of RequestData.files) {
+              const tempFilePath = file.path;
+
+              const d_image = {
+                cs_already_sent_id: contain.id,
+                file_name: file.filename,
+                file_path: `/images/sent_success/${RequestData.d_purchase_id}/${file.filename}`,
+              };
+              const document_picture =
+                await this.csStatusRepository.createDocument(
+                  tx,
+                  d_image,
+                  "cs_already_sent_file"
+                );
+
+              if (document_picture) {
+                const newFilePath = path.join(uploadDir, file.filename);
+                await fs.renameSync(tempFilePath, newFilePath);
+              }
+            }
+          }
+
+          const purchase_detail = await this.csService.getPurchaseDetail(
+            RequestData.d_purchase_id
+          );
+          let RequestSentNotifaction = {
+            user_id: purchase_detail.d_purchase_emp[0].user_id,
+            purchase_id: RequestData.d_purchase_id,
+            link_to: `purchase/content/` + RequestData.d_purchase_id,
+            title: "CS (ส่งเรีย��ร้อย)",
+            subject_key: RequestData.d_purchase_id,
+            message: `Cs ส่งเรียบร้อย เลขที่:${purchase_detail.book_number}`,
+            status: false,
+            data: {},
+          };
+          RequestSentNotifaction.data = JSON.stringify(RequestSentNotifaction);
+          const notification = await this.notificationRepo.sendNotification(
+            RequestSentNotifaction
+          );
+          return contain;
+        } catch (err: any) {
+          throw new Error(err);
+        }
+      });
     } catch (err: any) {
       throw new Error(err);
     }
@@ -2104,9 +2552,8 @@ export class CSStatusService {
 
   async createEtc(data: any): Promise<any> {
     try {
-      const id = await this.prisma.$transaction(async (tx:any) => {
+      const id = await this.prisma.$transaction(async (tx: any) => {
         try {
-
           const cs_purchaseData = {
             d_purchase_id: data.d_purchase_id,
             status_key: "Etc",
@@ -2120,18 +2567,15 @@ export class CSStatusService {
             cs_purchaseData
           );
 
-
           const EtcData = {
             etc: data.etc,
             date_etc: data.date_etc,
             cs_purchase_id: cs_purchase.id,
-
-          }
+          };
 
           const etc = await this.csStatusRepository.createEtc(tx, EtcData);
-       
 
-         const purchase_detail = await this.csService.getPurchaseDetail(
+          const purchase_detail = await this.csService.getPurchaseDetail(
             data.d_purchase_id
           );
           let RequestSentNotifaction = {
@@ -2148,7 +2592,7 @@ export class CSStatusService {
           const notification = await this.notificationRepo.sendNotification(
             RequestSentNotifaction
           );
-          
+
           return cs_purchase.id;
         } catch (err: any) {
           throw new Error(err);

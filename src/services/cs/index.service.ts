@@ -22,6 +22,15 @@ class Csservice {
     this.notificationRepo = new NotificationRepository();
   }
 
+  async getAllCs(Request: Partial<any>): Promise<any> {
+    try {
+      const data = await this.csRepo.getAllCs(Request);
+      return data;
+    } catch (err: any) {
+      throw new Error(err)
+    }
+  }
+
 
   async getPurchase(Request: Partial<any>): Promise<any> {
     try {
@@ -354,7 +363,7 @@ class Csservice {
       const data = await this.csRepo.SentRequestFile(id, Request);
       const purchase_detail = await this.csRepo.getPurchaseByid(id);
 
-      const notification = {
+      const notification = {  
         user_id: purchase_detail.d_purchase_emp[0].user_id,
         purchase_id: id,
         link_to: `purchase/content/${id}`,

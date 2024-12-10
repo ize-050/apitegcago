@@ -260,6 +260,86 @@ class CsStatusRepository {
     }
   }
 
+  async getDataBookcabinetPicture(tx:any,book_id:string,id: string): Promise<any> {
+    try{
+      const book_cabinet_picture = await tx.bookcabinet_picture.findMany({
+        where: {
+          id: {
+            not : {
+              in: id
+            },
+          },
+          bookcabinet_id: book_id,
+        },
+      });
+      return book_cabinet_picture;
+    }
+    catch(err:any){
+      console.log("Error getDataBookcabinetPicture", err);
+      throw new Error(err);
+    }
+  }
+  async getDataReceivePicture(tx:any,receive_id:string,id: string): Promise<any> {
+    try{
+      const receive_picture = await tx.receive_picture.findMany({
+        where: {
+          id: {
+            not : {
+              in: id
+            },
+          },
+          receive_id: receive_id,
+        },
+      });
+      return receive_picture;
+    }
+    catch(err:any){
+      console.log("Error getDataReceivePicture", err);
+      throw new Error(err);
+    }
+  }
+
+  async getSentSuccessFile(tx:any,sent_success_id:string,id: string): Promise<any> {
+    try{
+      const sent_success_file = await tx.cs_already_sent_file.findMany({
+        where: {
+          id: {
+            not : {
+              in: id
+            },
+          },
+          cs_already_sent_id: sent_success_id,
+        },
+      });
+      return sent_success_file;
+    }
+    catch(err:any){
+      console.log("Error getSentSuccessFile", err);
+      throw new Error(err);
+    }
+  }
+
+
+  async getWaitDestinationFile(tx:any,success_release_id:string,id: string): Promise<any> {
+    try{
+      const success_release_file = await tx.cs_wait_destination_file.findMany({
+        where: {
+          id: {
+            not : {
+              in: id
+            },
+          },
+          wait_destination_id: success_release_id,
+        },
+      });
+      return success_release_file;
+    }
+    catch(err:any){
+      console.log("Error getDatasuccessreleasefile", err);
+      throw new Error(err);
+    }
+  }
+
   async getDataContainPicture(tx:any,contain_id:string,id: string): Promise<any> {
     try{
       const contain_picture = await tx.contain_picture.findMany({
