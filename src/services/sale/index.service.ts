@@ -481,7 +481,7 @@ class SaleService {
 
       const notification = {
         user_id: getPurchase.d_purchase_emp[0].user_id,
-        link_to: `/purchase`,
+        link_to: `purchase`,
         title: "มีการปฎิเสธงาน",
         subject_key: id,
         message: `ปฎิเสธงาน เลขที่:${getPurchase.book_number}`,
