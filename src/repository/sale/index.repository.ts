@@ -390,6 +390,9 @@ class SaleRepository {
             },
           },
           d_purchase_emp: {
+            where: {
+              is_active: true,
+            },
             include: {
               user: true,
             },
@@ -528,9 +531,9 @@ class SaleRepository {
 
         const notificationData = {
           user_id: RequestData.employeeId,
-          title: "มีงานการจองที่ต้องดำเนินการ",
+          title: "ส่งมอบหมายงาน",
           subject_key: RequestData.id,
-          message: "มีงานการจองที่ต้องดำเนินการ",
+          message: "ส่งมอบหมายงาน เลขที่: " + RequestData.book_number,
           status: false,
           link_to: "purchase",
         }

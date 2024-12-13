@@ -217,7 +217,6 @@ class SaleService {
     }
   }
 
-
   async submitEstimate(RequestData: Partial<any>): Promise<any> {
     try {
       const d_purchase: RequestPurchase = {
@@ -456,8 +455,10 @@ class SaleService {
   async applyEmployee(RequestData: Partial<any>): Promise<any> {
     try {
       const updateEmployee = await this.saleRepo.applyEmployee(RequestData);
+
       return updateEmployee;
     } catch (err: any) {
+      console.log("errapplyEmployee", err);
       throw err;
     }
   }
@@ -465,6 +466,7 @@ class SaleService {
   async acceptJob(id: string, RequestData: Partial<any>): Promise<any> {
     try {
       const updateEmployee = await this.saleRepo.acceptJob(id, RequestData);
+
       return updateEmployee;
     } catch (err: any) {
       throw err;
@@ -473,9 +475,27 @@ class SaleService {
 
   async cancelJob(id: string, user_id: string): Promise<any> {
     try {
+
       const updateEmployee = await this.saleRepo.cancelJob(id, user_id);
+      const getPurchase = await this.saleRepo.getEstimate(id);
+
+      const notification = {
+        user_id: getPurchase.d_purchase_emp[0].user_id,
+        link_to: `/purchase`,
+        title: "มีการปฎิเสธงาน",
+        subject_key: id,
+        message: `ปฎิเสธงาน เลขที่:${getPurchase.book_number}`,
+        status: false,
+        data: {},
+      };
+      notification.data = JSON.stringify(notification);
+      const dataNotification = await this.notificationRepo.sendNotification(
+        notification
+      );
+
       return updateEmployee;
     } catch (err: any) {
+      console.log("errcancelJob", err);
       throw err;
     }
   }
