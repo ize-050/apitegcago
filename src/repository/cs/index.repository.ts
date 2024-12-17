@@ -60,40 +60,26 @@ class CsRepository {
 
       purchase.sort((a: any, b: any) => {
         const extractParts = (shipmentNumber: string | null | undefined) => {
-          if (!shipmentNumber) {
-            return { prefix: '', number: 0, date: '' }; // Default values
+          if (!shipmentNumber || shipmentNumber === '-') {
+            return { prefix: '', number: Infinity }; 
           }
-          const match = shipmentNumber.match(/([A-Z]+)(\d+)-(\d+)/);
+          const match = shipmentNumber.match(/([A-Z]+)(\d+)-(\d+)-(\d+)/);
           return match ? { 
             prefix: match[1] || '', 
-            number: parseInt(match[2], 10), 
-            date: match[3] || '' 
-          } : { prefix: '', number: 0, date: '' };
+            number: parseInt(match[2], 10)
+          } : { prefix: '', number: Infinity };
         };
 
         const partA = extractParts(a.d_shipment_number);
         const partB = extractParts(b.d_shipment_number);
 
-        // If one has no shipment number, prioritize the one without it and sort by createdAt
-        if (!a.d_shipment_number && !b.d_shipment_number) {
+        // If either has no shipment number (is '-'), prioritize by date
+        if ((!a.d_shipment_number || a.d_shipment_number === '-') || 
+            (!b.d_shipment_number || b.d_shipment_number === '-')) {
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
         }
-        if (!a.d_shipment_number) return -1;
-        if (!b.d_shipment_number) return 1;
 
-        // Compare by date in d_shipment_number first
-        const dateComparison = partB.date.localeCompare(partA.date);
-        if (dateComparison !== 0) {
-          return dateComparison;
-        }
-
-        // If date is the same, compare by prefix
-        const prefixComparison = partA.prefix.localeCompare(partB.prefix);
-        if (prefixComparison !== 0) {
-          return prefixComparison;
-        }
-
-        // If both date and prefix are the same, compare by number
+        // If both have shipment numbers, compare by number
         return partA.number - partB.number;
       });
       

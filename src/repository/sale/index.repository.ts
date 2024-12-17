@@ -26,7 +26,7 @@ class SaleRepository {
     const existingBookNumber :any = await this.prisma.d_purchase.findFirst({
       where: {
         d_shipment_number: {
-          startsWith: `${d_transport}001-${today}`,
+          startsWith: `${d_transport}001`,
         },
       },
       select: {
@@ -34,6 +34,20 @@ class SaleRepository {
         }
     });
     
+    return existingBookNumber?.d_shipment_number
+  }
+
+  async checkShipmentNumberLast(d_transport: string): Promise<any> {
+    const existingBookNumber :any = await this.prisma.d_purchase.findFirst({
+      where: {
+        d_shipment_number: {
+          startsWith: `${d_transport}`,
+        },
+      },
+      orderBy: {
+        d_shipment_number: "desc", // Order by the entire shipment number
+      },
+    });
     return existingBookNumber?.d_shipment_number
   }
 
