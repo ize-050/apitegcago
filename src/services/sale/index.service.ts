@@ -378,37 +378,67 @@ class SaleService {
               d_product
             );
 
-            if (RequestData.files.length > 0) {
-              const uploadDir = path.join(
-                "public",
-                "images",
-                "purchase_product",
-                `${purchase.id}`
-              );
-              await fs.mkdirSync(uploadDir, { recursive: true });
+            const uploadDir = path.join(
+              "public",
+              "images",
+              "purchase_product",
+              `${purchase.id}`
+            );  
 
-              const checkEdit = await this.saleRepo.checkEdit(
+           
+
+            if(RequestData.existingImageIds && RequestData.existingImageIds.length > 0){
+              const dataRequest = await this.saleRepo.checkEdit(
                 tx,
                 RequestData.id,
                 RequestData.existingImageIds
               );
 
-              const getImage = await this.saleRepo.getImageName(
-                tx,
-                RequestData.id
-              );
 
-              for (let image of getImage) {
-                if (!checkEdit.find((item: any) => item.id === image.id)) {
-                  const filePath = path.join(
-                    uploadDir,
-                    image.d_product_image_name
+              if (dataRequest.length > 0) {
+                for (let file of dataRequest) {
+                  const newFilePath = path.join(uploadDir, file.d_product_image_name);
+  
+                  await fs.unlinkSync(newFilePath);
+  
+                  await this.saleRepo.deleteImage(
+                    tx,
+                    file.id,
+                    
                   );
-                  await fs.unlinkSync(filePath);
                 }
-
-                await this.saleRepo.deleteImage(tx, image.id);
               }
+              
+            }
+            
+
+            if (RequestData.files.length > 0) {
+                 
+             
+              await fs.mkdirSync(uploadDir, { recursive: true });
+
+              // const checkEdit = await this.saleRepo.checkEdit(
+              //   tx,
+              //   RequestData.id,
+              //   RequestData.existingImageIds
+              // );
+
+              // const getImage = await this.saleRepo.getImageName(
+              //   tx,
+              //   RequestData.id
+              // );
+
+              // for (let image of getImage) {
+              //   if (!checkEdit.find((item: any) => item.id === image.id)) {
+              //     const filePath = path.join(
+              //       uploadDir,
+              //       image.d_product_image_name
+              //     );
+              //     await fs.unlinkSync(filePath);
+              //   }
+
+              //   await this.saleRepo.deleteImage(tx, image.id);
+              // }
 
               if (purchase_products) {
                 if (RequestData.files.length > 0) {
