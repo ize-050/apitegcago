@@ -160,6 +160,7 @@ class SaleRepository {
         cus_line: RequestData.cus_line,
         cus_website: RequestData.cus_website,
         cus_etc: RequestData.cus_etc,
+        createdAt: new Date(moment().utc(true).format('YYYY-MM-DD HH:mm:ss'))
       };
 
       const InsertCustomer = await this.prisma.customer.create({

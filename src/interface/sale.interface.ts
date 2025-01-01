@@ -11,6 +11,7 @@ export interface Requestcustomer {
   cus_facebook?: string;
   updatedAt?: Date
   cus_wechat?: string;
+  createdAt?: Date;
 }
 
 export interface RequestcustomerDetail {
@@ -34,6 +35,7 @@ export interface RequestcustomerDetail {
   cd_leader?: string;
   status_update?: boolean;
   cd_priority?: string;
+  createdAt?: any;
 }
 
 export interface RequestcustomerStatus {
