@@ -391,7 +391,7 @@ class Csservice {
 
 
       let createPayment :any[] = []
-
+      console.log("RequestData.type",RequestData.type)
       for(let types of RequestData.type){
 
        let payment :Partial<any> ={}

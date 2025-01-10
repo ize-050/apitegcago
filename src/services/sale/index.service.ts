@@ -383,38 +383,33 @@ class SaleService {
               "images",
               "purchase_product",
               `${purchase.id}`
-            );  
+            );
 
-           
-
-            if(RequestData.existingImageIds && RequestData.existingImageIds.length > 0){
+            if (
+              RequestData.existingImageIds &&
+              RequestData.existingImageIds.length > 0
+            ) {
               const dataRequest = await this.saleRepo.checkEdit(
                 tx,
                 RequestData.id,
                 RequestData.existingImageIds
               );
 
-
               if (dataRequest.length > 0) {
                 for (let file of dataRequest) {
-                  const newFilePath = path.join(uploadDir, file.d_product_image_name);
-  
-                  await fs.unlinkSync(newFilePath);
-  
-                  await this.saleRepo.deleteImage(
-                    tx,
-                    file.id,
-                    
+                  const newFilePath = path.join(
+                    uploadDir,
+                    file.d_product_image_name
                   );
+
+                  await fs.unlinkSync(newFilePath);
+
+                  await this.saleRepo.deleteImage(tx, file.id);
                 }
               }
-              
             }
-            
 
             if (RequestData.files.length > 0) {
-                 
-             
               await fs.mkdirSync(uploadDir, { recursive: true });
 
               // const checkEdit = await this.saleRepo.checkEdit(
@@ -505,7 +500,6 @@ class SaleService {
 
   async cancelJob(id: string, user_id: string): Promise<any> {
     try {
-
       const updateEmployee = await this.saleRepo.cancelJob(id, user_id);
       const getPurchase = await this.saleRepo.getEstimate(id);
 
@@ -871,10 +865,22 @@ class SaleService {
             }
           }
 
-          const type = JSON.parse(RequestData.type);
+          if (RequestData.type) {
+            console.log("RequestData.type", RequestData.type);
+            let typeData;
 
-          for (let item of type) {
-            if (RequestData.typeImage.length > 0) {
+            typeData = RequestData.type
+              .map((item: any) => {
+                try {
+                  return JSON.parse(item);
+                } catch (e) {
+                  console.log("Parse error for item:", item);
+                  return null;
+                }
+              })
+              .filter((item: any) => item !== null);
+
+            for (let i = 0; i < typeData.length; i++) {
               const uploadDir = path.join(
                 "public",
                 "images",
@@ -882,24 +888,74 @@ class SaleService {
                 `${RequestData.d_purchase_id}`
               );
               await fs.mkdirSync(uploadDir, { recursive: true });
+              console.log("item1231232", typeData[i]);
+              let paymentData: any = {
+                d_purchase_id: RequestData.d_purchase_id,
+                payment_date: new Date(),
+                payment_name: typeData[i].type_payment,
+                payment_price: typeData[i].price,
+                payment_type: typeData[i].currency,
+                payment_image_name: "",
+                payment_path: "",
+              };
 
-              for (let files of RequestData.typeImage) {
-                const newFilePath = path.join(uploadDir, files.filename);
-                const tempFilePath = files.path;
-                await fs.renameSync(tempFilePath, newFilePath);
-                const dataRequest = {
-                  file_name: files.filename,
-                  file_path: `/images/payment/${RequestData.d_purchase_id}/${files.filename}`,
-                };
+              // เก็บข้อมูลรูปภาพเดิมไว้ก่อน
+              const existingPayments =
+                await tx.d_purchase_customer_payment.findMany({
+                  where: {
+                    d_purchase_id: RequestData.d_purchase_id,
+                  },
+                });
+
+              // ในลูป processedTypes
+              if (RequestData.typeImage && RequestData.typeImage.length > 0) {
+                const findImage = RequestData.typeImage.find(
+                  (file: any) => file.index === i
+                );
+
+                if (findImage) {
+                  // กรณีมีการอัพโหลดรูปใหม่
+                  console.log(
+                    `Found new image: ${findImage.originalname} for index ${i}`
+                  );
+                  const newFilePath = path.join(
+                    uploadDir,
+                    findImage.originalname
+                  );
+                  const tempFilePath = findImage.path;
+                  await fs.renameSync(tempFilePath, newFilePath);
+
+                  paymentData.payment_image_name = findImage.originalname;
+                  paymentData.payment_path = `/images/payment/${RequestData.d_purchase_id}/${findImage.originalname}`;
+                } 
+                else{
+                  console.log("no image");
+                  paymentData.payment_image_name = existingPayments[i].payment_image_name;
+                  paymentData.payment_path = existingPayments[i].payment_path;
+                }
+              }
+              else{
+                console.log("no image");
+                paymentData.payment_image_name = existingPayments[i].payment_image_name;
+                paymentData.payment_path = existingPayments[i].payment_path;
+              }
+
+              // แยก update และ create ให้ชัดเจน
+              if (
+                typeData[i].id &&
+                typeData[i].id !== undefined &&
+                typeData[i].id !== ""
+              ) {
+                console.log("Updating payment with id:", typeData[i].id);
+                await tx.d_purchase_customer_payment.update({
+                  where: { id: typeData[i].id },
+                  data: paymentData,
+                });
+              } else {
+                console.log("Creating new payment", paymentData);
                 await tx.d_purchase_customer_payment.create({
                   data: {
-                    d_purchase_id: RequestData.d_purchase_id,
-                    payment_image_name: files.filename,
-                    payment_path: dataRequest.file_path,
-                    payment_date: new Date(),
-                    payment_name: item.type_payment,
-                    payment_price: item.price,
-                    payment_type: item.currency,
+                    ...paymentData,
                   },
                 });
               }

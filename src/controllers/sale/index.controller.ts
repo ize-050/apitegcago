@@ -559,10 +559,21 @@ export class SaleController {
       const purchaseEtcFiles = (req.files as any[]).filter(file => file.fieldname === 'purchase_etc');
       const conditionFiles = (req.files as any[]).filter(file => file.fieldname === 'condition');
       const purchaseFiles = (req.files as any[]).filter(file => file.fieldname === 'purchase_file');
-      const type_image = (req.files as any[]).filter(file => file.fieldname === 'type_images');
+      let type_image :any[]= []
+
+      const imageFiles = (req.files as any[]).filter((file:any) => file.fieldname.startsWith('type_images['))
+      .map((file: any) => {
+        // ดึงเลข index จาก type_images[N]
+        const indexMatch = file.fieldname.match(/\[(\d+)\]/);
+        const index = indexMatch ? parseInt(indexMatch[1]) : 0;
+        return { ...file, index };
+      }) 
+      .sort((a: any, b: any) => a.index - b.index)  // เรียงตาม index
+
+    console.log("Found images with indexes:", imageFiles.map(f => f.index));
+    type_image = imageFiles;
 
 
-      
 
       const request = {
         ...RequestData,
