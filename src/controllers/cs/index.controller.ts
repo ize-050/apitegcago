@@ -260,11 +260,15 @@ export class CSController {
         ...RequestData,
         files: req.files,
       };
-      console.log('request',request?.type)
+      console.log('request',RequestData)
       if(request?.type){
-        console.log('request?.type',request?.type)
-        request.type = request.type.map((typeItem: any) => JSON.parse(typeItem));
+        request.type = JSON.parse(request?.type);
       }
+
+      console.log('request',request)
+      
+
+
       const data = await this.csservice.updateAgency(request,req.params.id);
 
 

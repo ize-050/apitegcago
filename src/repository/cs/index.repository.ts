@@ -338,6 +338,8 @@ class CsRepository {
         where: { d_agentcy_id: id },
       });
 
+
+      console.log("RequestData", RequestData)
       for (const item of RequestData) {
         await tx.d_agentcy_detail.createMany({
           data: {

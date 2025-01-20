@@ -46,6 +46,7 @@ export class SystemController {
             const id = req.params.id;
             const data = req.body;
 
+            console.log("dataRequest",data)
             const agencyData = await this.systemService.updateAgency(data, id);
             return res.status(200).json(agencyData);
         }
