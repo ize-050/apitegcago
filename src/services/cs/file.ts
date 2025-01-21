@@ -75,7 +75,7 @@ export const fileData =[
   },
   {
     key: 'document_tracking',
-    value:'ใบแท็คกิҟง',
+    value:'Tracking',
   },
   {
     key: 'document_etc',
