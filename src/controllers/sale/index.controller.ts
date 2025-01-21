@@ -133,6 +133,15 @@ export class SaleController {
         userId: userId,
       };
 
+      const CheckEmpid = await this.saleservice.CheckEmpid(request.cus_code)
+      if(CheckEmpid){
+        res.status(200).json({
+          message: "รหัสลูกค้านี้มีอยู่ในระบบ",
+          statusCode: 202,
+        });
+        return;
+      }
+
       const response = await this.saleservice.createCustomer(request);
 
       res.status(200).json({

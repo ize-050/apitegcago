@@ -151,6 +151,19 @@ class SaleRepository {
     }
   }
 
+  async CheckEmpid(cus_code: string): Promise<any> {
+    try {
+      const CheckEmpid = await this.prisma.customer.findFirst({
+        where: {
+          cus_code: cus_code,
+        },
+      });
+      return CheckEmpid
+    } catch (err: any) {
+      throw new Error(err);
+    }
+  }
+
   async createCustomer(RequestData: Partial<any>): Promise<any> {
     try {
       const customer: Requestcustomer = {

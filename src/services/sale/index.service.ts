@@ -96,6 +96,15 @@ class SaleService {
     }
   }
 
+  async CheckEmpid(cus_code: string): Promise<any> {
+    try {
+      const response = await this.saleRepo.CheckEmpid(cus_code);
+      return response;
+    } catch (err: any) {
+      throw err;
+    }
+  }
+
   async editCustomer(RequestData: Partial<any>): Promise<any> {
     try {
       const response = await this.saleRepo.editCustomer(RequestData);
