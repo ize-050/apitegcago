@@ -891,6 +891,7 @@ model provedeparture {
   createdAt        DateTime    @default(now())
   updatedAt        DateTime?
   deletedAt        DateTime?
+  bl_no            String?
   cs_purchase      cs_purchase @relation(fields: [cs_purchase_id], references: [id], map: "ProveDeparture_cs_purchase_id_fkey")
 }
 

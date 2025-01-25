@@ -445,22 +445,49 @@ export class CSStatusService {
             container_no: RequestData.container_no,
           };
 
-          console.log("RequestData", RequestData);
-          console.log("RequestData.container_no", RequestData.container_no);
-          const getTransport = await this.CsRepository.getTransport(
-            RequestData.d_purchase_id
+          const receive_id = await this.csStatusRepository.create(
+            tx,
+            create_book_cabinet,
+            "receive"
           );
-          console.log("getTransport", getTransport);
-          const check = await this.saleRepository.checkShipmentNumber(
-            getTransport.d_transport
+
+          const getStatusContain: any = await this.prisma.cs_purchase.findFirst(
+            {
+              where: {
+                d_purchase_id: RequestData.d_purchase_id,
+                status_key: "Contain",
+              },
+              select: {
+                id: true,
+              },
+            }
           );
-          if (typeof check === 'undefined') {
-            RequestData.d_shipment_number =
-              getTransport.d_transport +
-              "001-" +
-              moment().format("YYMMDD") +
-              "-" +
-              RequestData.container_no.slice(-4);
+
+          let contain_id: any = "";
+
+          if (getStatusContain?.id != null) {
+            const contains = await this.prisma.contain.findUnique({
+              where: {
+                cs_purchase_id: getStatusContain.id,
+              },
+            });
+            contain_id = contains;
+          }
+
+          if (contain_id != "") {
+            const getTransport = await this.CsRepository.getTransport(
+              RequestData.d_purchase_id
+            );
+            const check = await this.saleRepository.checkShipmentNumber(
+              contain_id.type_contain
+            );
+            if (typeof check === "undefined") {
+              RequestData.d_shipment_number =
+                contain_id.type_contain +
+                "001-" +
+                moment().format("YYMMDD") +
+                "-" +
+                RequestData.container_no.slice(-4);
               await tx.d_purchase.update({
                 where: { id: RequestData.d_purchase_id },
                 data: {
@@ -468,45 +495,43 @@ export class CSStatusService {
                   updatedAt: new Date(),
                 },
               });
-          } else {
-            const check = await this.saleRepository.checkShipmentNumberLast(
-              getTransport.d_transport
-            );
-            console.log("lastShipmentNumber", check);
-            const [prefix, , sequence] = check.split("-"); // Ignore the date part
-
-            // Find the numeric part of the prefix
-            const prefixMatch = prefix.match(/^(\D+)(\d+)$/);
-            if (prefixMatch) {
-              const prefixText = prefixMatch[1];
-              const prefixNumber = parseInt(prefixMatch[2], 10) + 1; // Increment the numeric part
-              const newPrefix =
-                prefixText + prefixNumber.toString().padStart(3, "0"); // Ensure prefix number is always 3 digits
-
-              RequestData.d_shipment_number =
-                newPrefix +
-                "-" +
-                moment().format("YYMMDD") +
-                "-" +
-                RequestData.container_no.slice(-4);
             } else {
-              console.error("Prefix does not match expected pattern:", prefix);
+              const check = await this.saleRepository.checkShipmentNumberLast(
+                contain_id.type_contain
+              );
+              console.log("lastShipmentNumber", check);
+              const [prefix, , sequence] = check.split("-"); // Ignore the date part
+
+              // Find the numeric part of the prefix
+              const prefixMatch = prefix.match(/^(\D+)(\d+)$/);
+              if (prefixMatch) {
+                const prefixText = prefixMatch[1];
+                const prefixNumber = parseInt(prefixMatch[2], 10) + 1; // Increment the numeric part
+                const newPrefix =
+                  prefixText + prefixNumber.toString().padStart(3, "0"); // Ensure prefix number is always 3 digits
+
+                RequestData.d_shipment_number =
+                  newPrefix +
+                  "-" +
+                  moment().format("YYMMDD") +
+                  "-" +
+                  RequestData.container_no.slice(-4);
+              } else {
+                console.error(
+                  "Prefix does not match expected pattern:",
+                  prefix
+                );
+              }
             }
+
+            await tx.d_purchase.update({
+              where: { id: RequestData.d_purchase_id },
+              data: {
+                d_shipment_number: RequestData.d_shipment_number,
+                updatedAt: new Date(),
+              },
+            });
           }
-
-          await tx.d_purchase.update({
-            where: { id: RequestData.d_purchase_id },
-            data: {
-              d_shipment_number: RequestData.d_shipment_number,
-              updatedAt: new Date(),
-            },
-          });
-
-          const receive_id = await this.csStatusRepository.create(
-            tx,
-            create_book_cabinet,
-            "receive"
-          );
 
           if (RequestData.files.length > 0) {
             for (let file of RequestData.files) {
@@ -586,54 +611,48 @@ export class CSStatusService {
           throw new Error(`Record with id ${id} not found in receive`);
         }
 
-        const getTransport = await this.CsRepository.getTransport(
-          RequestData.d_purchase_id
-        );
-    
-        const check = await this.saleRepository.checkShipmentNumber(
-          getTransport.d_transport
-        );
-      
-        if (RequestData.container_no) {
-          if (typeof check === 'undefined') {
-            RequestData.d_shipment_number =
-              getTransport.d_transport +
-              "001-" +
-              moment().format("YYMMDD") +
-              "-" +
-              RequestData.container_no.slice(-4);
-              await tx.d_purchase.update({
-                where: { id: RequestData.d_purchase_id },
-                data: {
-                  d_shipment_number: RequestData.d_shipment_number,
-                  updatedAt: new Date(),
-                },
-              });
-          } else {
-            const check = await this.saleRepository.checkShipmentNumberLast(
-              getTransport.d_transport
-            );
-            console.log("lastShipmentNumber", check);
+        const getStatusContain: any = await this.prisma.cs_purchase.findFirst({
+          where: {
+            d_purchase_id: RequestData.d_purchase_id,
+            status_key: "Contain",
+          },
+          select: {
+            id: true,
+          },
+        });
 
-            const lastShipmentNumber = check;
+        let contain_id: any = "";
 
-            const [prefix, , sequence] = lastShipmentNumber.split("-"); // Ignore the date part
+        console.log("getStatusContain", getStatusContain);
 
-            // Find the numeric part of the prefix
-            const prefixMatch = prefix.match(/^(\D+)(\d+)$/);
-            if (prefixMatch) {
-              const prefixText = prefixMatch[1];
-              const prefixNumber = parseInt(prefixMatch[2], 10) + 1; // Increment the numeric part
-              const newPrefix =
-                prefixText + prefixNumber.toString().padStart(3, "0"); // Ensure prefix number is always 3 digits
-              console.log("newPrefix", newPrefix);
+        if (getStatusContain.id != null) {
+          const contains = await this.prisma.contain.findUnique({
+            where: {
+              cs_purchase_id: getStatusContain.id,
+            },
+          });
+          contain_id = contains;
+        }
+
+        console.log("contain_id", contain_id);
+
+        if (contain_id != "") {
+          const getTransport = await this.CsRepository.getTransport(
+            contain_id.type_contain
+          );
+
+          const check = await this.saleRepository.checkShipmentNumber(
+            contain_id.type_contain
+          );
+
+          if (RequestData.container_no) {
+            if (typeof check === "undefined") {
               RequestData.d_shipment_number =
-                newPrefix +
-                "-" +
+                contain_id.type_contain +
+                "001-" +
                 moment().format("YYMMDD") +
                 "-" +
                 RequestData.container_no.slice(-4);
-
               await tx.d_purchase.update({
                 where: { id: RequestData.d_purchase_id },
                 data: {
@@ -642,7 +661,43 @@ export class CSStatusService {
                 },
               });
             } else {
-              console.error("Prefix does not match expected pattern:", prefix);
+              const check = await this.saleRepository.checkShipmentNumberLast(
+                contain_id.type_contain
+              );
+              console.log("lastShipmentNumber", check);
+
+              const lastShipmentNumber = check;
+
+              const [prefix, , sequence] = lastShipmentNumber.split("-"); // Ignore the date part
+
+              // Find the numeric part of the prefix
+              const prefixMatch = prefix.match(/^(\D+)(\d+)$/);
+              if (prefixMatch) {
+                const prefixText = prefixMatch[1];
+                const prefixNumber = parseInt(prefixMatch[2], 10) ; // Increment the numeric part
+                const newPrefix =
+                  prefixText + prefixNumber.toString().padStart(3, "0"); // Ensure prefix number is always 3 digits
+                console.log("newPrefix", newPrefix);
+                RequestData.d_shipment_number =
+                  newPrefix +
+                  "-" +
+                  moment().format("YYMMDD") +
+                  "-" +
+                  RequestData.container_no.slice(-4);
+
+                await tx.d_purchase.update({
+                  where: { id: RequestData.d_purchase_id },
+                  data: {
+                    d_shipment_number: RequestData.d_shipment_number,
+                    updatedAt: new Date(),
+                  },
+                });
+              } else {
+                console.error(
+                  "Prefix does not match expected pattern:",
+                  prefix
+                );
+              }
             }
           }
         }
@@ -770,6 +825,87 @@ export class CSStatusService {
             gw_total: RequestData.gw_total,
           };
 
+          const getContainerNo = await this.prisma.cs_purchase.findFirst({
+            where: {
+              d_purchase_id: RequestData.d_purchase_id,
+              status_key: "Receive",
+            },
+          });
+
+          let container_no: any = "";
+
+          console.log("getContainerNo", getContainerNo);
+          if (getContainerNo) {
+            container_no = await this.prisma.receive.findUnique({
+              where: {
+                cs_purchase_id: getContainerNo.id,
+              },
+              select: {
+                container_no: true,
+              },
+            });
+          }
+
+          const getTransport = await this.CsRepository.getTransport(
+            RequestData.d_purchase_id
+          );
+
+          const check = await this.saleRepository.checkShipmentNumber(
+            RequestData.type_contain
+          );
+          if (container_no != "") {
+            if (typeof check === "undefined") {
+              RequestData.d_shipment_number =
+                RequestData.type_contain +
+                "001-" +
+                moment().format("YYMMDD") +
+                "-" +
+                container_no.container_no.slice(-4);
+              await tx.d_purchase.update({
+                where: { id: RequestData.d_purchase_id },
+                data: {
+                  d_shipment_number: RequestData.d_shipment_number,
+                  updatedAt: new Date(),
+                },
+              });
+            } else {
+              const check = await this.saleRepository.checkShipmentNumberLast(
+                RequestData.type_contain
+              );
+              console.log("lastShipmentNumber", check);
+              const [prefix, , sequence] = check.split("-"); // Ignore the date part
+
+              // Find the numeric part of the prefix
+              const prefixMatch = prefix.match(/^(\D+)(\d+)$/);
+              if (prefixMatch) {
+                const prefixText = prefixMatch[1];
+                const prefixNumber = parseInt(prefixMatch[2], 10) + 1; // Increment the numeric part
+                const newPrefix =
+                  prefixText + prefixNumber.toString().padStart(3, "0"); // Ensure prefix number is always 3 digits
+
+                RequestData.d_shipment_number =
+                  newPrefix +
+                  "-" +
+                  moment().format("YYMMDD") +
+                  "-" +
+                  container_no.container_no.slice(-4);
+              } else {
+                console.error(
+                  "Prefix does not match expected pattern:",
+                  prefix
+                );
+              }
+            }
+
+            await tx.d_purchase.update({
+              where: { id: RequestData.d_purchase_id },
+              data: {
+                d_shipment_number: RequestData.d_shipment_number,
+                updatedAt: new Date(),
+              },
+            });
+          }
+
           const contain = await this.csStatusRepository.create(
             tx,
             create_contain,
@@ -854,6 +990,98 @@ export class CSStatusService {
           const contain_id = RequestData?.id;
           delete RequestData.id;
 
+          console.log("RequestData", RequestData.d_purchase_id);
+
+          const getContainerNo = await this.prisma.cs_purchase.findFirst({
+            where: {
+              d_purchase_id: RequestData.d_purchase_id,
+              status_key: "Receive",
+            },
+          });
+
+          
+
+          let container_no: any = "";
+          if (getContainerNo) {
+            container_no = await this.prisma.receive.findUnique({
+              where: {
+                cs_purchase_id: getContainerNo.id,
+              },
+              select: {
+                container_no: true,
+              },
+            });
+          }
+
+          console.log("container_no", container_no);
+
+          const getTransport = await this.CsRepository.getTransport(
+            RequestData.d_purchase_id
+          );
+
+          const check = await this.saleRepository.checkShipmentNumber(
+            RequestData.type_contain
+          );
+
+       
+
+          if (container_no.container_no != "" && RequestData.type_contain != "") {
+            if (typeof check === "undefined") {
+              console.log("RequestData.type_contain", RequestData);
+              console.log("check", check);
+              RequestData.d_shipment_number =
+                RequestData.type_contain +
+                "001-" +
+                moment().format("YYMMDD") +
+                "-" +
+                container_no.container_no.slice(-4);
+              console.log(
+                "RequestData.d_shipment_number",
+                RequestData.d_shipment_number
+              );
+              await tx.d_purchase.update({
+                where: { id: RequestData.d_purchase_id },
+                data: {
+                  d_shipment_number: RequestData.d_shipment_number,
+                  updatedAt: new Date(),
+                },
+              });
+            } else {
+              const check = await this.saleRepository.checkShipmentNumberLast(
+                RequestData.type_contain
+              );
+
+              const [prefix, , sequence] = check.split("-"); // Ignore the date part
+
+              const prefixMatch = prefix.match(/^(\D+)(\d+)$/);
+              if (prefixMatch) {
+                const prefixText = prefixMatch[1];
+                const prefixNumber = parseInt(prefixMatch[2], 10) + 1; // Increment the numeric part
+                const newPrefix =
+                  prefixText + prefixNumber.toString().padStart(3, "0"); // Ensure prefix number is always 3 digits
+                RequestData.d_shipment_number =
+                  newPrefix +
+                  "-" +
+                  moment().format("YYMMDD") +
+                  "-" +
+                  container_no.container_no.slice(-4);
+              } else {
+                console.error(
+                  "Prefix does not match expected pattern:",
+                  prefix
+                );
+              }
+            }
+
+            await tx.d_purchase.update({
+              where: { id: RequestData.d_purchase_id },
+              data: {
+                d_shipment_number: RequestData.d_shipment_number,
+                updatedAt: new Date(),
+              },
+            });
+          }
+
           const edit_contain = {
             type_contain: RequestData?.type_contain,
             date_booking: RequestData?.date_booking,
@@ -933,6 +1161,7 @@ export class CSStatusService {
             data: {},
           };
           RequestSentNotifaction.data = JSON.stringify(RequestSentNotifaction);
+
           const notification = await this.notificationRepo.sendNotification(
             RequestSentNotifaction
           );
@@ -1187,13 +1416,14 @@ export class CSStatusService {
           );
           const create_departure = {
             cs_purchase_id: cs_purchase.id,
-            date_etd: RequestData.date_etd,
-            date_eta: RequestData.date_eta,
-            post_origin: RequestData.post_origin,
-            post_destination: RequestData.post_destination,
-            vessel_name: RequestData.vessel_name,
+            date_etd: RequestData?.date_etd,
+            date_eta: RequestData?.date_eta,
+            post_origin: RequestData?.post_origin,
+            post_destination: RequestData?.post_destination,
+            vessel_name: RequestData?.vessel_name,
+            bl_no: RequestData?.bl_no,
           };
-
+          console.log("create_departure", create_departure);
           const departure = await this.csStatusRepository.create(
             tx,
             create_departure,
@@ -1247,6 +1477,7 @@ export class CSStatusService {
             post_origin: RequestData?.post_origin,
             post_destination: RequestData?.post_destination,
             vessel_name: RequestData?.vessel_name,
+            bl_no: RequestData?.bl_no,
           };
 
           console.log("edit_departure", edit_departure);
