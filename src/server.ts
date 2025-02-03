@@ -20,7 +20,7 @@ declare module "express-serve-static-core" {
 
 // app.use(cors());
 app.use(cors({
-  origin: ['http://localhost:3003','https://cs.teglogistics.co.th'] 
+  origin: ['http://localhost:3003','https://cs.teglogistics.co.th','*'] 
 }));
 
 app.use(express.static(__dirname + "/public"));

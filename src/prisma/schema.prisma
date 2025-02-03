@@ -541,7 +541,7 @@ model waitrelease {
   detention_det_date  String?
   license_plate       String?
   location_exchange   String?
-  employee_driver    String?
+  employee_driver     String?
   phone_number        String?
   terminal_release    String?
   type_car            String?
@@ -724,7 +724,7 @@ model bookcabinet_picture {
 }
 
 model contain {
-  id              String         @id @default(uuid())
+  id              String            @id @default(uuid())
   cs_purchase_id  String            @unique(map: "Contain_cs_purchase_id_key")
   date_booking    String?
   carbon_total    String?
@@ -755,7 +755,7 @@ model contain_picture {
 }
 
 model contain_product {
-  id             String  @id @default(uuid())
+  id             String    @id @default(uuid())
   contain_id     String
   product_name   String
   product_hscode String
@@ -796,7 +796,7 @@ model cs_document_file {
 }
 
 model cs_purchase {
-  id                  String              @id @default(uuid())
+  id                  String               @id @default(uuid())
   d_purchase_id       String
   status_key          String?
   status_name         String?
@@ -832,7 +832,7 @@ model currency {
 }
 
 model documenttype {
-  id             String            @id @default(uuid())
+  id             String              @id @default(uuid())
   type_master_id String
   createdAt      DateTime            @default(now())
   updatedAt      DateTime?
@@ -881,7 +881,7 @@ model leavefile {
 }
 
 model provedeparture {
-  id               String     @id @default(uuid())
+  id               String      @id @default(uuid())
   cs_purchase_id   String      @unique(map: "ProveDeparture_cs_purchase_id_key")
   date_etd         String?
   date_eta         String?
@@ -896,7 +896,7 @@ model provedeparture {
 }
 
 model receive {
-  id              String           @id @default(uuid())
+  id              String            @id @default(uuid())
   cs_purchase_id  String            @unique(map: "Receive_cs_purchase_id_key")
   date_booking    String?
   so_no           String?
@@ -924,12 +924,44 @@ model receive_picture {
 }
 
 model typemaster {
-  id           String        @id @default(uuid())
+  id           String         @id @default(uuid())
   type_name    String
   createdAt    DateTime       @default(now())
   updatedAt    DateTime?
   deletedAt    DateTime?
   documenttype documenttype[]
+}
+
+model purchase_finance {
+  id                    String    @id @default(uuid())
+  d_purchase_id         String
+  ch_freight            String //ค่าเฟส
+  ch_rate               String //เปอร์เซ็น
+  ch_freight_total      String //รวม
+  th_duty               String //ค่าภาษีอากร
+  th_tax                String //ค่าภาษี
+  th_customs_fees       String //ค่าภาษีมัดจากการส่ง
+  th_overtime           String //ค่าล่วงเวลา
+  th_employee           String //ค่าพนักงาน
+  th_warehouse          String //ค่าเช่าโกดัง
+  th_gasoline           String //ค่าน้ำมัน
+  th_other_shipping     String //ค่าอื่นๆชิบปิ้ง
+  th_hairy              String //ค่าใบขน
+  th_head_tractor       String //ค่าหัวลาก
+  th_price_head_tractor String //ค่าใช้จ่ายหัวลาก
+  th_other_fee          String //อค่าอื่นๆ
+  th_total_shipping     String //รวมเคลียร์ชิปปิ้ง
+  total_all_th          String //รวมทั้ั้งหมดฝั่งไทย
+  th_cn_total           String //รวมทั้ั้งหมดฝั่งจีนไทย
+  miss_payment          String //ค้างชําระ  ขาดจ่าย
+  total_before_vat      String //รวมก่อน Vat
+  price_service         String  @default("10")
+  total_profit_loss     String  //รวมกำไรหรือขาดทุน
+  text_profit_loss      String  //ข้อความกำไรหรือขาดทุน 
+  finance_status        String  
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime?
+  deletedAt             DateTime?
 }
 
 enum keyDocument {

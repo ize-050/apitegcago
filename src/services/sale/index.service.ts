@@ -250,7 +250,7 @@ class SaleService {
         d_address_origin: RequestData.d_address_origin,
         d_address_destination: RequestData.d_address_destination,
         d_refund_tag: RequestData?.d_refund_tag ? RequestData.d_refund_tag : "",
-        d_truck: RequestData.d_truck,
+        d_truck: RequestData?.d_truck ? RequestData.d_truck : "",
         d_etc: RequestData.d_etc,
         d_status: "Sale ตีราคา",
       };
