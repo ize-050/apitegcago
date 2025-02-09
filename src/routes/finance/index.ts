@@ -34,4 +34,8 @@ router.put('/updatePurchase/:id',authMiddleware, (req, res) =>  financeControlle
 
 
 
+
+
+
+
 module.exports = router

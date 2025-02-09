@@ -73,7 +73,7 @@ class FinanceRepository {
       }
     }
     catch (err: any) {
-      throw err
+      throw err 
     }
   }
 
@@ -83,10 +83,20 @@ class FinanceRepository {
       const purchase = await this.prisma.d_purchase.findUnique({
         where: {
           id: id
-        }
+        },
+        include: {
+          cs_purchase:{
+            where:{
+              status_name:"Leave"
+            },
+            include:{
+              leave:true,
+            }
+          }
+        },
+        
       })
 
-      console.log("purchase",purchase)
 
       return purchase
     } catch (err: any) {
