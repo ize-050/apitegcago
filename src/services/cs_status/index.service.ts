@@ -1025,7 +1025,7 @@ export class CSStatusService {
 
        
 
-          if (container_no.container_no != "" && RequestData.type_contain != "") {
+          if (container_no?.container_no != "" && RequestData?.type_contain != "") {
             if (typeof check === "undefined") {
               console.log("RequestData.type_contain", RequestData);
               console.log("check", check);
