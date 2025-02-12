@@ -43,6 +43,17 @@ class FinanceService {
     }
   }
 
+  public async getWorkByid(id: string) {
+    try {
+      const finance_work = await this.financeRepo.getWorkByid(id)
+      return finance_work 
+    }
+    catch(err:any){
+      console.log("errgetWorkByid", err)
+      throw err
+    }
+  }
+
 
   public async submitPurchase(Request:Partial<any>) {
     try {

@@ -51,6 +51,23 @@ export class FinanceController {
         }
     }
 
+    public async getWorkByid(req: Request, res: Response) {
+        try {
+            console.log("id",req.params.id)
+            const finance_work = await this.financeService.getWorkByid(req.params.id)
+            const Response = {
+                data: finance_work,
+                message: "ข้อมูลสําเร็จ",
+                statusCode: 200
+            }
+            return res.status(200).json(Response);
+        }
+        catch (err: any) {
+            console.log('Error Notification', err)
+            res.status(500).json(err)
+        }
+    }
+
     public async submitPurchase(req: Request, res: Response) {
         try {
             const purchase = await this.financeService.submitPurchase(req.body)

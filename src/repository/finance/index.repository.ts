@@ -85,13 +85,18 @@ class FinanceRepository {
           id: id
         },
         include: {
+          d_purchase_customer_payment:true,
           cs_purchase:{
             where:{
-              status_name:"Leave"
+              status_key:{
+                in:["Leave","return_cabinet"]
+              }
             },
             include:{
               leave:true,
-            }
+              cs_return_cabinet:true,
+             
+            },
           }
         },
         
@@ -102,6 +107,20 @@ class FinanceRepository {
     } catch (err: any) {
       console.log("errgetPurchaseById", err)
       throw err
+    }
+  }
+
+  public async getWorkByid(d_purchase_id :string) :Promise<any>{
+    try{
+      const work = await this.prisma.purchase_finance.findFirst({
+        where:{
+          d_purchase_id:d_purchase_id
+        }
+      })
+      return work
+    }
+    catch(err:any){
+        throw err;
     }
   }
 

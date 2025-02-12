@@ -625,7 +625,7 @@ export class CSStatusService {
 
         console.log("getStatusContain", getStatusContain);
 
-        if (getStatusContain.id != null) {
+        if (getStatusContain?.id != null) {  
           const contains = await this.prisma.contain.findUnique({
             where: {
               cs_purchase_id: getStatusContain.id,

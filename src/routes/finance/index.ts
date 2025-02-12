@@ -28,8 +28,15 @@ const financeController = new FinanceController();
 
 router.get('/getPurchase', authMiddleware,(req, res) =>  financeController.getPurchase(req, res));
 router.get('/getPurchaseById/:id',authMiddleware, (req, res) =>  financeController.getPurchaseById(req, res));
+
+router.get('/getWorkByid/:id',authMiddleware, (req, res) =>  financeController.getWorkByid(req, res));
+
+
 router.post('/submitPurchase',authMiddleware, (req, res) =>  financeController.submitPurchase(req, res));
 router.put('/updatePurchase/:id',authMiddleware, (req, res) =>  financeController.updatePurchase(req, res));
+
+
+//
 
 
 
