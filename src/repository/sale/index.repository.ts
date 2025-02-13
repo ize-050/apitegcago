@@ -402,6 +402,9 @@ class SaleRepository {
   }
   async getEstimate(purchaseId: string): Promise<any> {
     try {
+
+      console.log("purchaseId", purchaseId);
+
       return await this.prisma.d_purchase.findFirst({
         where: {
           id: purchaseId,
@@ -477,6 +480,7 @@ class SaleRepository {
         },
       });
     } catch (err: any) {
+      console.log("rerere",err)
       throw new Error(err);
     }
   }

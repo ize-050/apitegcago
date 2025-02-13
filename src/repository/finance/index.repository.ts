@@ -43,7 +43,8 @@ class FinanceRepository {
             where: {
               status_name: "ออกเดินทาง"
             }
-          }
+          },
+          purchase_finance:true
         }
       })
 
@@ -73,33 +74,33 @@ class FinanceRepository {
       }
     }
     catch (err: any) {
-      throw err 
+      throw err
     }
   }
 
 
-  public async getPurchaseById(id: string):Promise<any> {
+  public async getPurchaseById(id: string): Promise<any> {
     try {
       const purchase = await this.prisma.d_purchase.findUnique({
         where: {
           id: id
         },
         include: {
-          d_purchase_customer_payment:true,
-          cs_purchase:{
-            where:{
-              status_key:{
-                in:["Leave","return_cabinet"]
+          d_purchase_customer_payment: true,
+          cs_purchase: {
+            where: {
+              status_key: {
+                in: ["Leave", "return_cabinet"]
               }
             },
-            include:{
-              leave:true,
-              cs_return_cabinet:true,
-             
+            include: {
+              leave: true,
+              cs_return_cabinet: true,
+
             },
           }
         },
-        
+
       })
 
 
@@ -110,28 +111,47 @@ class FinanceRepository {
     }
   }
 
-  public async getWorkByid(d_purchase_id :string) :Promise<any>{
-    try{
+  public async getWorkByid(d_purchase_id: string): Promise<any> {
+    try {
       const work = await this.prisma.purchase_finance.findFirst({
-        where:{
-          d_purchase_id:d_purchase_id
+        where: {
+          d_purchase_id: d_purchase_id
         }
       })
       return work
     }
-    catch(err:any){
-        throw err;
+    catch (err: any) {
+      throw err;
     }
   }
 
-  public async submitPurchase(Request:FinanceInterface):Promise<any> {
+  public async submitPurchase(Request: FinanceInterface): Promise<any> {
     try {
-      const purchase = await this.prisma.purchase_finance.create({
-        data: {
-          ...Request
-        }
-      })
-      return purchase
+
+      console.log("Rqwqeqwewq",Request.id)
+
+      if (typeof Request.id === "undefined") {
+        const data = Request;
+        delete data.id;
+        const purchase = await this.prisma.purchase_finance.create({
+          data: {
+            ...data
+          }
+        })
+
+        return purchase;
+      }
+      else {
+        const purchase = await this.prisma.purchase_finance.update({
+          where: {
+            id: Request.id
+          },
+          data: {
+            ...Request
+          }
+        })
+        return purchase
+      }
     } catch (err: any) {
       console.log("errsubmitPurchase", err)
       throw err
@@ -139,9 +159,9 @@ class FinanceRepository {
   }
 
 
-  public async updatePurchase(id:string,Request:FinanceInterface):Promise<any> {
+  public async updatePurchase(id: string, Request: FinanceInterface): Promise<any> {
     try {
-      if(Request.d_purchase_id == null){
+      if (Request.d_purchase_id == null) {
         return null
       }
 

@@ -1,6 +1,7 @@
 
 
 export interface FinanceInterface {
+    id?: string;
     d_purchase_id: string;
     ch_freight: string;
     ch_rate: string;
@@ -12,6 +13,7 @@ export interface FinanceInterface {
     finance_status: string;
     total_all_th: string;
     th_cn_total: string;
+    billing_amount:string;
     th_duty: string;
     th_tax: string;
     th_customs_fees: string;

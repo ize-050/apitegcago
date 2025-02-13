@@ -22,9 +22,45 @@ class FinanceService {
   public async getPurchase(Request:Partial<any>) {
 
     try{
-      const purchase = await this.financeRepo.getPurchase(Request)
+      const purchase :any = await this.financeRepo.getPurchase(Request);
 
-      return purchase
+      const data = [];
+      
+
+      for (let datas of purchase.purchase) {
+        if (datas.d_status === 'Sale ตีราคา') {
+          datas.color = 'bg-blue-500'
+        }
+        if (datas.d_status === 'Cs รับงาน') {
+          datas.color = 'bg-[#FFC8C8]'
+        }
+        if (datas.d_status === 'CS ร้องขอเอกสาร') {
+          datas.color = 'bg-red-400'
+        }
+        if (datas.d_status === 'Sale แนบเอกสาร') {
+          datas.color = 'bg-red-400'
+        }
+        if (datas.d_status === 'Cs เสนอราคา') {
+          datas.color = 'bg-orange-300'
+        }
+        if (datas.d_status === 'ยกเลิกคำสั่งซื้อ') {
+          datas.color = 'bg-red-500'
+        }
+        if (datas.d_status === 'อยู่ระหว่างทำ Financial') {
+          datas.color = 'bg-[#946A00]'
+        }
+        if (datas.d_status === 'ค้างชำระเงิน') {
+          datas.color = 'bg-red-500'
+        }
+        if (datas.d_status === 'ปิดการขาย') {
+          datas.color = 'bg-green-500'
+        }
+        if (datas.d_status === 'ลูกค้าเครดิต') {
+          datas.color = 'bg-blue-500'
+        }
+        data.push(datas)
+      }
+      return { purchase: data, total: purchase.total }
     }
     catch(err:any){
       console.log("errgetPurchase", err)
@@ -59,6 +95,7 @@ class FinanceService {
     try {
 
       const data = Request;
+
       const Body : FinanceInterface = {
         d_purchase_id:data.d_purchase_id.toString(),
         ch_freight: data.ch_freight === null ? null : data.ch_freight.toString(),
@@ -76,6 +113,7 @@ class FinanceService {
         th_customs_fees: data.th_customs_fees === null ? null : data.th_customs_fees.toString(),
         th_overtime: data.th_overtime === null ? null : data.th_overtime.toString(),
         th_employee: data.th_employee === null ? null : data.th_employee.toString(),
+        billing_amount: data.billing_amount === null ? null : data.billing_amount.toString(),
         th_warehouse: data.th_warehouse === null ? null : data.th_warehouse.toString(),
         th_gasoline: data.th_gasoline === null ? null : data.th_gasoline.toString(),
         th_other_shipping: data.th_other_shipping === null ? null : data.th_other_shipping.toString(),
@@ -85,6 +123,13 @@ class FinanceService {
         th_other_fee: data.th_other_fee === null ? null : data.th_other_fee.toString(),
         th_total_shipping: data.th_total_shipping === null ? null : data.th_total_shipping.toString(),
         price_service: data.price_service === null ? null : data.price_service.toString(),
+      }
+
+      if(data.id == null){
+        delete Body.id
+      }
+      else{
+        Body.id = data.id.toString()
       }
       const purchase = await this.financeRepo.submitPurchase(Body) 
       if(purchase == null){
