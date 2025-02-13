@@ -858,7 +858,7 @@ export class CSStatusService {
               RequestData.d_shipment_number =
                 RequestData.type_contain +
                 "001-" +
-                moment().format("YYMMDD") +
+                moment(RequestData.date_booking).format("YYMMDD") +
                 "-" +
                 container_no.container_no.slice(-4);
               await tx.d_purchase.update({
@@ -886,7 +886,7 @@ export class CSStatusService {
                 RequestData.d_shipment_number =
                   newPrefix +
                   "-" +
-                  moment().format("YYMMDD") +
+                  moment(RequestData.date_booking).format("YYMMDD") +
                   "-" +
                   container_no.container_no.slice(-4);
               } else {
@@ -1032,7 +1032,7 @@ export class CSStatusService {
               RequestData.d_shipment_number =
                 RequestData.type_contain +
                 "001-" +
-                moment().format("YYMMDD") +
+                moment(RequestData.date_booking).format("YYMMDD") +
                 "-" +
                 container_no.container_no.slice(-4);
               console.log(
@@ -1062,7 +1062,7 @@ export class CSStatusService {
                 RequestData.d_shipment_number =
                   newPrefix +
                   "-" +
-                  moment().format("YYMMDD") +
+                  moment(RequestData.date_booking).format("YYMMDD") +
                   "-" +
                   container_no.container_no.slice(-4);
               } else {
