@@ -16,6 +16,25 @@ export class FinanceController {
         this.financeService = new FinanceService();
     }
 
+    public async getPurchaseBySearch(req: Request, res: Response) {
+        try {
+
+            const {search} :any = req.query;
+
+            const purchase = await this.financeService.getPurchasebySearch(search)
+            const Response = {
+                data: purchase,
+                message: "ข้อมูลสําเร็จ",
+                statusCode: 200
+            }
+            return res.status(200).json(Response);
+        }
+        catch (err: any) {
+            console.log('Error Notification', err)
+            res.status(500).json(err)
+        }
+    }
+
 
     public async getPurchase(req: Request, res: Response) {
         try {
@@ -102,6 +121,88 @@ export class FinanceController {
             res.status(500).json(err)
         }
     }
+
+
+    //work
+    public async getWidhdrawalInformation(req: Request, res: Response) {
+        try {
+            
+            const Request = {
+                page :req.query.page
+            }
+            const widhdrawalInformation = await this.financeService.getWidhdrawalInformation(Request)
+            const Response = {
+                data: widhdrawalInformation,
+                message: "ข้อมูลสําเร็จ",
+                statusCode: 200
+            }
+            return res.status(200).json(Response);
+        }
+        catch (err: any) {
+            console.log('Error Notification', err)
+            res.status(500).json(err)
+        }
+    }
+
+    public async submitWidhdrawalInformation(req: Request, res: Response) {
+        try {
+            
+            const Check = await this.financeService.CheckWidhdrawalInformation(req.body)
+            if(Check.length > 0){
+                const Response = {
+                    data: null,
+                    message: "มีข้อมูล",
+                    statusCode: 400
+                }
+                return res.status(200).json(Response);
+            }
+
+            const widhdrawalInformation = await this.financeService.submitWidhdrawalInformation(req.body)
+            const Response = {
+                data: widhdrawalInformation,
+                message: "ข้อมูลสําเร็จ",
+                statusCode: 200
+            }
+            return res.status(200).json(Response);
+        }
+        catch (err: any) {
+            console.log('Error Notification', err)
+            res.status(500).json(err)
+        }
+    }
+
+    public async updateWidhdrawalInformation(req: Request, res: Response) {
+        try {
+            const widhdrawalInformation = await this.financeService.updateWidhdrawalInformation(req.body)
+            const Response = {
+                data: widhdrawalInformation,
+                message: "ข้อมูลสําเร็จ",
+                statusCode: 200
+            }
+            return res.status(200).json(Response);
+        }
+        catch (err: any) {
+            console.log('Error Notification', err)
+            res.status(500).json(err)
+        }
+    }
+
+    public async deleteWithdrawalInformation(req: Request, res: Response) {
+        try {
+            const widhdrawalInformation = await this.financeService.deleteWithdrawalInformation(req.params.id)
+            const Response = {
+                data: widhdrawalInformation,
+                message: "ข้อมูลสําเร็จ",
+                statusCode: 200
+            }
+            return res.status(200).json(Response);
+        }
+        catch (err: any) {
+            console.log('Error Notification', err)
+            res.status(500).json(err)
+        }
+    }
+
 
 
 

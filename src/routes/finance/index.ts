@@ -37,7 +37,12 @@ router.put('/updatePurchase/:id',authMiddleware, (req, res) =>  financeControlle
 
 
 //
+router.get('/purchase',authMiddleware, (req, res) =>  financeController.getPurchaseBySearch(req, res));
+router.get('/getWidhdrawalInformation',authMiddleware, (req, res) =>  financeController.getWidhdrawalInformation(req, res));
+router.post('/submitwidhdrawalInformation',authMiddleware, (req, res) =>  financeController.submitWidhdrawalInformation(req, res));
+router.post('/updatewidhdrawalInformation',authMiddleware, (req, res) =>  financeController.updateWidhdrawalInformation(req, res));
 
+router.delete('/withdrawal_information/:id',authMiddleware, (req, res) =>  financeController.deleteWithdrawalInformation(req, res));
 
 
 

@@ -4,7 +4,7 @@ import { Request, Response } from "express";
 import FinanceRepository from "../../repository/finance/index.repository";
 
 
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, withdrawalInformaion } from "@prisma/client";
 
 //interface
 import  { FinanceInterface } from "./dto/finance.interface"
@@ -17,6 +17,18 @@ class FinanceService {
 
   constructor() {
     this.financeRepo = new FinanceRepository();
+  }
+
+  public async getPurchasebySearch(search:string):Promise<any>{
+    try{
+      const purchase :any = await this.financeRepo.getPurchaseBysearch(search);
+
+      return purchase;
+    }
+    catch(err:any){
+      console.log("errgetPurchase", err)
+      throw err
+    }
   }
 
   public async getPurchase(Request:Partial<any>) {
@@ -157,6 +169,62 @@ class FinanceService {
       throw err
     }
   }
+
+  public async getWidhdrawalInformation(Request:Partial<any>) {
+    try {
+      const widhdrawalInformation = await this.financeRepo.getWidhdrawalInformation(Request)
+      return {
+        widhdrawalInformation,
+        total: widhdrawalInformation.length
+      }
+    } catch (err: any) {
+      console.log("errgetWidhdrawalInformation", err)
+      throw err
+    }
+  }
+
+  public async CheckWidhdrawalInformation(Request:Partial<any>) {
+    try {
+      const widhdrawalInformation = await this.financeRepo.CheckWidhdrawalInformation(Request)
+      return widhdrawalInformation
+    } catch (err: any) {
+      console.log("errCheckWidhdrawalInformation", err)
+      throw err
+    }
+  }
+
+
+  public async submitWidhdrawalInformation(Request:withdrawalInformaion) {
+    try {
+      const widhdrawalInformation = await this.financeRepo.submitWidhdrawalInformation(Request)
+      return widhdrawalInformation
+    } catch (err: any) {
+      console.log("errsubmitWidhdrawalInformation", err)
+      throw err
+    }
+  }
+
+  public async updateWidhdrawalInformation(Request:Partial<any>) {
+    try {
+      const widhdrawalInformation = await this.financeRepo.updateWidhdrawalInformation(Request)
+      return widhdrawalInformation
+    } catch (err: any) {
+      console.log("errupdateWidhdrawalInformation", err)
+      throw err
+    }
+  }
+
+  public async deleteWithdrawalInformation(id:string) {
+    try {
+      const widhdrawalInformation = await this.financeRepo.deleteWithdrawalInformation(id)
+      return widhdrawalInformation
+    } catch (err: any) {
+      console.log("errdeleteWithdrawalInformation", err)
+      throw err
+    }
+  }
+
+  
 
 
 }
