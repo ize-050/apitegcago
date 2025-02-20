@@ -19,6 +19,16 @@ class FinanceRepository {
           d_shipment_number: {
             contains: search
           }
+        },
+        include:{
+          cs_purchase:{
+            where:{
+              status_key :'Bookcabinet'
+            },
+            include:{
+              bookcabinet:true,
+            }
+          },
         }
       })
       return purchase
@@ -118,6 +128,7 @@ class FinanceRepository {
             include: {
               leave: true,
               cs_return_cabinet: true,
+              bookcabinet:true,
 
             },
           }
