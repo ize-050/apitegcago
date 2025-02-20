@@ -54,6 +54,7 @@ export interface RequestPurchase{
     d_shipment_number?: string;
     d_address_origin_la?: string;
     date_cabinet?: string;
+    t_group_work?: string;
     link_d_origin?: string;
     link_d_destination?: string;
     d_address_origin_long?: string;

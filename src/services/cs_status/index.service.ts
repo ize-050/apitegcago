@@ -226,6 +226,7 @@ export class CSStatusService {
           const create_book_cabinet = {
             cs_purchase_id: cs_purchase.id,
             date_receiving: RequestData.date_receiving,
+            consignee: RequestData?.consignee,
             date_entering: RequestData.date_entering,
             date_booking: RequestData.date_booking,
             time_entering: RequestData.time_entering,
@@ -317,6 +318,7 @@ export class CSStatusService {
           const cs_purchaseData = {
             date_receiving: RequestData?.date_receiving,
             date_entering: RequestData?.date_entering,
+            consignee: RequestData?.consignee,
             date_booking: RequestData?.date_booking,
             time_entering: RequestData?.time_entering,
             agentcy_id: RequestData?.agentcy_id,
@@ -1029,12 +1031,13 @@ export class CSStatusService {
             if (typeof check === "undefined") {
               console.log("RequestData.type_contain", RequestData);
               console.log("check", check);
+              const lastFourDigits = container_no.container_no.toString().slice(-4).padStart(4, '0');
               RequestData.d_shipment_number =
                 RequestData.type_contain +
                 "001-" +
                 moment(RequestData.date_booking).format("YYMMDD") +
                 "-" +
-                container_no.container_no.slice(-4);
+                lastFourDigits;
               console.log(
                 "RequestData.d_shipment_number",
                 RequestData.d_shipment_number
@@ -1508,6 +1511,7 @@ export class CSStatusService {
           const notification = await this.notificationRepo.sendNotification(
             RequestSentNotifaction
           );
+
           return true;
         } catch (err: any) {
           console.log("createFail", err);
@@ -2209,6 +2213,8 @@ export class CSStatusService {
             tx,
             cs_purchaseData
           );
+
+          console.log("cs_purchase", cs_purchase);
 
           const re: any = await tx.cs_purchase.findFirst({
             select: {

@@ -186,6 +186,7 @@ model d_purchase {
   d_emp_look                  String?                       @default("")
   d_end_date                  DateTime?
   d_group_work                String?                       @default("")
+  t_group_work                String?
   d_num_date                  String?
   d_address_destination_la    String?
   d_address_destination_long  String?
@@ -703,6 +704,7 @@ model bookcabinet {
   agentcy_id          String?
   agentcy_etc         String?
   date_entering       String?
+  consignee           String?
   createdAt           DateTime              @default(now())
   updatedAt           DateTime?
   deletedAt           DateTime?

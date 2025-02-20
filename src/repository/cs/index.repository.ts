@@ -49,6 +49,7 @@ class CsRepository {
           },
           
           d_purchase_status: true,
+          customer:true,
         },
         orderBy: [
           { createdAt: 'desc' }, // Primary sorting by createdAt

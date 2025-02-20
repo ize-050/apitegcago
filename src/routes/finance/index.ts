@@ -45,7 +45,7 @@ router.post('/updatewidhdrawalInformation',authMiddleware, (req, res) =>  financ
 router.delete('/withdrawal_information/:id',authMiddleware, (req, res) =>  financeController.deleteWithdrawalInformation(req, res));
 
 
-
+  
 
 
 
