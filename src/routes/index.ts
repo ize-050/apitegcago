@@ -15,6 +15,7 @@ const Csstatus = require('./cs_status')
 const Superadmin = require('./superadmin')
 
 const FinanceRouter = require('./finance')
+const EmployeeRouter = require('./employee')
 
 
 
@@ -26,6 +27,7 @@ router.use('/notification',Notification)
 router.use('/system',SystemRouter)
 router.use('/cs_status',Csstatus)
 router.use('/finance',FinanceRouter)
+router.use('/employee',EmployeeRouter)
 
 
 

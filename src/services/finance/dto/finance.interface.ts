@@ -1,5 +1,3 @@
-
-
 export interface FinanceInterface {
     id?: string;
     d_purchase_id: string;
@@ -29,4 +27,42 @@ export interface FinanceInterface {
     th_total_shipping: string;
     price_service: string;
     
+}
+
+export interface FinancialRecordInterface {
+    id?: string;
+    date: string;
+    title: string;
+    accountOwner: 'AHYONG' | 'GINNY';
+    type: 'PAYMENT' | 'RECEIPT';
+    amountRMB: number;
+    transferDate: string;
+    details?: string;
+    transferSlip?: string;
+    
+    // Receipt specific fields
+    amountTHB?: number;
+    exchangeRate?: number;
+    
+    // Payment specific fields
+    payTo?: string;
+}
+
+export interface FinancialRecordInterface {
+    id?: string;
+    date: string;
+    title: string;
+    accountOwner: 'AHYONG' | 'GINNY';
+    type: 'PAYMENT' | 'RECEIPT';
+    amountRMB: number;
+    transferDate: string;
+    details?: string;
+    transferSlip?: string;
+    
+    // Receipt specific fields
+    amountTHB?: number;
+    exchangeRate?: number;
+    
+    // Payment specific fields
+    payTo?: string;
 }

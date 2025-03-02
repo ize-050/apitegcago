@@ -212,7 +212,7 @@ model d_purchase {
   d_purchase_status           d_purchase_status[]
   d_sale_agentcy              d_sale_agentcy[]
   payment_purchase            payment_purchase[]
-  purchase_finance          purchase_finance[]
+  purchase_finance            purchase_finance[]
 
   @@index([customer_id])
 }
@@ -506,11 +506,13 @@ model payment_purchase {
 model d_sale_agentcy {
   id                  String                @id @default(uuid())
   d_agentcy_id        String
+  d_purchase_id       String
   status              Boolean?              @default(false)
+  d_sale_agentcy_note String?
+  d_sale_agentcy_date String?
   createdAt           DateTime              @default(now())
   updatedAt           DateTime?
   deletedAt           DateTime?
-  d_purchase_id       String
   d_agentcy           d_agentcy             @relation(fields: [d_agentcy_id], references: [id])
   d_purchase          d_purchase            @relation(fields: [d_purchase_id], references: [id])
   d_sale_agentcy_file d_sale_agentcy_file[]
@@ -935,6 +937,28 @@ model typemaster {
   documenttype documenttype[]
 }
 
+model financial_record {
+  id                  String    @id @default(uuid())
+  date                DateTime
+  title               String
+  accountOwner        String    // 'AHYONG' | 'GINNY'
+  type                String    // 'PAYMENT' | 'RECEIPT'
+  amountRMB           Float
+  transferDate        DateTime
+  details             String?   @db.Text
+  transferSlip        String?   @db.Text
+  
+  // Receipt specific fields
+  amountTHB           Float?
+  exchangeRate        Float?
+  
+  // Payment specific fields
+  payTo               String?
+  
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime?
+}
+
 model purchase_finance {
   id                    String    @id @default(uuid())
   d_purchase_id         String
@@ -948,7 +972,7 @@ model purchase_finance {
   th_employee           String //ค่าพนักงาน
   th_warehouse          String //ค่าเช่าโกดัง
   th_gasoline           String //ค่าน้ำมัน
-  th_other_shipping     String //ค่าอื่นๆชิบปิ้ง
+  th_other_shipping     String //ค่าอื่นๆชิปปิ้ง
   th_hairy              String //ค่าใบขน
   th_head_tractor       String //ค่าหัวลาก
   th_price_head_tractor String //ค่าใช้จ่ายหัวลาก
@@ -959,35 +983,69 @@ model purchase_finance {
   miss_payment          String //ค้างชําระ  ขาดจ่าย
   total_before_vat      String //รวมก่อน Vat
   billing_amount        String //ยอดเรีัยกเก็บ
-  price_service         String  @default("10")
-  total_profit_loss     String  //รวมกำไรหรือขาดทุน
-  text_profit_loss      String  //ข้อความกำไรหรือขาดทุน 
-  finance_status        String  
+  price_service         String    @default("10")
+  total_profit_loss     String //รวมกำไรหรือขาดทุน
+  text_profit_loss      String //ข้อความกำไรหรือขาดทุน 
+  finance_status        String
   createdAt             DateTime  @default(now())
   updatedAt             DateTime?
   deletedAt             DateTime?
-
 
   purchase_finance d_purchase? @relation(fields: [d_purchase_id], references: [id], map: "purchase_finance_d_purchase_id_fkey")
 }
 
 model withdrawalInformaion {
-  id            String    @id @default(uuid())
-  d_purchase_id String
-  invoice_package String?
-  consignee      String?
-  head_tractor   String?
-  withdrawal_date String?
+  id                String    @id @default(uuid())
+  d_purchase_id     String
+  invoice_package   String?
+  consignee         String?
+  head_tractor      String?
+  withdrawal_date   String?
+  withdrawal_person String?
   withdrawal_amount String?
-  pay_price String?
-  pay_gasoline String?
-  pay_total String? //คงเหลือ
-  return_people String? //คืนให้ใคร
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime?
-  deletedAt     DateTime?
+  transfer_amount   String?
+  transfer_date     String?
+  group_id          String?  // To group related withdrawal records
+  pay_price         String?
+  pay_gasoline      String?
+  pay_total         String? //คงเหลือ
+  return_people     String? //คืนให้ใคร
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime?
+  deletedAt         DateTime?
 }
 
+// Consignment types
+enum ConsignmentType {
+  ORDER
+  TOPUP
+}
+
+model finance_consignment {
+  id                  String          @id @default(uuid())
+  date                DateTime
+  salespersonId       String
+  documentNumber      String
+  customerId          String
+  type                ConsignmentType
+  
+  // Common fields
+  amountRMB           Float
+  transferDate        DateTime
+  notes               String?         @db.Text
+  transferSlipUrl     String?         @db.Text
+  
+  // For ORDER type
+  productDetails      String?         @db.Text
+  orderStatus         String?         @default("PENDING") // PENDING, PROCESSING, COMPLETED
+  
+  // For TOPUP type
+  topupPlatform       String?
+  topupAccount        String?
+  
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime?
+}
 
 enum keyDocument {
   Document
@@ -1000,4 +1058,16 @@ enum documenttype_do_key {
   AIR
   TRAIN
   TRUCK
+}
+
+// Financial record types
+enum TransactionType {
+  PAYMENT
+  RECEIPT
+}
+
+// Account owners
+enum AccountOwner {
+  AHYONG
+  GINNY
 }

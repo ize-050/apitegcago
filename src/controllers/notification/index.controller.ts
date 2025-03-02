@@ -35,6 +35,8 @@ export class NotificationController {
 
   }
 
+  
+
   async ReadAllNotifications(req: Request, res: Response): Promise<any>{
     try{
         const userId =  req?.userId;

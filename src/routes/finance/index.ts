@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { FinanceController } from '../../controllers/finance/index.controller';
+import ConsignmentController from '../../controllers/finance/consignment.controller';
 
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt'; // For password hashing
@@ -10,19 +11,28 @@ import { Request, Response } from 'express';
 import authMiddleware from "../../middleware/authMiddleware";
 import multer from "multer";
 import path from "path";
+import fs from "fs";
 const router = Router()
 const { v4: uuidv4 } = require('uuid');
+
+// Ensure the transferSlip directory exists
+const transferSlipDir = 'public/images/transferSlip';
+if (!fs.existsSync(transferSlipDir)) {
+  fs.mkdirSync(transferSlipDir, { recursive: true });
+}
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, 'public/temp'); // Specify the directory where you want to store files
+    cb(null, transferSlipDir); // Store files in public/images/transferSlip
   },
   filename: (req, file, cb) => {
-    cb(null, `${Date.now()}-${uuidv4()}`+path.extname(file.originalname));
+    cb(null, `${Date.now()}-${uuidv4()}${path.extname(file.originalname)}`);
   }
 });
 
 var upload = multer({ storage: storage });
 const financeController = new FinanceController();
+const consignmentController = new ConsignmentController();
 
 
 
@@ -39,15 +49,30 @@ router.put('/updatePurchase/:id',authMiddleware, (req, res) =>  financeControlle
 //
 router.get('/purchase',authMiddleware, (req, res) =>  financeController.getPurchaseBySearch(req, res));
 router.get('/getWidhdrawalInformation',authMiddleware, (req, res) =>  financeController.getWidhdrawalInformation(req, res));
+router.get('/withdrawal_information/group/:groupId',authMiddleware, (req, res) =>  financeController.getWidhdrawalInformationByGroupId(req, res));
 router.post('/submitwidhdrawalInformation',authMiddleware, (req, res) =>  financeController.submitWidhdrawalInformation(req, res));
 router.post('/updatewidhdrawalInformation',authMiddleware, (req, res) =>  financeController.updateWidhdrawalInformation(req, res));
 
 router.delete('/withdrawal_information/:id',authMiddleware, (req, res) =>  financeController.deleteWithdrawalInformation(req, res));
 
+// Financial Record Routes
+router.post('/financial-records', authMiddleware, upload.single('transferSlip'), (req, res) => financeController.createFinancialRecord(req, res));
+router.get('/financial-records', authMiddleware, (req, res) => financeController.getFinancialRecords(req, res));
+router.get('/financial-records/:id', authMiddleware, (req, res) => financeController.getFinancialRecordById(req, res));
+router.put('/financial-records/:id', authMiddleware, upload.single('transferSlip'), (req, res) => financeController.updateFinancialRecord(req, res));
+router.delete('/financial-records/:id', authMiddleware, (req, res) => financeController.deleteFinancialRecord(req, res));
 
-  
+// Export financial records to Excel
+router.get('/export-excel', authMiddleware, (req, res) => financeController.exportFinancialRecordsToExcel(req, res));
 
+// Export withdrawal information to Excel
+router.get('/export-withdrawal-excel', authMiddleware, (req, res) => financeController.exportWithdrawalInformationToExcel(req, res));
 
-
+// Consignment Routes
+router.post('/consignments', authMiddleware, (req, res) => consignmentController.createConsignment(req, res));
+router.get('/consignments', authMiddleware, (req, res) => consignmentController.getConsignments(req, res));
+router.get('/consignments/:id', authMiddleware, (req, res) => consignmentController.getConsignmentById(req, res));
+router.put('/consignments/:id', authMiddleware, (req, res) => consignmentController.updateConsignment(req, res));
+router.delete('/consignments/:id', authMiddleware, (req, res) => consignmentController.deleteConsignment(req, res));
 
 module.exports = router

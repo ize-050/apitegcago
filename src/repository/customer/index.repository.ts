@@ -1,9 +1,6 @@
 
 import { PrismaClient ,customer } from "@prisma/client";
 
-
-
-
 class CustomerRepository {
   private prisma: PrismaClient;
 

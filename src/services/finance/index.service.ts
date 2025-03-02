@@ -3,8 +3,9 @@ import { Request, Response } from "express";
 //repositroy
 import FinanceRepository from "../../repository/finance/index.repository";
 
-
-import { PrismaClient, withdrawalInformaion } from "@prisma/client";
+//import { PrismaClient, withdrawalInformaion } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
+import { withdrawalInformaion } from "@prisma/client";
 
 //interface
 import  { FinanceInterface } from "./dto/finance.interface"
@@ -172,11 +173,8 @@ class FinanceService {
 
   public async getWidhdrawalInformation(Request:Partial<any>) {
     try {
-      const widhdrawalInformation = await this.financeRepo.getWidhdrawalInformation(Request)
-      return {
-        widhdrawalInformation,
-        total: widhdrawalInformation.length
-      }
+      const result = await this.financeRepo.getWidhdrawalInformation(Request);
+      return result;
     } catch (err: any) {
       console.log("errgetWidhdrawalInformation", err)
       throw err
@@ -194,7 +192,7 @@ class FinanceService {
   }
 
 
-  public async submitWidhdrawalInformation(Request:withdrawalInformaion) {
+  public async submitWidhdrawalInformation(Request: any) {
     try {
       const widhdrawalInformation = await this.financeRepo.submitWidhdrawalInformation(Request)
       return widhdrawalInformation
@@ -204,7 +202,7 @@ class FinanceService {
     }
   }
 
-  public async updateWidhdrawalInformation(Request:Partial<any>) {
+  public async updateWidhdrawalInformation(Request: Partial<any>) {
     try {
       const widhdrawalInformation = await this.financeRepo.updateWidhdrawalInformation(Request)
       return widhdrawalInformation
@@ -221,6 +219,66 @@ class FinanceService {
     } catch (err: any) {
       console.log("errdeleteWithdrawalInformation", err)
       throw err
+    }
+  }
+
+  public async getWidhdrawalInformationByGroupId(groupId: string) {
+    try {
+      const records = await this.financeRepo.getWidhdrawalInformationByGroupId(groupId);
+      return records;
+    } catch (err: any) {
+      console.log("errgetWidhdrawalInformationByGroupId", err);
+      throw err;
+    }
+  }
+
+  public async createFinancialRecord(data: any): Promise<any> {
+    try {
+      const record = await this.financeRepo.createFinancialRecord(data);
+      return record;
+    } catch (err: any) {
+      console.log("Error creating financial record", err);
+      throw err;
+    }
+  }
+
+  public async getFinancialRecords(filters: any): Promise<any> {
+    try {
+      const records = await this.financeRepo.getFinancialRecords(filters);
+      return records;
+    } catch (err: any) {
+      console.log("Error getting financial records", err);
+      throw err;
+    }
+  }
+
+  public async getFinancialRecordById(id: string): Promise<any> {
+    try {
+      const record = await this.financeRepo.getFinancialRecordById(id);
+      return record;
+    } catch (err: any) {
+      console.log("Error getting financial record by ID", err);
+      throw err;
+    }
+  }
+
+  public async updateFinancialRecord(id: string, data: any): Promise<any> {
+    try {
+      const record = await this.financeRepo.updateFinancialRecord(id, data);
+      return record;
+    } catch (err: any) {
+      console.log("Error updating financial record", err);
+      throw err;
+    }
+  }
+
+  public async deleteFinancialRecord(id: string): Promise<any> {
+    try {
+      const record = await this.financeRepo.deleteFinancialRecord(id);
+      return record;
+    } catch (err: any) {
+      console.log("Error deleting financial record", err);
+      throw err;
     }
   }
 
