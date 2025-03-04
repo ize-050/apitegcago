@@ -174,6 +174,7 @@ class FinanceService {
   public async getWidhdrawalInformation(Request:Partial<any>) {
     try {
       const result = await this.financeRepo.getWidhdrawalInformation(Request);
+    
       return result;
     } catch (err: any) {
       console.log("errgetWidhdrawalInformation", err)

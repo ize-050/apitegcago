@@ -29,6 +29,7 @@ model user {
   d_purchase_emp d_purchase_emp[]
   d_purchase_log d_purchase_log[]
   notification   notification[]
+  finance_transaction finance_transaction[]
   roles          roles            @relation(fields: [roles_id], references: [id])
 
   @@index([roles_id])
@@ -1015,36 +1016,80 @@ model withdrawalInformaion {
   deletedAt         DateTime?
 }
 
-// Consignment types
-enum ConsignmentType {
-  ORDER
-  TOPUP
-}
-
-model finance_consignment {
+// Consignment model (ฝากสั่งซื้อ/ฝากเติม)
+model finance_exchange {
   id                  String          @id @default(uuid())
-  date                DateTime
-  salespersonId       String
-  documentNumber      String
-  customerId          String
-  type                ConsignmentType
-  
-  // Common fields
-  amountRMB           Float
-  transferDate        DateTime
-  notes               String?         @db.Text
-  transferSlipUrl     String?         @db.Text
-  
-  // For ORDER type
+  date                DateTime?
+  salespersonId       String?
+  documentNumber      String?
+  customerId          String?
+  type                String?
+  amountRMB           Float?
+  priceDifference     Float?    @default(0)
+  exchangeRate        Float?
+  fee                 Float?     @default(0)
+  amount              Float?       
   productDetails      String?         @db.Text
   orderStatus         String?         @default("PENDING") // PENDING, PROCESSING, COMPLETED
-  
-  // For TOPUP type
   topupPlatform       String?
   topupAccount        String?
-  
+  receivingAccount    String?
+  exchangeRateProfit  Float?
+  incomePerTransaction Float?
+  transferDate        DateTime?
+  notes               String?         @db.Text
+  transferSlipUrl     String?         @db.Text
   createdAt           DateTime        @default(now())
   updatedAt           DateTime?
+  deletedAt           DateTime?
+
+  transaction         finance_transaction?
+}
+
+
+// Customer Deposit / Exchange model
+model finance_customer_deposit {
+  id                    String    @id @default(uuid())
+  date                  DateTime?
+  salespersonId         String?
+  documentNumber        String?
+  customerId            String?
+  amountRMB             Float?
+  priceDifference       Float?     @default(0)
+  exchangeRate          Float?
+  fee                   Float?     @default(0)
+  amount                Float?     
+  vat                   Float?     
+  totalWithVat          Float?     
+  transferDate          DateTime?
+  receivingAccount      String?    
+  notes                 String?   @db.Text
+  transferSlipUrl       String?   @db.Text
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime?
+  deletedAt             DateTime?
+  transaction           finance_transaction?
+}
+
+
+
+model finance_transaction {
+  id                    String    @id @default(uuid())
+  type                  String?
+  customerDepositId     String?   @unique
+  exchangeId            String?   @unique
+  date                  DateTime?
+  documentNumber        String?
+  customerId            String?
+  salespersonId         String?
+  amountRMB             Float?
+  transferDate          DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime?
+  deletedAt             DateTime?
+  customerDeposit       finance_customer_deposit? @relation(fields: [customerDepositId], references: [id])
+  exchange              finance_exchange?         @relation(fields: [exchangeId], references: [id])
+  user                  user?                     @relation(fields: [salespersonId], references: [id])
 }
 
 enum keyDocument {

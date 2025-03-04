@@ -1,0 +1,91 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model finance_transaction {
+  id               String    @id @default(uuid())
+  type             String    // deposit, order, topup
+  date             DateTime
+  documentNumber   String
+  customerId       String
+  salespersonId    String
+  amountRMB        Float
+  transferDate     DateTime
+  customerDeposit  finance_customer_deposit? @relation(fields: [customerDepositId], references: [id])
+  customerDepositId String?
+  exchange         finance_exchange?         @relation(fields: [exchangeId], references: [id])
+  exchangeId       String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  deletedAt        DateTime?
+
+  @@index([type])
+  @@index([date])
+  @@index([customerId])
+  @@index([salespersonId])
+}
+
+model finance_customer_deposit {
+  id                  String    @id @default(uuid())
+  date                DateTime
+  salespersonId       String
+  documentNumber      String
+  customerId          String
+  amountRMB          Float
+  exchangeRate        Float
+  fee                 Float
+  amount             Float
+  vat                Float
+  totalWithVat       Float
+  transferDate       DateTime
+  receivingAccount   String
+  exchangeRateProfit Float
+  incomePerTransaction Float
+  notes              String?   @db.Text
+  transferSlipUrl    String?   @db.Text
+  transactions       finance_transaction[]
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  deletedAt          DateTime?
+
+  @@index([date])
+  @@index([customerId])
+  @@index([salespersonId])
+}
+
+model finance_exchange {
+  id                  String    @id @default(uuid())
+  date                DateTime
+  salespersonId       String
+  documentNumber      String
+  customerId          String
+  amountRMB          Float
+  priceDifference    Float
+  exchangeRate        Float
+  fee                 Float
+  amount             Float
+  vat                Float
+  totalWithVat       Float
+  transferDate       DateTime
+  receivingAccount   String
+  exchangeRateProfit Float
+  incomePerTransaction Float
+  notes              String?   @db.Text
+  transferSlipUrl    String?   @db.Text
+  transactions       finance_transaction[]
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  deletedAt          DateTime?
+
+  @@index([date])
+  @@index([customerId])
+  @@index([salespersonId])
+}

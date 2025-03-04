@@ -19,7 +19,7 @@ class ConsignmentRepository {
         amountRMB: typeof data.amountRMB === 'string' ? parseFloat(data.amountRMB) : data.amountRMB,
       };
 
-      const record = await this.prisma.finance_consignment.create({
+      const record = await this.prisma.finance_exchange.create({
         data: formattedData
       });
       
@@ -71,15 +71,15 @@ class ConsignmentRepository {
       }
       
       // Get total count for pagination
-      const totalCount = await this.prisma.finance_consignment.count({ where });
+      const totalCount = await this.prisma.finance_exchange.count({ where });
       
       // Parse pagination parameters
       const page = filters?.page ? parseInt(filters.page as string) : 1;
       const limit = filters?.limit ? parseInt(filters.limit as string) : 10;
       const skip = (page - 1) * limit;
       
-      // Get records with pagination
-      const records = await this.prisma.finance_consignment.findMany({
+      // Get records with paginationไ
+      const records = await this.prisma.finance_exchange.findMany({
         where,
         orderBy: {
           date: 'desc'
@@ -108,7 +108,7 @@ class ConsignmentRepository {
 
   public async getConsignmentById(id: string): Promise<any> {
     try {
-      const record = await this.prisma.finance_consignment.findUnique({
+      const record = await this.prisma.finance_exchange.findUnique({
         where: { id }
       });
       
@@ -141,7 +141,7 @@ class ConsignmentRepository {
         formattedData.amountRMB = parseFloat(data.amountRMB);
       }
 
-      const record = await this.prisma.finance_consignment.update({
+      const record = await this.prisma.finance_customer_deposit.update({
         where: { id },
         data: formattedData
       });
@@ -155,7 +155,7 @@ class ConsignmentRepository {
 
   public async deleteConsignment(id: string): Promise<any> {
     try {
-      const record = await this.prisma.finance_consignment.delete({
+      const record = await this.prisma.finance_exchange.delete({
         where: { id }
       });
       

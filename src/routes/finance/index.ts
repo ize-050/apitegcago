@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { FinanceController } from '../../controllers/finance/index.controller';
 import ConsignmentController from '../../controllers/finance/consignment.controller';
+import { TransactionController } from '../../controllers/finance/transaction.controller';
 
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt'; // For password hashing
@@ -33,6 +34,7 @@ const storage = multer.diskStorage({
 var upload = multer({ storage: storage });
 const financeController = new FinanceController();
 const consignmentController = new ConsignmentController();
+const transactionController = new TransactionController();
 
 
 
@@ -54,6 +56,13 @@ router.post('/submitwidhdrawalInformation',authMiddleware, (req, res) =>  financ
 router.post('/updatewidhdrawalInformation',authMiddleware, (req, res) =>  financeController.updateWidhdrawalInformation(req, res));
 
 router.delete('/withdrawal_information/:id',authMiddleware, (req, res) =>  financeController.deleteWithdrawalInformation(req, res));
+
+// Transaction routes
+router.post('/record-money', authMiddleware, (req, res) => transactionController.createTransaction(req, res));
+router.get('/record-money', authMiddleware, (req, res) => transactionController.getTransactions(req, res));
+// router.get('/record-money/:id', authMiddleware, (req, res) => transactionController.getTransactionById(req, res));
+// router.put('/record-money/:id', authMiddleware, (req, res) => transactionController.updateTransaction(req, res));
+router.delete('/record-money/:id', authMiddleware, (req, res) => transactionController.deleteTransaction(req, res));
 
 // Financial Record Routes
 router.post('/financial-records', authMiddleware, upload.single('transferSlip'), (req, res) => financeController.createFinancialRecord(req, res));
