@@ -13,6 +13,10 @@ import authMiddleware from "../../middleware/authMiddleware";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import customerRoutes from './customer.routes';
+import transactionRoutes from './transaction.routes';
+import companyRoutes from './company.routes';
+
 const router = Router()
 const { v4: uuidv4 } = require('uuid');
 
@@ -58,11 +62,9 @@ router.post('/updatewidhdrawalInformation',authMiddleware, (req, res) =>  financ
 router.delete('/withdrawal_information/:id',authMiddleware, (req, res) =>  financeController.deleteWithdrawalInformation(req, res));
 
 // Transaction routes
-router.post('/record-money', authMiddleware, (req, res) => transactionController.createTransaction(req, res));
-router.get('/record-money', authMiddleware, (req, res) => transactionController.getTransactions(req, res));
-// router.get('/record-money/:id', authMiddleware, (req, res) => transactionController.getTransactionById(req, res));
-// router.put('/record-money/:id', authMiddleware, (req, res) => transactionController.updateTransaction(req, res));
-router.delete('/record-money/:id', authMiddleware, (req, res) => transactionController.deleteTransaction(req, res));
+router.use('/record-money', transactionRoutes);
+router.use('/customer', customerRoutes);
+router.use('/company', companyRoutes);
 
 // Financial Record Routes
 router.post('/financial-records', authMiddleware, upload.single('transferSlip'), (req, res) => financeController.createFinancialRecord(req, res));

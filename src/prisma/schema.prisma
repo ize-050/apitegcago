@@ -1092,6 +1092,29 @@ model finance_transaction {
   user                  user?                     @relation(fields: [salespersonId], references: [id])
 }
 
+model finance_customer_account {
+  id           String    @id @default(uuid())
+  finance_name String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime? @updatedAt
+  deletedAt    DateTime?
+
+  @@map("finance_customer_account")
+}
+
+model finance_company_account {
+  id           String    @id @default(uuid())
+  company_name String
+  bank_name    String
+  bank_account String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime? @updatedAt
+  deletedAt    DateTime?
+
+  @@map("finance_company_account")
+}
+
+
 enum keyDocument {
   Document
   License
