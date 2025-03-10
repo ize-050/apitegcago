@@ -47,6 +47,9 @@ export class TransactionController {
                     }
                 });
 
+
+              
+
                 // Create exchange record if exchange data exists
                 let exchangeId = null;
                 if (data.exchange) {
@@ -69,6 +72,20 @@ export class TransactionController {
                         }
                     });
                     exchangeId = exchange.id;
+
+
+                    const  financial_recode = await this.prisma.financial_record.create({
+                        data:{
+                            date: new Date(data.date),
+                            type: 'PAYMENT',
+                            accountOwner: data.exchange.receivingAccount,
+                            amountRMB: parseFloat(data.exchange.amountRMB || 0),
+                            transferDate: new Date(data.exchange.transferDate),
+                            transferSlip: data.transferSlipUrl,
+                            details :'',
+                            title:data.exchange.notes,
+                        }
+                    })
                 }
 
                 // Create main transaction record

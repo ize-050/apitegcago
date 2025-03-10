@@ -1,6 +1,7 @@
 import { PrismaClient, withdrawalInformaion } from "@prisma/client";
 import moment from "moment";
 import crypto from 'crypto';
+import { v4 as uuidv4 } from 'uuid';
 
 //interface 
 
@@ -282,121 +283,264 @@ class FinanceRepository {
     }
   }
 
-  public async submitWidhdrawalInformation(Request: any): Promise<any> {
+  public async submitWidhdrawalInformation(withdrawalData: any): Promise<any> {
     try {
-      // Extract withdrawal items from the request
-      const { withdrawalItems, ...mainData } = Request;
+      // Extract the main data and withdrawal items from the request
+      const { withdrawalItems, ...mainData } = withdrawalData;
+
+      // Generate a unique group_id for this submission
+      const groupId = uuidv4();
+
+      // Calculate total gasoline and other costs from individual items
+      const totalGasolineCost = withdrawalItems.reduce(
+        (sum: number, item: any) => sum + Number(item.gasoline_cost || 0),
+        0
+      );
       
-      console.log("withdrawalItems received:", withdrawalItems);
-      console.log("withdrawalItems length:", withdrawalItems.length);
-      console.log("mainData:", mainData);
+      const totalOtherCost = withdrawalItems.reduce(
+        (sum: number, item: any) => sum + Number(item.other_cost || 0),
+        0
+      );
       
-      // Generate a unique group ID to link all related withdrawal records
-      const groupId = crypto.randomUUID();
+      // คำนวณยอดรวมการเบิกทั้งหมด
+      const totalWithdrawalAmount = withdrawalItems.reduce(
+        (sum: number, item: any) => sum + Number(item.withdrawal_amount || 0),
+        0
+      );
       
-      // Calculate the number of items to distribute expenses to
-      const itemCount = withdrawalItems.length;
-      
-      // Only distribute expenses if there are items
-      const distributedGasoline = itemCount > 0 ? Number(mainData.pay_gasoline) / itemCount : 0;
-      const distributedPrice = itemCount > 0 ? Number(mainData.pay_price) / itemCount : 0;
-      
-      console.log("distributedGasoline:", distributedGasoline);
-      console.log("distributedPrice:", distributedPrice);
-      
-      // Create multiple withdrawal information records, one for each item
+      // คำนวณยอดคงเหลือจากยอดโอน - ยอดเบิกรวม
+      const transferAmount = Number(mainData.transfer_amount || 0);
+      const remainingAmount = transferAmount - totalWithdrawalAmount;
+
+      // Create records for each withdrawal item
       const createdRecords = await Promise.all(
-        withdrawalItems.map(async (item:any) => {
-          console.log("Processing item:", item);
-          
+        withdrawalItems.map(async (item: any) => {
           return await this.prisma.withdrawalInformaion.create({
             data: {
-              ...mainData,
+              d_purchase_id: mainData.d_purchase_id || '',
               group_id: groupId,
-              invoice_package: item.invoice_package,
+              withdrawal_date: mainData.withdrawal_date || '',
+              withdrawal_person: mainData.withdrawal_person || '',
+              withdrawal_amount: item.withdrawal_amount || '',
+              invoice_package: item.invoice_package || '',
               consignee: item.consignee || '',
               head_tractor: item.head_tractor || '',
-              withdrawal_date: item.withdrawal_date || '',
-              withdrawal_amount: item.withdrawal_amount || '',
-              // Distribute the expenses evenly across all items
-              pay_gasoline: distributedGasoline.toString(),
-              pay_price: distributedPrice.toString(),
-              // Calculate the total for each item
+              transfer_amount: mainData.transfer_amount || '',
+              transfer_date: mainData.transfer_date || '',
+              return_people: mainData.return_people || '',
+              withdrawal_company: mainData.withdrawal_company || '',
+              
+              // Store individual gasoline and other costs for each item
+              pay_gasoline: item.gasoline_cost?.toString() || '0',
+              pay_price: item.other_cost?.toString() || '0',
+              
+              // Calculate the total for this item
               pay_total: (
                 Number(item.withdrawal_amount || 0) - 
-                distributedGasoline - 
-                distributedPrice
+                Number(item.gasoline_cost || 0) - 
+                Number(item.other_cost || 0)
               ).toString()
             }
           });
         })
       );
 
-      console.log("Created records:", createdRecords.length);
-      
+      // Create a summary record with total gasoline and other costs
+      // This record will not have specific withdrawal item details
+      await this.prisma.withdrawalInformaion.create({
+        data: {
+          d_purchase_id: mainData.d_purchase_id || '',
+          group_id: groupId,
+          withdrawal_date: mainData.withdrawal_date || '',
+          withdrawal_person: mainData.withdrawal_person || '',
+          transfer_amount: mainData.transfer_amount || '',
+          transfer_date: mainData.transfer_date || '',
+          return_people: mainData.return_people || '',
+          withdrawal_company: mainData.withdrawal_company || '',
+          
+          // Store the total gasoline and other costs
+          pay_gasoline: totalGasolineCost.toString(),
+          pay_price: totalOtherCost.toString(),
+          
+          // ยอดคงเหลือ (ยอดโอน - ยอดเบิกรวม)
+          pay_total: remainingAmount.toString(),
+          
+          // Mark this as a summary record
+          invoice_package: 'SUMMARY_RECORD'
+        }
+      });
+
       return {
         groupId,
-        records: createdRecords
+        records: createdRecords,
+        totalWithdrawalAmount,
+        totalGasolineCost,
+        totalOtherCost,
+        transferAmount,
+        remainingAmount
       };
-    } catch (err: any) {
-      console.log("errsubmitWidhdrawalInformation", err);
-      throw err
+    } catch (error) {
+      console.error('Error in submitWidhdrawalInformation:', error);
+      throw error;
     }
   }
 
   public async updateWidhdrawalInformation(Request: Partial<any>): Promise<any> {
     try {
-      // Extract withdrawal items from the request
-      const { withdrawalItems, groupId, ...mainData } = Request;
+      // Extract withdrawal items and main data from the request
+      const { withdrawalItems, ...mainData } = Request;
       
-      // Calculate the number of items to distribute expenses to
-      const itemCount = withdrawalItems.length;
+      // Use existing group_id
+      const groupId = mainData.group_id;
       
-      // Only distribute expenses if there are items
-      const distributedGasoline = itemCount > 0 ? Number(mainData.pay_gasoline) / itemCount : 0;
-      const distributedPrice = itemCount > 0 ? Number(mainData.pay_price) / itemCount : 0;
+      if (!groupId) {
+        throw new Error("Group ID is required for updating withdrawal information");
+      }
       
-      // First delete all existing withdrawal records with this group ID
-      await this.prisma.withdrawalInformaion.deleteMany({
+      // Calculate total gasoline and other costs from all items
+      const totalGasolineCost = withdrawalItems.reduce(
+        (sum: number, item: any) => sum + Number(item.gasoline_cost || 0),
+        0
+      );
+      
+      const totalOtherCost = withdrawalItems.reduce(
+        (sum: number, item: any) => sum + Number(item.other_cost || 0),
+        0
+      );
+      
+      // คำนวณยอดรวมการเบิกทั้งหมด
+      const totalWithdrawalAmount = withdrawalItems.reduce(
+        (sum: number, item: any) => sum + Number(item.withdrawal_amount || 0),
+        0
+      );
+      
+      // คำนวณยอดคงเหลือจากยอดโอน - ยอดเบิกรวม
+      const transferAmount = Number(mainData.transfer_amount || 0);
+      const remainingAmount = transferAmount - totalWithdrawalAmount;
+      
+      // Get existing records for this group
+      const existingRecords = await this.prisma.withdrawalInformaion.findMany({
         where: {
           group_id: groupId
         }
       });
       
-      // Create new withdrawal information records, one for each item
-      const updatedRecords = await Promise.all(
-        withdrawalItems.map(async (item:any) => {
-          return await this.prisma.withdrawalInformaion.create({
-            data: {
-              ...mainData,
-              group_id: groupId,
-              d_purchase_id: item.d_purchase_id,
-              invoice_package: item.invoice_package,
-              consignee: item.consignee || '',
-              head_tractor: item.head_tractor || '',
-              withdrawal_date: item.withdrawal_date || '',
-              withdrawal_amount: item.withdrawal_amount || '',
-              // Distribute the expenses evenly across all items
-              pay_gasoline: distributedGasoline.toString(),
-              pay_price: distributedPrice.toString(),
-              // Calculate the total for each item
-              pay_total: (
-                Number(item.withdrawal_amount || 0) - 
-                distributedGasoline - 
-                distributedPrice
-              ).toString()
-            }
-          });
-        })
-      );
+      // Separate regular records and summary record
+      const existingSummaryRecord = existingRecords.find(record => record.invoice_package === 'SUMMARY_RECORD');
+      const existingRegularRecords = existingRecords.filter(record => record.invoice_package !== 'SUMMARY_RECORD');
       
-      return {
-        groupId,
-        records: updatedRecords
-      };
+      // Use transaction to ensure all updates are atomic
+      return await this.prisma.$transaction(async (prisma) => {
+        const updatedRecords = [];
+        
+        // Update or create records for each withdrawal item
+        for (let i = 0; i < withdrawalItems.length; i++) {
+          const item = withdrawalItems[i];
+          const existingRecord = existingRegularRecords[i];
+          
+          const recordData = {
+            d_purchase_id: mainData.d_purchase_id || '',
+            group_id: groupId,
+            withdrawal_date: mainData.withdrawal_date || '',
+            withdrawal_person: mainData.withdrawal_person || '',
+            withdrawal_amount: item.withdrawal_amount || '',
+            invoice_package: item.invoice_package || '',
+            consignee: item.consignee || '',
+            head_tractor: item.head_tractor || '',
+            transfer_amount: mainData.transfer_amount || '',
+            transfer_date: mainData.transfer_date || '',
+            return_people: mainData.return_people || '',
+            
+            // Store individual gasoline and other costs for each item
+            pay_gasoline: item.gasoline_cost?.toString() || '0',
+            pay_price: item.other_cost?.toString() || '0',
+            
+            // คำนวณยอดคงเหลือของแต่ละรายการตามแบบเดียวกับเส้น create
+            pay_total: (
+              Number(item.withdrawal_amount || 0) - 
+              Number(item.gasoline_cost || 0) - 
+              Number(item.other_cost || 0)
+            ).toString()
+          };
+          
+          let updatedRecord;
+          
+          if (existingRecord) {
+            // Update existing record
+            updatedRecord = await prisma.withdrawalInformaion.update({
+              where: { id: existingRecord.id },
+              data: recordData
+            });
+          } else {
+            // Create new record if there are more items than before
+            updatedRecord = await prisma.withdrawalInformaion.create({
+              data: recordData
+            });
+          }
+          
+          updatedRecords.push(updatedRecord);
+        }
+        
+        // If there are more existing records than new items, delete the extra records
+        if (existingRegularRecords.length > withdrawalItems.length) {
+          const recordsToDelete = existingRegularRecords.slice(withdrawalItems.length);
+          
+          for (const record of recordsToDelete) {
+            await prisma.withdrawalInformaion.delete({
+              where: { id: record.id }
+            });
+          }
+        }
+        
+        // Update or create summary record
+        const summaryData = {
+          d_purchase_id: mainData.d_purchase_id || '',
+          group_id: groupId,
+          withdrawal_date: mainData.withdrawal_date || '',
+          withdrawal_person: mainData.withdrawal_person || '',
+          transfer_amount: mainData.transfer_amount || '',
+          transfer_date: mainData.transfer_date || '',
+          return_people: mainData.return_people || '',
+          
+          // Store the total gasoline and other costs
+          pay_gasoline: totalGasolineCost.toString(),
+          pay_price: totalOtherCost.toString(),
+          
+          // ยอดคงเหลือ (ยอดโอน - ยอดเบิกรวม)
+          pay_total: remainingAmount.toString(),
+          
+          // Mark this as a summary record
+          invoice_package: 'SUMMARY_RECORD'
+        };
+        
+        let updatedSummaryRecord;
+        
+        if (existingSummaryRecord) {
+          // Update existing summary record
+          updatedSummaryRecord = await prisma.withdrawalInformaion.update({
+            where: { id: existingSummaryRecord.id },
+            data: summaryData
+          });
+        } else {
+          // Create new summary record if it doesn't exist
+          updatedSummaryRecord = await prisma.withdrawalInformaion.create({
+            data: summaryData
+          });
+        }
+        
+        return {
+          groupId,
+          records: updatedRecords,
+          summaryRecord: updatedSummaryRecord,
+          transferAmount,
+          totalWithdrawalAmount,
+          remainingAmount
+        };
+      });
+      
     } catch (err: any) {
       console.log("errupdateWidhdrawalInformation", err);
-      throw err
+      throw err;
     }
   }
 
@@ -420,17 +564,34 @@ class FinanceRepository {
 
   public async deleteWithdrawalInformation(id: string): Promise<any> {
     try {
-      // Delete only the specific record with the given ID
-      const result = await this.prisma.withdrawalInformaion.delete({
+      const deleteWithdrawalInformation = await this.prisma.withdrawalInformaion.delete({
         where: {
-          id: id
-        }
+          id: id,
+        },
       });
-
-      return result;
+      return deleteWithdrawalInformation;
     } catch (err: any) {
       console.log("errdeleteWithdrawalInformation", err);
-      throw err
+      throw err;
+    }
+  }
+
+  public async deleteWithdrawalInformationByGroupId(groupId: string): Promise<any> {
+    try {
+      // ลบข้อมูลทั้งหมดที่มี group_id เดียวกัน
+      const deleteResult = await this.prisma.withdrawalInformaion.deleteMany({
+        where: {
+          group_id: groupId,
+        },
+      });
+      
+      return {
+        count: deleteResult.count,
+        groupId: groupId
+      };
+    } catch (err: any) {
+      console.log("errDeleteWithdrawalInformationByGroupId", err);
+      throw err;
     }
   }
 
@@ -581,6 +742,53 @@ class FinanceRepository {
       throw error;
     }
   }
+
+  public async getCustomerAccounts(): Promise<any> {
+    try {
+      const customerAccounts = await this.prisma.finance_customer_account.findMany({
+        where: {
+          deletedAt: null
+        },
+        orderBy: {
+          finance_name: 'asc'
+        },
+        select: {
+          id: true,
+          finance_name: true
+        }
+      });
+      
+      return customerAccounts;
+    } catch (err: any) {
+      console.log("Error fetching customer accounts:", err);
+      throw err;
+    }
+  }
+
+  public async getCompanyAccounts(): Promise<any> {
+    try {
+      const companyAccounts = await this.prisma.finance_company_account.findMany({
+        where: {
+          deletedAt: null
+        },
+        orderBy: {
+          company_name: 'asc'
+        },
+        select: {
+          id: true,
+          company_name: true,
+          bank_name: true,
+          bank_account: true
+        }
+      });
+      
+      return companyAccounts;
+    } catch (err: any) {
+      console.log("Error fetching company accounts:", err);
+      throw err;
+    }
+  }
+
 }
 
 export default FinanceRepository;

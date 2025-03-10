@@ -223,6 +223,16 @@ class FinanceService {
     }
   }
 
+  public async deleteWithdrawalInformationByGroupId(groupId: string) {
+    try {
+      const result = await this.financeRepo.deleteWithdrawalInformationByGroupId(groupId);
+      return result;
+    } catch (err: any) {
+      console.log("errDeleteWithdrawalInformationByGroupId", err);
+      throw err;
+    }
+  }
+
   public async getWidhdrawalInformationByGroupId(groupId: string) {
     try {
       const records = await this.financeRepo.getWidhdrawalInformationByGroupId(groupId);

@@ -40,6 +40,19 @@ const financeController = new FinanceController();
 const consignmentController = new ConsignmentController();
 const transactionController = new TransactionController();
 
+router.post('/record-money', authMiddleware, transactionController.createTransaction.bind(transactionController));
+
+// Get all transactions
+router.get('/record-money', authMiddleware, transactionController.getTransactions.bind(transactionController));
+
+// Get transaction by ID
+// router.get('/record-money/:id', verifyToken, transactionController.getTransactionById.bind(transactionController));
+
+// // Update transaction
+// router.put('/record-money/:id', verifyToken, transactionController.updateTransaction.bind(transactionController));
+
+// Delete transaction
+router.delete('/record-money/:id', authMiddleware, transactionController.deleteTransaction.bind(transactionController));
 
 
 router.get('/getPurchase', authMiddleware,(req, res) =>  financeController.getPurchase(req, res));
@@ -47,6 +60,8 @@ router.get('/getPurchaseById/:id',authMiddleware, (req, res) =>  financeControll
 
 router.get('/getWorkByid/:id',authMiddleware, (req, res) =>  financeController.getWorkByid(req, res));
 
+router.get('/customer-accounts', authMiddleware, (req, res) => financeController.getCustomerAccounts(req, res));
+router.get('/company-accounts', authMiddleware, (req, res) => financeController.getCompanyAccounts(req, res));
 
 router.post('/submitPurchase',authMiddleware, (req, res) =>  financeController.submitPurchase(req, res));
 router.put('/updatePurchase/:id',authMiddleware, (req, res) =>  financeController.updatePurchase(req, res));
@@ -60,6 +75,7 @@ router.post('/submitwidhdrawalInformation',authMiddleware, (req, res) =>  financ
 router.post('/updatewidhdrawalInformation',authMiddleware, (req, res) =>  financeController.updateWidhdrawalInformation(req, res));
 
 router.delete('/withdrawal_information/:id',authMiddleware, (req, res) =>  financeController.deleteWithdrawalInformation(req, res));
+router.delete('/withdrawal_information/group/:groupId',authMiddleware, (req, res) =>  financeController.deleteWithdrawalInformationByGroupId(req, res));
 
 // Transaction routes
 router.use('/record-money', transactionRoutes);
