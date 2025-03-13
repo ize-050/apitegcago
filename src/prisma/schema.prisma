@@ -30,7 +30,9 @@ model user {
   d_purchase_log d_purchase_log[]
   notification   notification[]
   finance_transaction finance_transaction[]
+  employee_commission employee_commission[]
   roles          roles            @relation(fields: [roles_id], references: [id])
+  commissions    finance_commission[] @relation("UserCommissions")
 
   @@index([roles_id])
 }
@@ -214,6 +216,8 @@ model d_purchase {
   d_sale_agentcy              d_sale_agentcy[]
   payment_purchase            payment_purchase[]
   purchase_finance            purchase_finance[]
+  employee_commission         employee_commission[]
+  cs_department_commission    cs_department_commission[]
 
   @@index([customer_id])
 }
@@ -1115,6 +1119,82 @@ model finance_company_account {
   @@map("finance_company_account")
 }
 
+// Commission Rank model
+model commission_rank {
+  id           String   @id @default(uuid())
+  min_amount   Float
+  max_amount   Float
+  percentage   Float
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("commission_ranks")
+}
+
+// Employee Commission model
+model employee_commission {
+  id                String   @id @default(uuid())
+  d_purchase_id     String
+  employee_id       String
+  commission_type   String   // "percentage" or "fixed"
+  commission_value  Float    // percentage value or fixed amount
+  commission_amount Float    // actual commission amount
+  status            String   @default("saved") // "saved", "pending", "paid", etc.
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+
+  // Relations
+  d_purchase        d_purchase @relation(fields: [d_purchase_id], references: [id])
+  employee          user       @relation(fields: [employee_id], references: [id])
+
+  @@index([d_purchase_id])
+  @@index([employee_id])
+  @@map("employee_commissions")
+}
+
+// CS Department Commission model - fixed 300 baht per purchase
+model cs_department_commission {
+  id                String    @id @default(uuid())
+  d_purchase_id     String    @unique
+  commission_amount Float     @default(300) // fixed 300 baht per purchase
+  is_paid           Boolean   @default(false)
+  status            String    @default("saved") // "saved", "pending", "paid", etc.
+  paid_date         DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime @updatedAt
+  d_purchase        d_purchase @relation(fields: [d_purchase_id], references: [id])
+
+  @@index([d_purchase_id])
+  @@map("cs_department_commissions")
+}
+
+model finance_transfer_type {
+  id           String    @id @default(uuid())
+  type_name    String    // ประเภท: ฝากสั่ง, ฝากโอน, ฝากเติม
+  commission_rate Float   @default(0) // เรทค่าคอม
+  is_active    Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime? @updatedAt
+  deletedAt    DateTime?
+}
+
+model finance_commission {
+  id           String    @id @default(uuid())
+  transfer_id  String    // ID of the transfer
+  employee_id  String    // ID of the salesperson/employee
+  amount       Float     // Commission amount
+  status       String    @default("PENDING") // PENDING, APPROVED, PAID
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime? @updatedAt
+  deletedAt    DateTime?
+  
+  // Relations
+  employee     user      @relation("UserCommissions", fields: [employee_id], references: [id])
+
+  @@index([transfer_id])
+  @@index([employee_id])
+}
 
 enum keyDocument {
   Document

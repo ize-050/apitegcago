@@ -16,7 +16,7 @@ const Superadmin = require('./superadmin')
 
 const FinanceRouter = require('./finance')
 const EmployeeRouter = require('./employee')
-
+const HrRouter = require('./hr')
 
 
 router.use('/superadmin',Superadmin)
@@ -28,6 +28,7 @@ router.use('/system',SystemRouter)
 router.use('/cs_status',Csstatus)
 router.use('/finance',FinanceRouter)
 router.use('/employee',EmployeeRouter)
+router.use('/hr', HrRouter)
 
 
 
