@@ -40,12 +40,7 @@ export class EmployeeController {
     }
   }
 
-  /**
-   * Get all salesupport employees
-   * @param req Express request object
-   * @param res Express response object
-   * @returns JSON response with salesupport employees data
-   */
+
   async getSalesSupportEmployees(req: Request, res: Response): Promise<any> {
     try {
       const employees = await this.employeeService.getEmployeesByRole("Salesupport");

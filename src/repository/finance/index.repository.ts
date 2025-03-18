@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 //interface 
 
 import { FinanceInterface } from "../../services/finance/dto/finance.interface"
+import { PurchaseFinanceDataInterface } from "../../services/finance/dto/purchaseFinanceData.interface"
 
 class FinanceRepository {
   private prisma: PrismaClient;
@@ -151,67 +152,92 @@ class FinanceRepository {
       const work = await this.prisma.purchase_finance.findFirst({
         where: {
           d_purchase_id: d_purchase_id
+        },
+        include: {
+          payment_details: true,
+          china_expenses: true,
+          thailand_expenses: {
+            select: {
+              id: true,
+              purchase_finance_id: true,
+              th_duty: true,
+              th_tax: true,
+              th_employee: true,
+              th_warehouse: true,
+              th_custom_fees: true,
+              th_overtime: true,
+              th_check_fee: true,
+              th_product_account: true,
+              th_license_fee: true,
+              th_gasoline: true,
+              th_hairy: true,
+              th_other_fee: true,
+              th_port_name: true,
+              th_port_fee: true,
+              th_lift_on_off: true,
+              th_ground_fee: true,
+              th_port_other_fee: true,
+              amount_payment_do: true,
+              price_deposit: true,
+              createdAt: true,
+              updatedAt: true
+            }
+          },
+          shipping_details: true,
+          d_purchase: true
         }
-      })
-      return work
+      });
+      
+      // Get port expenses and DO expenses using raw queries
+      let portExpenses = null;
+      
+      if (work) {
+        try {
+          // Get port expenses
+          const portExpensesResult = await this.prisma.$queryRaw`
+            SELECT * FROM purchase_finance_port_expenses WHERE purchase_finance_id = ${work.id}
+          `;
+          
+          if (Array.isArray(portExpensesResult) && portExpensesResult.length > 0) {
+            portExpenses = portExpensesResult[0];
+          }
+        } catch (error) {
+          console.error("Error fetching port expenses:", error);
+        }
+      }
+      
+      // Merge all data into a single object
+      return {
+        ...work,
+        ...(work?.d_purchase || {}),
+        ...(work?.payment_details || {}),
+        ...(work?.china_expenses || {}),
+        ...(work?.thailand_expenses || {}),
+        ...(work?.shipping_details || {}),
+        ...(portExpenses || {})
+      };
     }
     catch (err: any) {
-      throw err;
-    }
-  }
-
-  public async submitPurchase(Request: FinanceInterface): Promise<any> {
-    try {
-
-      console.log("Rqwqeqwewq", Request.id)
-
-      if (typeof Request.id === "undefined") {
-        const data = Request;
-        delete data.id;
-        const purchase = await this.prisma.purchase_finance.create({
-          data: {
-            ...data
-          }
-        })
-
-        return purchase;
-      }
-      else {
-        const purchase = await this.prisma.purchase_finance.update({
-          where: {
-            id: Request.id
-          },
-          data: {
-            ...Request
-          }
-        })
-        return purchase
-      }
-    } catch (err: any) {
-      console.log("errsubmitPurchase", err)
+      console.error("Error in getWorkByid:", err);
       throw err
     }
   }
 
+  public async submitPurchase(data: any): Promise<any> {
+    try{
+      
+    }
+    catch(error){
+      throw error;
+    }
+  }
 
-  public async updatePurchase(id: string, Request: FinanceInterface): Promise<any> {
-    try {
-      if (Request.d_purchase_id == null) {
-        return null
-      }
-
-      const purchase = await this.prisma.purchase_finance.update({
-        where: {
-          id: id
-        },
-        data: {
-          ...Request
-        }
-      })
-      return purchase
-    } catch (err: any) {
-      console.log("errupdatePurchase", err)
-      throw err
+  public async updatePurchase(id: string, Request: any): Promise<any> {
+    try{
+      
+    }
+    catch(error){
+      throw error;
     }
   }
 
@@ -540,7 +566,7 @@ class FinanceRepository {
       
     } catch (err: any) {
       console.log("errupdateWidhdrawalInformation", err);
-      throw err;
+      throw err
     }
   }
 

@@ -92,14 +92,18 @@ export class FinanceController {
             const purchase = await this.financeService.submitPurchase(req.body)
             const Response = {
                 data: purchase,
-                message: "ข้อมูลสําเร็จ",
+                message: "บันทึกข้อมูลสําเร็จ",
                 statusCode: 200
             }
             return res.status(200).json(Response);
         }
         catch (err: any) {
             console.log('Error Notification', err)
-            res.status(500).json(err)
+            res.status(500).json({
+                message: "เกิดข้อผิดพลาดในการบันทึกข้อมูล",
+                error: err.message,
+                statusCode: 500
+            })
         }
     }
 

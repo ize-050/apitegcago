@@ -965,38 +965,150 @@ model financial_record {
 }
 
 model purchase_finance {
-  id                    String    @id @default(uuid())
-  d_purchase_id         String
-  ch_freight            String //ค่าเฟส
-  ch_rate               String //เปอร์เซ็น
-  ch_freight_total      String //รวม
-  th_duty               String //ค่าภาษีอากร
-  th_tax                String //ค่าภาษี
-  th_customs_fees       String //ค่าภาษีมัดจากการส่ง
-  th_overtime           String //ค่าล่วงเวลา
-  th_employee           String //ค่าพนักงาน
-  th_warehouse          String //ค่าเช่าโกดัง
-  th_gasoline           String //ค่าน้ำมัน
-  th_other_shipping     String //ค่าอื่นๆชิปปิ้ง
-  th_hairy              String //ค่าใบขน
-  th_head_tractor       String //ค่าหัวลาก
-  th_price_head_tractor String //ค่าใช้จ่ายหัวลาก
-  th_other_fee          String //อค่าอื่นๆ
-  th_total_shipping     String //รวมเคลียร์ชิปปิ้ง
-  total_all_th          String //รวมทั้ั้งหมดฝั่งไทย
-  th_cn_total           String //รวมทั้ั้งหมดฝั่งจีนไทย
-  miss_payment          String //ค้างชําระ  ขาดจ่าย
-  total_before_vat      String //รวมก่อน Vat
-  billing_amount        String //ยอดเรีัยกเก็บ
-  price_service         String    @default("10")
-  total_profit_loss     String //รวมกำไรหรือขาดทุน
-  text_profit_loss      String //ข้อความกำไรหรือขาดทุน 
-  finance_status        String
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime?
-  deletedAt             DateTime?
+  id                     String    @id @default(uuid())
+  d_purchase_id          String
+  
+  // ข้อมูลตู้
+  container_number       String?
+  container_size         String?
+  seal_number            String?
+  
+  // ข้อมูลเรือ
+  ship_name              String?
+  
+  // ข้อมูลท่าเรือ
+  port_load              String?
+  port_discharge         String?
+  
+  // ข้อมูลวันที่
+  etd_date               String?
+  eta_date               String?
+  
+  // ข้อมูลการเงิน
+  billing_code           String?
+  billing_amount         String?
+  total_before_vat       String?
+  vat_amount             String?
+  total_after_vat        String?
+  
+  // ความสัมพันธ์กับตาราง
+  d_purchase             d_purchase @relation(fields: [d_purchase_id], references: [id])
+  payment_details        purchase_finance_payment?
+  china_expenses         purchase_finance_china_expenses?
+  thailand_expenses      purchase_finance_thailand_expenses?
+  shipping_details       purchase_finance_shipping?
+  
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime? @updatedAt
+  deletedAt              DateTime?
 
-  purchase_finance d_purchase? @relation(fields: [d_purchase_id], references: [id], map: "purchase_finance_d_purchase_id_fkey")
+  @@map("purchase_finance")
+}
+
+// ข้อมูลค่าใช้จ่ายจีน
+model purchase_finance_china_expenses {
+  id                     String    @id @default(uuid())
+  purchase_finance_id    String    @unique
+  
+  ch_freight             String?
+  ch_exchange_rate       String?
+  ch_freight_total       String?
+  
+  purchase_finance       purchase_finance @relation(fields: [purchase_finance_id], references: [id], onDelete: Cascade)
+  
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime? @updatedAt
+  deletedAt              DateTime?
+}
+
+// ข้อมูลการชำระเงิน
+model purchase_finance_payment {
+  id                     String    @id @default(uuid())
+  purchase_finance_id    String    @unique
+  
+  payment_date_1         String?
+  payment_date_2         String?
+  payment_date_3         String?
+  payment_amount_1       String?
+  payment_amount_2       String?
+  payment_amount_3       String?
+  remaining_amount_1     String?
+  remaining_amount_2     String?
+  remaining_amount_3     String?
+  payment_status         String?
+  
+  // ข้อมูลคืนภาษีจากตู้
+  tax_return_checked     Boolean?  @default(false)
+  tax_return_amount      String?
+  tax_return_date        String?
+  
+  // ข้อมูลกำไรและค่าบริหารจัดการ
+  management_fee         String?
+  percentage_fee         String?
+  net_profit             String?
+  profit_loss            String?
+  
+  purchase_finance       purchase_finance @relation(fields: [purchase_finance_id], references: [id], onDelete: Cascade)
+  
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime? @updatedAt
+  deletedAt              DateTime?
+}
+
+// ข้อมูลค่าใช้จ่ายไทย
+model purchase_finance_thailand_expenses {
+  id                     String    @id @default(uuid())
+  purchase_finance_id    String    @unique
+  
+  th_duty                String?
+  th_tax                 String?
+  th_employee            String?
+  th_warehouse           String?
+  th_custom_fees         String?
+  th_overtime            String?
+  th_check_fee           String?
+  th_product_account     String?
+  th_license_fee         String?
+  th_gasoline            String?
+  th_hairy               String?
+  th_other_fee           String?
+  
+  // ข้อมูลค่าใช้จ่ายหัวลาก
+  th_port_name           String?
+  th_port_fee            String?
+  th_lift_on_off         String?
+  th_ground_fee          String?
+  th_port_other_fee      String?
+  th_price_head_tractor  String?
+  th_total_port_fee      String?
+  
+  // ข้อมูลค่าใช้จ่าย D/O
+  amount_payment_do      String?
+  price_deposit          String?
+  
+  purchase_finance       purchase_finance @relation(fields: [purchase_finance_id], references: [id], onDelete: Cascade)
+  
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime? @updatedAt
+  deletedAt              DateTime?
+}
+
+// ข้อมูล Shipping
+model purchase_finance_shipping {
+  id                     String    @id @default(uuid())
+  purchase_finance_id    String    @unique
+  
+  th_shipping_price      String?
+  th_shipping_advance    String?
+  th_shipping_remaining  String?
+  th_shipping_return_to  String?
+  th_total_shipping      String?
+  
+  purchase_finance       purchase_finance @relation(fields: [purchase_finance_id], references: [id], onDelete: Cascade)
+  
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime? @updatedAt
+  deletedAt              DateTime?
 }
 
 model withdrawalInformaion {
@@ -1051,7 +1163,6 @@ model finance_exchange {
   transaction         finance_transaction?
 }
 
-
 // Customer Deposit / Exchange model
 model finance_customer_deposit {
   id                    String    @id @default(uuid())
@@ -1075,8 +1186,6 @@ model finance_customer_deposit {
   deletedAt             DateTime?
   transaction           finance_transaction?
 }
-
-
 
 model finance_transaction {
   id                    String    @id @default(uuid())
