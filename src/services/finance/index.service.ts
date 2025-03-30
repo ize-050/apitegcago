@@ -14,9 +14,11 @@ import { withdrawalInformaion } from "@prisma/client";
 class FinanceService {
 
     private financeRepo: FinanceRepository;
+    private prisma: PrismaClient;
 
   constructor() {
     this.financeRepo = new FinanceRepository();
+    this.prisma = new PrismaClient();
   }
 
   public async getPurchasebySearch(search:string):Promise<any>{
@@ -91,11 +93,24 @@ class FinanceService {
     }
   }
 
+  public async getWidhdrawalInformationByShipmentNumber(id: string) {
+    try {
+
+      const purchase   = await this.financeRepo.getPurchaseById(id)
+
+      const withdrawal = await this.financeRepo.getWidhdrawalInformationByShipmentNumber(purchase.d_shipment_number)
+      return withdrawal;
+    } catch (err: any) {
+      console.log("errgetWidhdrawalInformationByShipmentNumber", err)
+      throw err
+    }
+  }
+
   public async getWorkByid(id: string) {
     try {
-      const finance_work = await this.financeRepo.getWorkByid(id)
-      
-      // ตรวจสอบว่ามีข้อมูล amount_payment_do และ price_deposit หรือไม่
+      let finance_work = await this.financeRepo.getWorkByid(id)
+
+
       console.log("Thailand expenses data:", finance_work?.thailand_expenses);
       console.log("Amount payment DO:", finance_work?.amount_payment_do);
       console.log("Price deposit:", finance_work?.price_deposit);
@@ -109,294 +124,347 @@ class FinanceService {
   }
 
 
-  public async submitPurchase(Request:Partial<any>) {
+  public async submitPurchase(data: any) {
     try {
-      const data = Request;
-      
-      // Convert work_id to d_purchase_id if needed
-      data.d_purchase_id = data.work_id;
-
-      // Main purchase finance data
-      const purchaseFinanceData: FinanceInterface = {
-        d_purchase_id: data.d_purchase_id,
-        finance_status: data.finance_status,
+        // แยกข้อมูล payment_details ออกมา
+        const { payment_details, ...allData } = data;
         
-        // ข้อมูลตู้
-        container_number: data.container_number === null ? null : data.container_number?.toString(),
-        container_size: data.container_size === null ? null : data.container_size?.toString(),
-        seal_number: data.seal_number === null ? null : data.seal_number?.toString(),
+        // Convert work_id to d_purchase_id if needed
+        if(allData.work_id && !allData.d_purchase_id) {
+            allData.d_purchase_id = allData.work_id;
+        }
         
-        // ข้อมูลเรือ
-        ship_name: data.ship_name === null ? null : data.ship_name?.toString(),
-        
-        // ข้อมูลท่าเรือ
-        port_load: data.port_load === null ? null : data.port_load?.toString(),
-        port_discharge: data.port_discharge === null ? null : data.port_discharge?.toString(),
-        
-        // ข้อมูลวันที่
-        etd_date: data.etd_date === null ? null : data.etd_date?.toString(),
-        eta_date: data.eta_date === null ? null : data.eta_date?.toString(),
-        
-        // ข้อมูลการเงิน
-        billing_code: data.billing_code === null ? null : data.billing_code?.toString(),
-        billing_amount: data.billing_amount === null ? null : data.billing_amount?.toString(),
-        total_before_vat: data.total_before_vat === null ? null : data.total_before_vat?.toString(),
-        vat_amount: data.vat_amount === null ? null : data.vat_amount?.toString(),
-        total_after_vat: data.total_after_vat === null ? null : data.total_after_vat?.toString(),
-        
-        // ข้อมูลการคำนวณ
-        total_payment_all: data.total_payment_all === null ? null : data.total_payment_all?.toString(),
-        miss_payment: data.miss_payment === null ? null : data.miss_payment?.toString(),
-        profit_loss: data.profit_loss === null ? null : data.profit_loss?.toString(),
-        price_service: data.price_service === null ? null : data.price_service?.toString(),
-        total_profit_loss: data.total_profit_loss === null ? null : data.total_profit_loss?.toString(),
-        text_profit_loss: data.text_profit_loss === null ? null : data.text_profit_loss?.toString(),
-      };
+        // ใช้ transaction เพื่อให้มั่นใจว่าถ้ามีข้อผิดพลาดจะ rollback ทั้งหมด
+        return await this.prisma.$transaction(async (prismaClient) => {
+            // แยกข้อมูลตามโครงสร้างของตาราง purchase_finance
 
-      // Payment details data
-      const paymentData: PaymentDetailsInterface = {
-        payment_date_1: data.payment_date_1 === null ? null : data.payment_date_1?.toString(),
-        payment_date_2: data.payment_date_2 === null ? null : data.payment_date_2?.toString(),
-        payment_date_3: data.payment_date_3 === null ? null : data.payment_date_3?.toString(),
-        payment_amount_1: data.payment_amount_1 === null ? null : data.payment_amount_1?.toString(),
-        payment_amount_2: data.payment_amount_2 === null ? null : data.payment_amount_2?.toString(),
-        payment_amount_3: data.payment_amount_3 === null ? null : data.payment_amount_3?.toString(),
-        remaining_amount_1: data.remaining_amount_1 === null ? null : data.remaining_amount_1?.toString(),
-        remaining_amount_2: data.remaining_amount_2 === null ? null : data.remaining_amount_2?.toString(),
-        remaining_amount_3: data.remaining_amount_3 === null ? null : data.remaining_amount_3?.toString(),
-        payment_status: data.payment_status === null ? null : data.payment_status?.toString(),
-      };
-      
-      // Tax return data
-      const taxReturnData: TaxReturnInterface = {
-        // ข้อมูลคืนภาษีจากตู้
-        tax_return_checked: data.tax_return_checked === null ? null : data.tax_return_checked,
-        tax_return_amount: data.tax_return_amount === null ? null : data.tax_return_amount?.toString(),
-        tax_return_date: data.tax_return_date === null ? null : data.tax_return_date?.toString(),
-        
-        // ข้อมูลกำไรและค่าบริหารจัดการ
-        management_fee: data.management_fee === null ? null : data.management_fee?.toString(),
-        percentage_fee: data.percentage_fee === null ? null : data.percentage_fee?.toString(),
-        net_profit: data.net_profit === null ? null : data.net_profit?.toString(),
-        profit_loss: data.profit_loss === null ? null : data.profit_loss?.toString(),
-      };
-
-      // China expenses data
-      const chinaExpensesData: ChinaExpensesInterface = {
-        ch_freight: data.ch_freight === null ? null : data.ch_freight?.toString(),
-        ch_exchange_rate: data.ch_exchange_rate === null ? null : data.ch_exchange_rate?.toString(),
-        ch_freight_total: data.ch_freight_total === null ? null : data.ch_freight_total?.toString()
-      };
-
-      // Thailand expenses data
-      const thailandExpensesData: ThailandExpensesInterface = {
-        th_duty: data.th_duty === null ? null : data.th_duty?.toString(),
-        th_tax: data.th_tax === null ? null : data.th_tax?.toString(),
-        th_employee: data.th_employee === null ? null : data.th_employee?.toString(),
-        th_warehouse: data.th_warehouse === null ? null : data.th_warehouse?.toString(),
-        th_custom_fees: data.th_custom_fees === null ? null : data.th_custom_fees?.toString(),
-        th_overtime: data.th_overtime === null ? null : data.th_overtime?.toString(),
-        th_check_fee: data.th_check_fee === null ? null : data.th_check_fee?.toString(),
-        th_product_account: data.th_product_account === null ? null : data.th_product_account?.toString(),
-        th_license_fee: data.th_license_fee === null ? null : data.th_license_fee?.toString(),
-        th_gasoline: data.th_gasoline === null ? null : data.th_gasoline?.toString(),
-        th_hairy: data.th_hairy === null ? null : data.th_hairy?.toString(),
-        th_other_fee: data.th_other_fee === null ? null : data.th_other_fee?.toString(),
-      };
-      
-      // Port expenses data
-      const portExpensesData: PortExpensesInterface = {
-        th_port_name: data.th_port_name === null ? null : data.th_port_name?.toString(),
-        th_port_fee: data.th_port_fee === null ? null : data.th_port_fee?.toString(),
-        th_lift_on_off: data.th_lift_on_off === null ? null : data.th_lift_on_off?.toString(),
-        th_ground_fee: data.th_ground_fee === null ? null : data.th_ground_fee?.toString(),
-        th_port_other_fee: data.th_port_other_fee === null ? null : data.th_port_other_fee?.toString(),
-        th_price_head_tractor: data.th_price_head_tractor === null ? null : data.th_price_head_tractor?.toString(),
-        th_total_port_fee: data.th_total_port_fee === null ? null : data.th_total_port_fee?.toString()
-      };
-      
-      // DO expenses data
-      const doExpensesData: DOExpensesInterface = {
-        amount_payment_do: data.amount_payment_do === null ? null : data.amount_payment_do?.toString(),
-        price_deposit: data.price_deposit === null ? null : data.price_deposit?.toString(),
-      };
-
-      // Shipping data - Note: th_shipping_price is mapped from th_shipping in the form
-      const shippingData: ShippingDetailsInterface = {
-        th_shipping_price: data.th_shipping === null ? null : data.th_shipping?.toString(), // Map from th_shipping
-        th_shipping_note: data.th_shipping_note === null ? null : data.th_shipping_note?.toString(),
-        th_shipping_advance: data.th_shipping_advance === null ? null : data.th_shipping_advance?.toString(),
-        th_shipping_remaining: data.th_shipping_remaining === null ? null : data.th_shipping_remaining?.toString(),
-        th_shipping_return_to: data.th_shipping_return_to === null ? null : data.th_shipping_return_to?.toString(),
-        th_total_shipping: data.th_total_shipping === null ? null : data.th_total_shipping?.toString(),
-      };
-
-      if(data.id) {
-        purchaseFinanceData.id = data.id.toString();
-      }
-
-      // Pass the structured data to the repository
-      const purchase = await this.financeRepo.submitPurchase({
-        purchaseFinanceData,
-        paymentData,
-        taxReturnData,
-        chinaExpensesData,
-        thailandExpensesData,
-        portExpensesData,
-        doExpensesData,
-        shippingData
-      } as PurchaseFinanceDataInterface);
-
-      if(purchase == null){
-        return null;
-      }
-      
-      return purchase;
-    } catch (err: any) {
-      console.log("errsubmitPurchase", err);
-      throw err;
+            
+            const purchaseFinanceData = {
+                d_purchase_id: allData.d_purchase_id,
+                
+                // ข้อมูลตู้
+                container_number: allData.container_number || null,
+                container_size: allData.container_size || null,
+                seal_number: allData.seal_number || null,
+                payment_status: allData.payment_status || null,
+                
+                // ข้อมูลเรือ
+                ship_name: allData.ship_name || null,
+                
+                // ข้อมูลท่าเรือ
+                port_load: allData.port_load || null,
+                port_discharge: allData.port_discharge || null,
+                
+                // ข้อมูลวันที่
+                etd_date: allData.etd_date || null,
+                eta_date: allData.eta_date || null,
+                
+                // ข้อมูลการเงิน
+                billing_code: allData.billing_code || null,
+                billing_amount: allData.billing_amount || null,
+                total_before_vat: allData.total_before_vat || null,
+                vat_amount: allData.vat_amount || null,
+                total_after_vat: allData.total_after_vat || null,
+            };
+            
+            // สร้างข้อมูลหลักของการชำระเงิน
+            const purchaseFinance = await prismaClient.purchase_finance.create({
+                data: purchaseFinanceData
+            });
+            
+            // ข้อมูลค่าใช้จ่ายจีน
+            const chinaExpensesData = {
+                purchase_finance_id: purchaseFinance.id,
+                ch_freight: allData.ch_freight || null,
+                ch_exchange_rate: allData.ch_exchange_rate || null,
+                ch_freight_total: allData.ch_freight_total || null
+            };
+            
+            // บันทึกข้อมูลค่าใช้จ่ายจีน
+            await prismaClient.purchase_finance_china_expenses.create({
+                data: chinaExpensesData
+            });
+            
+            // ข้อมูลค่าใช้จ่ายไทย
+            const thailandExpensesData = {
+                purchase_finance_id: purchaseFinance.id,
+                
+                // ค่าใช้จ่ายทั่วไป
+                th_shipping_note :allData.th_shipping_note || null,
+                
+                th_duty: allData.th_duty || null,
+                th_tax: allData.th_tax || null,
+                th_employee: allData.th_employee || null,
+                th_warehouse: allData.th_warehouse || null,
+                th_custom_fees: allData.th_custom_fees || null,
+                th_overtime: allData.th_overtime || null,
+                th_check_fee: allData.th_check_fee || null,
+                th_product_account: allData.th_product_account || null,
+                th_license_fee: allData.th_license_fee || null,
+                th_gasoline: allData.th_gasoline || null,
+                th_hairy: allData.th_hairy || null,
+                th_other_fee: allData.th_other_fee || null,
+                
+                // ข้อมูลค่าใช้จ่ายหัวลาก
+                th_port_name: allData.th_port_name || null,
+                th_port_fee: allData.th_port_fee || null,
+                th_lift_on_off: allData.th_lift_on_off || null,
+                th_port_note : allData.th_port_note  || null,
+                th_ground_fee: allData.th_ground_fee || null,
+                th_port_other_fee: allData.th_port_other_fee || null,
+                th_price_head_tractor: allData.th_price_head_tractor || null,
+                th_total_port_fee: allData.th_total_port_fee || null,
+                
+                // ข้อมูลค่าใช้จ่าย D/O
+                amount_payment_do: allData.amount_payment_do || null,
+                price_deposit: allData.price_deposit || null
+            };
+            
+            // บันทึกข้อมูลค่าใช้จ่ายไทย
+            await prismaClient.purchase_finance_thailand_expenses.create({
+                data: thailandExpensesData
+            });
+            
+            // ข้อมูล Shipping
+            const shippingData = {
+                purchase_finance_id: purchaseFinance.id,
+                th_shipping_price: allData.th_shipping_price || null,
+                th_shipping_advance: allData.th_shipping_advance || null,
+                th_shipping_remaining: allData.th_shipping_remaining || null,
+                th_shipping_return_to: allData.th_shipping_return_to || null,
+                th_total_shipping: allData.th_total_shipping || null
+            };
+            
+            // บันทึกข้อมูล Shipping
+            await prismaClient.purchase_finance_shipping.create({
+                data: shippingData
+            });
+            
+            // ข้อมูลการชำระเงินและภาษี
+            const paymentData = {
+                purchase_finance_id: purchaseFinance.id,
+                
+                // สถานะการชำระเงิน
+                payment_status: allData.payment_status || null,
+                
+                // ข้อมูลคืนภาษีจากตู้
+                tax_return_checked: allData.tax_return_checked || false,
+                tax_return_amount: allData.tax_return_amount || null,
+                tax_return_date: allData.tax_return_date || null,
+                
+                // ข้อมูลกำไรและค่าบริหารจัดการ
+                management_fee: allData.management_fee || null,
+                percentage_fee: allData.percentage_fee || null,
+                net_profit: allData.net_profit || null,
+                profit_loss: allData.profit_loss || null
+            };
+            
+            // บันทึกข้อมูลการชำระเงินและภาษี
+            await prismaClient.purchase_finance_payment.create({
+                data: paymentData
+            });
+            
+            // บันทึกข้อมูลการชำระเงินแต่ละรายการ
+            if (payment_details && payment_details.length > 0) {
+                for (const detail of payment_details) {
+                    await prismaClient.finance_payment_detail.create({
+                        data: {
+                            purchase_finance_id: purchaseFinance.id,
+                            payment_date: detail.payment_date,
+                            payment_amount: detail.payment_amount.toString(),
+                            remaining_amount: detail.remaining_amount.toString()
+                        }
+                    });
+                }
+            }
+            
+            return purchaseFinance;
+        });
+    } catch (error) {
+        console.error('Error in submitPurchase:', error);
+        throw error;
     }
-  }
+}
 
-  public async updatePurchase(id:string, Request:any):Promise<any> {
+  public async updatePurchase(id: string, data: any) {
     try {
-      // Convert work_id to d_purchase_id if needed
-      if(Request.work_id && !Request.d_purchase_id) {
-        Request.d_purchase_id = Request.work_id;
-      }
+        // แยกข้อมูล payment_details ออกมา
+        const { payment_details, ...allData } = data;
 
-      // Main purchase finance data
-      const purchaseFinanceData: FinanceInterface = {
-        d_purchase_id: Request.d_purchase_id,
-        finance_status: Request.finance_status,
+        console.log("percentage_fee", allData.percentage_fee)
         
-        // ข้อมูลตู้
-        container_number: Request.container_number === null ? null : Request.container_number?.toString(),
-        container_size: Request.container_size === null ? null : Request.container_size?.toString(),
-        seal_number: Request.seal_number === null ? null : Request.seal_number?.toString(),
+        // Convert work_id to d_purchase_id if needed
+        if(allData.work_id && !allData.d_purchase_id) {
+            allData.d_purchase_id = allData.work_id;
+        }
         
-        // ข้อมูลเรือ
-        ship_name: Request.ship_name === null ? null : Request.ship_name?.toString(),
-        
-        // ข้อมูลท่าเรือ
-        port_load: Request.port_load === null ? null : Request.port_load?.toString(),
-        port_discharge: Request.port_discharge === null ? null : Request.port_discharge?.toString(),
-        
-        // ข้อมูลวันที่
-        etd_date: Request.etd_date === null ? null : Request.etd_date?.toString(),
-        eta_date: Request.eta_date === null ? null : Request.eta_date?.toString(),
-        
-        // ข้อมูลการเงิน
-        billing_code: Request.billing_code === null ? null : Request.billing_code?.toString(),
-        billing_amount: Request.billing_amount === null ? null : Request.billing_amount?.toString(),
-        total_before_vat: Request.total_before_vat === null ? null : Request.total_before_vat?.toString(),
-        vat_amount: Request.vat_amount === null ? null : Request.vat_amount?.toString(),
-        total_after_vat: Request.total_after_vat === null ? null : Request.total_after_vat?.toString(),
-        
-        // ข้อมูลการคำนวณ
-        total_payment_all: Request.total_payment_all === null ? null : Request.total_payment_all?.toString(),
-        miss_payment: Request.miss_payment === null ? null : Request.miss_payment?.toString(),
-        profit_loss: Request.profit_loss === null ? null : Request.profit_loss?.toString(),
-        price_service: Request.price_service === null ? null : Request.price_service?.toString(),
-        total_profit_loss: Request.total_profit_loss === null ? null : Request.total_profit_loss?.toString(),
-        text_profit_loss: Request.text_profit_loss === null ? null : Request.text_profit_loss?.toString(),
-      };
-
-      // Payment details data
-      const paymentData: PaymentDetailsInterface = {
-        payment_date_1: Request.payment_date_1 === null ? null : Request.payment_date_1?.toString(),
-        payment_date_2: Request.payment_date_2 === null ? null : Request.payment_date_2?.toString(),
-        payment_date_3: Request.payment_date_3 === null ? null : Request.payment_date_3?.toString(),
-        payment_amount_1: Request.payment_amount_1 === null ? null : Request.payment_amount_1?.toString(),
-        payment_amount_2: Request.payment_amount_2 === null ? null : Request.payment_amount_2?.toString(),
-        payment_amount_3: Request.payment_amount_3 === null ? null : Request.payment_amount_3?.toString(),
-        remaining_amount_1: Request.remaining_amount_1 === null ? null : Request.remaining_amount_1?.toString(),
-        remaining_amount_2: Request.remaining_amount_2 === null ? null : Request.remaining_amount_2?.toString(),
-        remaining_amount_3: Request.remaining_amount_3 === null ? null : Request.remaining_amount_3?.toString(),
-        payment_status: Request.payment_status === null ? null : Request.payment_status?.toString(),
-      };
-      
-      // Tax return data
-      const taxReturnData: TaxReturnInterface = {
-        // ข้อมูลคืนภาษีจากตู้
-        tax_return_checked: Request.tax_return_checked === null ? null : Request.tax_return_checked,
-        tax_return_amount: Request.tax_return_amount === null ? null : Request.tax_return_amount?.toString(),
-        tax_return_date: Request.tax_return_date === null ? null : Request.tax_return_date?.toString(),
-        
-        // ข้อมูลกำไรและค่าบริหารจัดการ
-        management_fee: Request.management_fee === null ? null : Request.management_fee?.toString(),
-        percentage_fee: Request.percentage_fee === null ? null : Request.percentage_fee?.toString(),
-        net_profit: Request.net_profit === null ? null : Request.net_profit?.toString(),
-        profit_loss: Request.profit_loss === null ? null : Request.profit_loss?.toString(),
-      };
-
-      // China expenses data
-      const chinaExpensesData: ChinaExpensesInterface = {
-        ch_freight: Request.ch_freight === null ? null : Request.ch_freight?.toString(),
-        ch_exchange_rate: Request.ch_exchange_rate === null ? null : Request.ch_exchange_rate?.toString(),
-        ch_freight_total: Request.ch_freight_total === null ? null : Request.ch_freight_total?.toString()
-      };
-
-      // Thailand expenses data
-      const thailandExpensesData: ThailandExpensesInterface = {
-        th_duty: Request.th_duty === null ? null : Request.th_duty?.toString(),
-        th_tax: Request.th_tax === null ? null : Request.th_tax?.toString(),
-        th_employee: Request.th_employee === null ? null : Request.th_employee?.toString(),
-        th_warehouse: Request.th_warehouse === null ? null : Request.th_warehouse?.toString(),
-        th_custom_fees: Request.th_custom_fees === null ? null : Request.th_custom_fees?.toString(),
-        th_overtime: Request.th_overtime === null ? null : Request.th_overtime?.toString(),
-        th_check_fee: Request.th_check_fee === null ? null : Request.th_check_fee?.toString(),
-        th_product_account: Request.th_product_account === null ? null : Request.th_product_account?.toString(),
-        th_license_fee: Request.th_license_fee === null ? null : Request.th_license_fee?.toString(),
-        th_gasoline: Request.th_gasoline === null ? null : Request.th_gasoline?.toString(),
-        th_hairy: Request.th_hairy === null ? null : Request.th_hairy?.toString(),
-        th_other_fee: Request.th_other_fee === null ? null : Request.th_other_fee?.toString(),
-      };
-      
-      // Port expenses data
-      const portExpensesData: PortExpensesInterface = {
-        th_port_name: Request.th_port_name === null ? null : Request.th_port_name?.toString(),
-        th_port_fee: Request.th_port_fee === null ? null : Request.th_port_fee?.toString(),
-        th_lift_on_off: Request.th_lift_on_off === null ? null : Request.th_lift_on_off?.toString(),
-        th_ground_fee: Request.th_ground_fee === null ? null : Request.th_ground_fee?.toString(),
-        th_port_other_fee: Request.th_port_other_fee === null ? null : Request.th_port_other_fee?.toString(),
-        th_price_head_tractor: Request.th_price_head_tractor === null ? null : Request.th_price_head_tractor?.toString(),
-        th_total_port_fee: Request.th_total_port_fee === null ? null : Request.th_total_port_fee?.toString()
-      };
-      
-      // DO expenses data
-      const doExpensesData: DOExpensesInterface = {
-        amount_payment_do: Request.amount_payment_do === null ? null : Request.amount_payment_do?.toString(),
-        price_deposit: Request.price_deposit === null ? null : Request.price_deposit?.toString(),
-      };
-
-      // Shipping data - Note: th_shipping_price is mapped from th_shipping in the form
-      const shippingData: ShippingDetailsInterface = {
-        th_shipping_price: Request.th_shipping === null ? null : Request.th_shipping?.toString(), // Map from th_shipping
-        th_shipping_note: Request.th_shipping_note === null ? null : Request.th_shipping_note?.toString(),
-        th_shipping_advance: Request.th_shipping_advance === null ? null : Request.th_shipping_advance?.toString(),
-        th_shipping_remaining: Request.th_shipping_remaining === null ? null : Request.th_shipping_remaining?.toString(),
-        th_shipping_return_to: Request.th_shipping_return_to === null ? null : Request.th_shipping_return_to?.toString(),
-        th_total_shipping: Request.th_total_shipping === null ? null : Request.th_total_shipping?.toString(),
-      };
-
-      const purchase = await this.financeRepo.updatePurchase(id, {
-        purchaseFinanceData,
-        paymentData,
-        taxReturnData,
-        chinaExpensesData,
-        thailandExpensesData,
-        portExpensesData,
-        doExpensesData,
-        shippingData
-      } as PurchaseFinanceDataInterface);
-      
-      return purchase;
-    } catch (err: any) {
-      console.log("errupdatePurchase", err);
-      throw err;
+        // ใช้ transaction เพื่อให้มั่นใจว่าถ้ามีข้อผิดพลาดจะ rollback ทั้งหมด
+        return await this.prisma.$transaction(async (prismaClient) => {
+            try {
+                // แยกข้อมูลตามโครงสร้างของตาราง purchase_finance
+                const purchaseFinanceData = {
+                    d_purchase_id: allData.d_purchase_id,
+                    
+                    // ข้อมูลตู้
+                    container_number: allData.container_number || null,
+                    container_size: allData.container_size || null,
+                    seal_number: allData.seal_number || null,
+                    
+                    // ข้อมูลเรือ
+                    ship_name: allData.ship_name || null,
+                    payment_status: allData.payment_status || null,
+                    // ข้อมูลท่าเรือ
+                    port_load: allData.port_load || null,
+                    port_discharge: allData.port_discharge || null,
+                    
+                    // ข้อมูลวันที่
+                    etd_date: allData.etd_date || null,
+                    eta_date: allData.eta_date || null,
+                    
+                    // ข้อมูลการเงิน
+                    billing_code: allData.billing_code || null,
+                    billing_amount: allData.billing_amount || null,
+                    total_before_vat: allData.total_before_vat || null,
+                    vat_amount: allData.vat_amount || null,
+                    total_after_vat: allData.total_after_vat || null,
+                };
+                
+                // อัพเดทข้อมูลหลักของการชำระเงิน
+                const purchaseFinance = await prismaClient.purchase_finance.update({
+                    where: { id },
+                    data: purchaseFinanceData
+                });
+                
+                // ข้อมูลค่าใช้จ่ายจีน
+                const chinaExpensesData = {
+                    purchase_finance_id: id,
+                    ch_freight: allData.ch_freight || null,
+                    ch_exchange_rate: allData.ch_exchange_rate || null,
+                    ch_freight_total: allData.ch_freight_total || null
+                };
+                
+                // อัพเดทหรือสร้างข้อมูลค่าใช้จ่ายจีน
+                await prismaClient.purchase_finance_china_expenses.upsert({
+                    where: { purchase_finance_id: id },
+                    update: chinaExpensesData,
+                    create: chinaExpensesData
+                });
+                
+                // ข้อมูลค่าใช้จ่ายไทย
+                const thailandExpensesData = {
+                    purchase_finance_id: id,
+                    
+                    // ค่าใช้จ่ายทั่วไป
+                    th_duty: allData.th_duty || null,
+                    th_shipping_note :allData.th_shipping_note || null,
+                    th_tax: allData.th_tax || null,
+                    th_employee: allData.th_employee || null,
+                    th_warehouse: allData.th_warehouse || null,
+                    th_custom_fees: allData.th_custom_fees || null,
+                    th_overtime: allData.th_overtime || null,
+                    th_check_fee: allData.th_check_fee || null,
+                    th_product_account: allData.th_product_account || null,
+                    th_license_fee: allData.th_license_fee || null,
+                    th_gasoline: allData.th_gasoline || null,
+                    th_hairy: allData.th_hairy || null,
+                    th_other_fee: allData.th_other_fee || null,
+                    
+                    // ข้อมูลค่าใช้จ่ายหัวลาก
+                    th_port_name: allData.th_port_name || null,
+                    th_port_fee: allData.th_port_fee || null,
+                    th_port_note : allData.th_port_note  || null,
+                    th_lift_on_off: allData.th_lift_on_off || null,
+                    th_ground_fee: allData.th_ground_fee || null,
+                    th_port_other_fee: allData.th_port_other_fee || null,
+                    th_price_head_tractor: allData.th_price_head_tractor || null,
+                    th_total_port_fee: allData.th_total_port_fee || null,
+                    
+                    // ข้อมูลค่าใช้จ่าย D/O
+                    amount_payment_do: allData.amount_payment_do || null,
+                    price_deposit: allData.price_deposit || null
+                };
+                
+                // อัพเดทหรือสร้างข้อมูลค่าใช้จ่ายไทย
+                await prismaClient.purchase_finance_thailand_expenses.upsert({
+                    where: { purchase_finance_id: id },
+                    update: thailandExpensesData,
+                    create: thailandExpensesData
+                });
+                
+                // ข้อมูล Shipping
+                const shippingData = {
+                    purchase_finance_id: id,
+                    th_shipping_price: allData.th_shipping_price || null,
+                    th_shipping_advance: allData.th_shipping_advance || null,
+                    th_shipping_remaining: allData.th_shipping_remaining || null,
+                    th_shipping_return_to: allData.th_shipping_return_to || null,
+                    th_total_shipping: allData.th_total_shipping || null
+                };
+                
+                // อัพเดทหรือสร้างข้อมูล Shipping
+                await prismaClient.purchase_finance_shipping.upsert({
+                    where: { purchase_finance_id: id },
+                    update: shippingData,
+                    create: shippingData
+                });
+                
+                // ข้อมูลการชำระเงินและภาษี
+                const paymentData = {
+                    purchase_finance_id: id,
+                    
+                    // สถานะการชำระเงิน
+                    payment_status: allData.payment_status || null,
+                    
+                    // ข้อมูลคืนภาษีจากตู้
+                    tax_return_checked: allData.tax_return_checked || false,
+                    tax_return_amount: allData.tax_return_amount || null,
+                    tax_return_date: allData.tax_return_date || null,
+                    
+                    // ข้อมูลกำไรและค่าบริหารจัดการ
+                    management_fee: allData.management_fee || null,
+                    percentage_fee: allData.percentage_fee || null,
+                    net_profit: allData.net_profit || null,
+                    profit_loss: allData.profit_loss || null
+                };
+                
+                // อัพเดทหรือสร้างข้อมูลการชำระเงินและภาษี
+                await prismaClient.purchase_finance_payment.upsert({
+                    where: { purchase_finance_id: id },
+                    update: paymentData,
+                    create: paymentData
+                });
+                
+                // ลบข้อมูลการชำระเงินเดิมทั้งหมด
+                await prismaClient.finance_payment_detail.deleteMany({
+                    where: { purchase_finance_id: id }
+                });
+                
+                // บันทึกข้อมูลการชำระเงินใหม่แต่ละรายการ
+                if (payment_details && payment_details.length > 0) {
+                    // สร้างข้อมูลการชำระเงินทั้งหมดในคราวเดียว
+                    await prismaClient.finance_payment_detail.createMany({
+                        data: payment_details.map((detail:any) => ({
+                            purchase_finance_id: id,
+                            payment_date: detail.payment_date,
+                            payment_amount: detail.payment_amount.toString(),
+                            remaining_amount: detail.remaining_amount.toString()
+                        }))
+                    });
+                }
+                
+                console.log('Transaction completed successfully');
+                return purchaseFinance;
+            } catch (transactionError) {
+                console.error('Transaction error in updatePurchase:', transactionError);
+                // Transaction will automatically rollback on error
+                throw transactionError;
+            }
+        });
+    } catch (error) {
+        console.error('Error in updatePurchase:', error);
+        throw error;
     }
-  }
+}
 
   public async getWidhdrawalInformation(Request:Partial<any>) {
     try {

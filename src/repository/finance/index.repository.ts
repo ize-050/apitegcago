@@ -116,6 +116,7 @@ class FinanceRepository {
           id: id
         },
         include: {
+          purchase_finance: true,
           d_purchase_customer_payment: true,
           d_purchase_emp: {
             include: {
@@ -154,68 +155,49 @@ class FinanceRepository {
           d_purchase_id: d_purchase_id
         },
         include: {
-          payment_details: true,
+          d_purchase:true,
           china_expenses: true,
-          thailand_expenses: {
-            select: {
-              id: true,
-              purchase_finance_id: true,
-              th_duty: true,
-              th_tax: true,
-              th_employee: true,
-              th_warehouse: true,
-              th_custom_fees: true,
-              th_overtime: true,
-              th_check_fee: true,
-              th_product_account: true,
-              th_license_fee: true,
-              th_gasoline: true,
-              th_hairy: true,
-              th_other_fee: true,
-              th_port_name: true,
-              th_port_fee: true,
-              th_lift_on_off: true,
-              th_ground_fee: true,
-              th_port_other_fee: true,
-              amount_payment_do: true,
-              price_deposit: true,
-              createdAt: true,
-              updatedAt: true
-            }
-          },
+          thailand_expenses: true,
           shipping_details: true,
-          d_purchase: true
+          payment_details:true,
+          payment_prefix:true,
+          
         }
       });
+
+      console.log("work", work)
       
-      // Get port expenses and DO expenses using raw queries
-      let portExpenses = null;
-      
-      if (work) {
-        try {
-          // Get port expenses
-          const portExpensesResult = await this.prisma.$queryRaw`
-            SELECT * FROM purchase_finance_port_expenses WHERE purchase_finance_id = ${work.id}
-          `;
-          
-          if (Array.isArray(portExpensesResult) && portExpensesResult.length > 0) {
-            portExpenses = portExpensesResult[0];
-          }
-        } catch (error) {
-          console.error("Error fetching port expenses:", error);
-        }
+      if (!work) {
+        return null;
       }
       
-      // Merge all data into a single object
-      return {
+      // ดึงข้อมูลการชำระเงินแต่ละรายการ
+      const paymentDetails = await this.getPaymentDetailsByPurchaseId(work.id);
+      
+      // รวมข้อมูลทั้งหมดเข้าด้วยกัน
+      const result: any = {
         ...work,
-        ...(work?.d_purchase || {}),
-        ...(work?.payment_details || {}),
-        ...(work?.china_expenses || {}),
-        ...(work?.thailand_expenses || {}),
-        ...(work?.shipping_details || {}),
-        ...(portExpenses || {})
+        ...work.d_purchase,
+        
+        // ข้อมูลการชำระเงินแต่ละรายการ
+        payment_details: paymentDetails || [],
+        
+        // ข้อมูลค่าใช้จ่ายจีน
+        ...(work.china_expenses || {}),
+        
+        // ข้อมูลค่าใช้จ่ายไทย
+        ...(work.thailand_expenses || {}),
+        
+        // ข้อมูล Shipping
+        ...(work.shipping_details || {})
       };
+      
+      // ลบข้อมูลซ้ำซ้อน
+      if ('d_purchase' in result) {
+        delete result.d_purchase;
+      }
+      
+      return result;
     }
     catch (err: any) {
       console.error("Error in getWorkByid:", err);
@@ -223,20 +205,117 @@ class FinanceRepository {
     }
   }
 
+  public async getWidhdrawalInformationByShipmentNumber(d_shipment_number: string): Promise<any> {
+    try {
+      const withdrawalInformation = await this.prisma.withdrawalInformaion.findFirst({
+        where: {
+          invoice_package: d_shipment_number
+        },
+      });
+      return withdrawalInformation;
+    } catch (err: any) {
+      console.error("Error in getWidhdrawalInformationByShipmentNumber:", err);
+      throw err;
+    }
+  }
+
   public async submitPurchase(data: any): Promise<any> {
     try{
+      // บันทึกข้อมูลหลักของการชำระเงิน
+      const purchaseFinance = await this.prisma.purchase_finance.create({
+        data: {
+          ...data
+        }
+      });
       
+      return purchaseFinance;
     }
     catch(error){
+      console.error("Error in submitPurchase:", error);
       throw error;
     }
   }
 
-  public async updatePurchase(id: string, Request: any): Promise<any> {
-    try{
+
+  // เพิ่มฟังก์ชันสำหรับจัดการข้อมูลการชำระเงิน
+public async createPaymentDetail(data: any) {
+  try {
+      console.log('Creating payment detail:', data);
+      console.log('Payment detail data:', data);
+      return await this.prisma.finance_payment_detail.create({
+          data: {
+              purchase_finance_id: data.purchase_finance_id,
+              payment_date: data.payment_date,
+              payment_amount: data.payment_amount,
+              remaining_amount: data.remaining_amount
+          }
+      });
+  } catch (error) {
+      console.error('Error in createPaymentDetail:', error);
+      throw error;
+  }
+}
+
+public async deletePaymentDetails(purchaseFinanceId: string) {
+  try {
+      return await this.prisma.finance_payment_detail.deleteMany({
+          where: {
+              purchase_finance_id: purchaseFinanceId
+          }
+      });
+  } catch (error) {
+      console.error('Error in deletePaymentDetails:', error);
+      throw error;
+  }
+}
+
+public async getPaymentDetailsByPurchaseId(purchaseFinanceId: string) {
+  try {
+      return await this.prisma.finance_payment_detail.findMany({
+          where: {
+              purchase_finance_id: purchaseFinanceId
+          },
+          orderBy: {
+              id: 'asc'
+          }
+      });
+  } catch (error) {
+      console.error('Error in getPaymentDetailsByPurchaseId:', error);
+      throw error;
+  }
+}
+
+  public async getPurchaseFinanceById(id: string): Promise<any> {
+    try {
+      const purchaseFinance = await this.prisma.purchase_finance.findUnique({
+        where: {
+          id: id
+        }
+      });
       
+      return purchaseFinance;
+    } catch (error) {
+      console.error('Error in getPurchaseFinanceById:', error);
+      throw error;
+    }
+  }
+
+  public async updatePurchase(id: string, data: any): Promise<any> {
+    try{
+      // อัพเดทข้อมูลหลักของการซื้อ
+      const purchaseFinance = await this.prisma.purchase_finance.update({
+        where: {
+          id: id
+        },
+        data: {
+          ...data
+        }
+      });
+      
+      return purchaseFinance;
     }
     catch(error){
+      console.error("Error in updatePurchase:", error);
       throw error;
     }
   }

@@ -70,6 +70,22 @@ export class FinanceController {
         }
     }
 
+    public async getWidhdrawalInformationByShipmentNumber(req: Request, res: Response) {
+        try {
+            const withdrawal = await this.financeService.getWidhdrawalInformationByShipmentNumber(req.params.id)
+            const Response = {
+                data: withdrawal,
+                message: "ข้อมูลสําเร็จ",
+                statusCode: 200
+            }
+            return res.status(200).json(Response);
+        }
+        catch (err: any) {
+            console.log('Error Notification', err)
+            res.status(500).json(err)
+        }
+    }
+
     public async getWorkByid(req: Request, res: Response) {
         try {
             console.log("id", req.params.id)

@@ -61,6 +61,8 @@ router.delete('/record-money/:id', authMiddleware, transactionController.deleteT
 router.get('/getPurchase', authMiddleware,(req, res) =>  financeController.getPurchase(req, res));
 router.get('/getPurchaseById/:id',authMiddleware, (req, res) =>  financeController.getPurchaseById(req, res));
 
+
+router.get('/getWidhdrawalInformationByShipmentNumber/:id',authMiddleware, (req, res) =>  financeController.getWidhdrawalInformationByShipmentNumber(req, res));
 router.get('/getWorkByid/:id',authMiddleware, (req, res) =>  financeController.getWorkByid(req, res));
 
 router.get('/customer-accounts', authMiddleware, (req, res) => financeController.getCustomerAccounts(req, res));

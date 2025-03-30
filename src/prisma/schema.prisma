@@ -990,10 +990,13 @@ model purchase_finance {
   total_before_vat       String?
   vat_amount             String?
   total_after_vat        String?
+  payment_status         String?
   
   // ความสัมพันธ์กับตาราง
   d_purchase             d_purchase @relation(fields: [d_purchase_id], references: [id])
-  payment_details        purchase_finance_payment?
+  payment_prefix         purchase_finance_payment?
+
+  payment_details        finance_payment_detail[]
   china_expenses         purchase_finance_china_expenses?
   thailand_expenses      purchase_finance_thailand_expenses?
   shipping_details       purchase_finance_shipping?
@@ -1026,15 +1029,6 @@ model purchase_finance_payment {
   id                     String    @id @default(uuid())
   purchase_finance_id    String    @unique
   
-  payment_date_1         String?
-  payment_date_2         String?
-  payment_date_3         String?
-  payment_amount_1       String?
-  payment_amount_2       String?
-  payment_amount_3       String?
-  remaining_amount_1     String?
-  remaining_amount_2     String?
-  remaining_amount_3     String?
   payment_status         String?
   
   // ข้อมูลคืนภาษีจากตู้
@@ -1048,7 +1042,7 @@ model purchase_finance_payment {
   net_profit             String?
   profit_loss            String?
   
-  purchase_finance       purchase_finance @relation(fields: [purchase_finance_id], references: [id], onDelete: Cascade)
+  purchase_finance       purchase_finance @relation(fields: [purchase_finance_id], references: [id])
   
   createdAt              DateTime  @default(now())
   updatedAt              DateTime? @updatedAt
@@ -1072,10 +1066,12 @@ model purchase_finance_thailand_expenses {
   th_gasoline            String?
   th_hairy               String?
   th_other_fee           String?
+  th_shipping_note       String?
   
   // ข้อมูลค่าใช้จ่ายหัวลาก
   th_port_name           String?
   th_port_fee            String?
+  th_port_note           String?
   th_lift_on_off         String?
   th_ground_fee          String?
   th_port_other_fee      String?
@@ -1114,7 +1110,7 @@ model purchase_finance_shipping {
 model withdrawalInformaion {
   id                String    @id @default(uuid())
   d_purchase_id     String
-  invoice_package   String?
+  invoice_package   String   
   consignee         String?
   head_tractor      String?
   withdrawal_date   String?
@@ -1131,6 +1127,7 @@ model withdrawalInformaion {
   createdAt         DateTime  @default(now())
   updatedAt         DateTime?
   deletedAt         DateTime?
+  
 }
 
 // Consignment model (ฝากสั่งซื้อ/ฝากเติม)
@@ -1303,6 +1300,19 @@ model finance_commission {
 
   @@index([transfer_id])
   @@index([employee_id])
+}
+
+model finance_payment_detail {
+  id                  Int      @id @default(autoincrement())
+  purchase_finance_id String  
+  payment_date        String?
+  payment_amount      String?
+  remaining_amount    String?
+  created_at          DateTime @default(now())
+  updated_at          DateTime @updatedAt
+ 
+  
+  purchase_finance    purchase_finance? @relation(fields: [purchase_finance_id], references: [id])
 }
 
 enum keyDocument {

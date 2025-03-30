@@ -41,6 +41,9 @@ export interface FinanceInterface {
     remaining_amount_3?: string;
     payment_status?: string;
     
+    // ข้อมูลการชำระเงินแบบใหม่
+    payment_details?: PaymentDetailItem[];
+    
     // ข้อมูลคืนภาษีจากตู้
     tax_return_checked?: boolean;
     tax_return_amount?: string;
@@ -75,7 +78,6 @@ export interface FinanceInterface {
     shipping_details?: ShippingDetailsInterface;
     
     // ข้อมูลความสัมพันธ์
-    payment_details?: PaymentDetailsInterface;
     tax_return?: TaxReturnInterface;
 }
 
@@ -94,6 +96,13 @@ export interface PaymentDetailsInterface {
     remaining_amount_2?: string;
     remaining_amount_3?: string;
     payment_status?: string;
+}
+
+// Interface ใหม่สำหรับรายการชำระเงินแต่ละรายการ
+export interface PaymentDetailItem {
+    payment_date: string;
+    payment_amount: number;
+    remaining_amount: number;
 }
 
 export interface TaxReturnInterface {
