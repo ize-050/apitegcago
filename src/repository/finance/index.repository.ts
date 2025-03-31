@@ -69,9 +69,29 @@ class FinanceRepository {
         skip: (page - 1) * 10,
         take: 10,
         include: {
+          d_agentcy: {
+            include: {
+              d_sale_agentcy: {
+                include: {
+                  d_agentcy: {
+                    include: {
+                      agentcy: true
+                    }
+                  }
+                }
+              }
+            }
+          },
           cs_purchase: {
             where: {
-              status_name: "ออกเดินทาง"
+              status_name: {
+                in :["ออกเดินทาง","จองตู้","ยืนยันวันออกเดินทาง"]
+              }
+            },
+            include:{
+              receive :true,
+              bookcabinet:true,
+              provedeparture:true,
             }
           },
           purchase_finance: true

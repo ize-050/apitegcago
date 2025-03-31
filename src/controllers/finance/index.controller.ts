@@ -1125,4 +1125,216 @@ export class FinanceController {
             });
         }
     }
+
+    // Export finance work data to Excel
+    public async exportFinanceWorkToExcel(req: Request, res: Response) {
+        try {
+            const filters: any = req.query;
+            const financeRepository = new FinanceRepository();
+
+            // Get all records without pagination for export
+            const result: any = await financeRepository.getPurchase({
+                ...filters,
+                page: 1,
+                limit: 1000
+            });
+
+            if (!result || !result.purchase || result.purchase.length === 0) {
+                return res.status(404).json({ message: 'ไม่พบข้อมูล' });
+            }
+
+            const records = result.purchase;
+
+            // Create a new Excel workbook
+            const workbook = new ExcelJS.Workbook();
+            workbook.creator = 'Tegcago Financial System';
+            workbook.lastModifiedBy = 'Tegcago';
+            workbook.created = new Date();
+            workbook.modified = new Date();
+
+            // Add a worksheet
+            const worksheet = workbook.addWorksheet('รายงานการเงิน', {
+                pageSetup: {
+                    paperSize: 9, // A4
+                    orientation: 'landscape',
+                    fitToPage: true
+                }
+            });
+
+            // Set column widths
+            worksheet.columns = [
+                { key: 'index', width: 5 },
+                { key: 'bookNumber', width: 15 },
+                { key: 'date', width: 12 },
+                { key: 'shipmentType', width: 15 },
+                { key: 'containerNo', width: 15 },
+                { key: 'blNo', width: 15 },
+                { key: 'consignee', width: 20 },
+                { key: 'agency', width: 20 },
+                { key: 'shippingLine', width: 15 },
+                { key: 'etd', width: 12 },
+                { key: 'eta', width: 12 },
+                { key: 'shipmentNumber', width: 15 },
+                { key: 'status', width: 15 },
+                { key: 'paymentStatus', width: 20 }
+            ];
+
+            // Add title
+            const titleRow = worksheet.addRow(['รายงานการเงิน']);
+            titleRow.font = { bold: true, size: 16 };
+            titleRow.alignment = { horizontal: 'center' };
+            worksheet.mergeCells(`A${titleRow.number}:N${titleRow.number}`);
+
+            // Add date
+            const dateRow = worksheet.addRow([`วันที่พิมพ์: ${new Date().toLocaleDateString('th-TH')}`]);
+            dateRow.font = { bold: true };
+            worksheet.mergeCells(`A${dateRow.number}:N${dateRow.number}`);
+
+            // Add filter information if filters were applied
+            if (filters.startDate || filters.endDate || filters.shipmentType) {
+                const filterRow = worksheet.addRow(['ตัวกรอง:']);
+                filterRow.font = { bold: true };
+                
+                let filterText = '';
+                
+                if (filters.startDate && filters.endDate) {
+                    const startDate = new Date(filters.startDate);
+                    const endDate = new Date(filters.endDate);
+                    filterText += `วันที่: ${startDate.toLocaleDateString('th-TH')} ถึง ${endDate.toLocaleDateString('th-TH')} `;
+                } else if (filters.startDate) {
+                    const startDate = new Date(filters.startDate);
+                    filterText += `วันที่ตั้งแต่: ${startDate.toLocaleDateString('th-TH')} `;
+                } else if (filters.endDate) {
+                    const endDate = new Date(filters.endDate);
+                    filterText += `วันที่ถึง: ${endDate.toLocaleDateString('th-TH')} `;
+                }
+                
+                if (filters.shipmentType) {
+                    filterText += `ประเภท Shipment: ${filters.shipmentType}`;
+                }
+                
+                if (filterText) {
+                    const filterInfoRow = worksheet.addRow([filterText]);
+                    worksheet.mergeCells(`A${filterInfoRow.number}:N${filterInfoRow.number}`);
+                }
+            }
+
+            // Add empty row for spacing
+            worksheet.addRow([]);
+
+            // Add headers
+            const headerRow = worksheet.addRow([
+                'ลำดับ',
+                'เลขที่บุ๊คกิ้ง',
+                'วันที่',
+                'ประเภท Shipment',
+                'Container No',
+                'B/L No',
+                'Consignee',
+                'Agency',
+                'สายเรือ',
+                'ETD',
+                'ETA',
+                'เลข Shipment',
+                'สถานะ',
+                'สถานะการชำระเงิน'
+            ]);
+
+            // Style the header row
+            headerRow.eachCell((cell) => {
+                cell.font = { bold: true };
+                cell.fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'FFD3D3D3' }
+                };
+                cell.border = {
+                    top: { style: 'thin' },
+                    left: { style: 'thin' },
+                    bottom: { style: 'thin' },
+                    right: { style: 'thin' }
+                };
+                cell.alignment = { horizontal: 'center', vertical: 'middle' };
+            });
+
+            // Add data rows
+            records.forEach((data: any, index: number) => {
+                const row = worksheet.addRow([
+                    index + 1,
+                    data?.book_number || '',
+                    data?.createdAt ? new Date(data.createdAt).toLocaleDateString('th-TH') : '',
+                    data?.d_transport || '',
+                    data?.cs_purchase?.[0]?.receive?.container_no || '',
+                    data?.cs_purchase?.find((res: any) => res.status_key === "Departure")?.provedeparture?.bl_no || '',
+                    data?.cs_purchase?.find((res: any) => res.status_name === "จองตู้")?.bookcabinet?.consignee || '',
+                    data?.d_agentcy?.some((agency: any) => agency?.d_sale_agentcy?.length > 0)
+                        ? data.d_agentcy.find((agency: any) => agency?.d_sale_agentcy?.length > 0)
+                            ?.d_sale_agentcy[0]?.d_agentcy?.agentcy?.agent_name || ''
+                        : '',
+                    data?.d_agentcy?.some((agency: any) => agency?.d_sale_agentcy?.length > 0)
+                        ? data.d_agentcy.find((agency: any) => agency?.d_sale_agentcy?.length > 0)
+                            ?.d_sale_agentcy[0]?.d_agentcy?.agent_boat || ''
+                        : '',
+                    data?.d_agentcy?.some((agency: any) => agency?.d_sale_agentcy?.length > 0)
+                        ? data.d_agentcy.find((agency: any) => agency?.d_sale_agentcy?.length > 0)
+                            ?.d_sale_agentcy[0]?.d_agentcy?.agentcy_etd || ''
+                        : '',
+                    data?.d_agentcy?.some((agency: any) => agency?.d_sale_agentcy?.length > 0)
+                        ? data.d_agentcy.find((agency: any) => agency?.d_sale_agentcy?.length > 0)
+                            ?.d_sale_agentcy[0]?.d_agentcy?.agentcy_eta || ''
+                        : '',
+                    data?.d_shipment_number || '',
+                    data?.d_status || '',
+                    data?.purchase_finance?.length > 0 ? data?.purchase_finance[0]?.payment_status : ''
+                ]);
+
+                // Style data rows
+                row.eachCell((cell) => {
+                    cell.border = {
+                        top: { style: 'thin' },
+                        left: { style: 'thin' },
+                        bottom: { style: 'thin' },
+                        right: { style: 'thin' }
+                    };
+                });
+            });
+
+            // Generate a unique filename
+            const fileName = `รายงานการเงิน_${new Date().toISOString().slice(0, 10)}.xlsx`;
+            const filePath = path.join('public', 'exports', fileName);
+
+            // Ensure the directory exists
+            if (!fs.existsSync(path.join('public', 'exports'))) {
+                fs.mkdirSync(path.join('public', 'exports'), { recursive: true });
+            }
+
+            // Write the file
+            await workbook.xlsx.writeFile(filePath);
+
+            // Send the file as a download
+            res.download(filePath, fileName, (err) => {
+                if (err) {
+                    console.error('Error downloading file:', err);
+                    // Clean up the file after download attempt
+                    if (fs.existsSync(filePath)) {
+                        fs.unlinkSync(filePath);
+                    }
+                } else {
+                    // Clean up the file after successful download
+                    setTimeout(() => {
+                        if (fs.existsSync(filePath)) {
+                            fs.unlinkSync(filePath);
+                        }
+                    }, 60000); // Delete after 1 minute
+                }
+            });
+        } catch (err: any) {
+            console.error('Error exporting finance work to Excel:', err);
+            res.status(500).json({
+                message: 'เกิดข้อผิดพลาดในการส่งออกข้อมูล',
+                error: err.message,
+                statusCode: 500
+            });
+        }
+    }
 }
