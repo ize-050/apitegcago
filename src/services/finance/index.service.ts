@@ -165,6 +165,7 @@ class FinanceService {
                 total_before_vat: allData.total_before_vat || null,
                 vat_amount: allData.vat_amount || null,
                 total_after_vat: allData.total_after_vat || null,
+                has_vat: allData.has_vat === true || allData.has_vat === 1 ? true : false,
             };
             
             // สร้างข้อมูลหลักของการชำระเงิน
@@ -327,6 +328,7 @@ class FinanceService {
                     total_before_vat: allData.total_before_vat || null,
                     vat_amount: allData.vat_amount || null,
                     total_after_vat: allData.total_after_vat || null,
+                    has_vat: allData.has_vat === true || allData.has_vat === 1 ? true : false,
                 };
                 
                 // อัพเดทข้อมูลหลักของการชำระเงิน

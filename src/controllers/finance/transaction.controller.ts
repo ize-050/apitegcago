@@ -43,7 +43,8 @@ export class TransactionController {
                         transferDate: new Date(data.customerDeposit.transferDate),
                         receivingAccount: data.customerDeposit.receivingAccount || "",
                         notes: data.customerDeposit.notes || "",
-                        transferSlipUrl: data.transferSlipUrl
+                        transferSlipUrl: data.transferSlipUrl,
+                        deposit_purpose: data.deposit_purpose || null
                     }
                 });
 
@@ -150,7 +151,8 @@ export class TransactionController {
                         transferDate: transaction.customerDeposit.transferDate,
                         receivingAccount: transaction.customerDeposit.receivingAccount,
                         notes: transaction.customerDeposit.notes,
-                        transferSlipUrl: transaction.customerDeposit.transferSlipUrl
+                        transferSlipUrl: transaction.customerDeposit.transferSlipUrl,
+                        deposit_purpose: transaction.customerDeposit.deposit_purpose
                         }
                     };
                   if (transaction.exchange) {
@@ -178,6 +180,7 @@ export class TransactionController {
                     type: transaction.type,
                     date: transaction.date,
                     user:transaction.user,
+                    deposit_purpose: transaction.customerDeposit?.deposit_purpose || null,
                     documentNumber: transaction.documentNumber,
                     customerId: transaction.customerId,
                     salespersonId: transaction.salespersonId,

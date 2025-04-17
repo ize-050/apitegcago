@@ -145,16 +145,28 @@ class FinanceRepository {
           },
           cs_purchase: {
             where: {
-              status_key: {
-                in: ["Leave", "return_cabinet"]
+              status_name: {
+                in :["ออกเดินทาง","จองตู้","ยืนยันวันออกเดินทาง"]
               }
             },
+            include:{
+              receive :true,
+              bookcabinet:true,
+              provedeparture:true,
+            }
+          },
+          d_agentcy: {
             include: {
-              leave: true,
-              cs_return_cabinet: true,
-              bookcabinet: true,
-
-            },
+              d_sale_agentcy: {
+                include: {
+                  d_agentcy: {
+                    include: {
+                      agentcy: true
+                    }
+                  }
+                }
+              }
+            }
           }
         },
 
@@ -175,13 +187,35 @@ class FinanceRepository {
           d_purchase_id: d_purchase_id
         },
         include: {
-          d_purchase:true,
+          d_purchase: {
+            include: {
+              cs_purchase: {
+                include: {
+                  receive: true,
+                  provedeparture: true,
+                  bookcabinet: true
+                }
+              },
+              d_agentcy: {
+                include: {
+                  d_sale_agentcy: {
+                    include: {
+                      d_agentcy: {
+                        include: {
+                          agentcy: true
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
           china_expenses: true,
           thailand_expenses: true,
           shipping_details: true,
           payment_details:true,
           payment_prefix:true,
-          
         }
       });
 

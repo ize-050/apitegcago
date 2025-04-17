@@ -990,6 +990,7 @@ model purchase_finance {
   total_before_vat       String?
   vat_amount             String?
   total_after_vat        String?
+  has_vat                Boolean? @default(false)
   payment_status         String?
   
   // ความสัมพันธ์กับตาราง
@@ -1178,6 +1179,7 @@ model finance_customer_deposit {
   receivingAccount      String?    
   notes                 String?   @db.Text
   transferSlipUrl       String?   @db.Text
+  deposit_purpose       String?   @db.Text
   createdAt             DateTime  @default(now())
   updatedAt             DateTime?
   deletedAt             DateTime?
