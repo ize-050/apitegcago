@@ -46,7 +46,7 @@ router.post('/record-money', authMiddleware, transactionController.createTransac
 router.get('/record-money', authMiddleware, transactionController.getTransactions.bind(transactionController));
 
 // Get transaction by ID
-// router.get('/record-money/:id', verifyToken, transactionController.getTransactionById.bind(transactionController));
+router.get('/record-money/:id', authMiddleware, transactionController.getTransactionById.bind(transactionController));
 
 // Employee routes
 // router.get('/employee/role/salesupport', authMiddleware, (req, res) => employeeController.getSalesSupportEmployees(req, res));

@@ -1,16 +1,14 @@
 import { Request, Response } from "express";
-import { PrismaClient } from "@prisma/client";
 import { TransactionCreateDto, TransactionUpdateDto } from "../../services/finance/dto/transaction.interface";
 import { ConsignmentCreateDto } from "../../services/finance/dto/consignment.interface";
 import z from "zod";
 import upload from "../../config/multerConfig";
 import multer from "multer";
+import prisma from "../../lib/prisma";
 
 export class TransactionController {
-    private prisma: PrismaClient;
-
     constructor() {
-        this.prisma = new PrismaClient();
+        // ไม่ต้องสร้าง PrismaClient ใหม่ เพราะเราใช้ singleton จาก lib/prisma.ts
     }
 
     public async createTransaction(req: Request, res: Response) {
@@ -29,7 +27,7 @@ export class TransactionController {
 
             // Handle customer deposit type
             if (data.customerDeposit) {
-                const customerDeposit = await this.prisma.finance_customer_deposit.create({
+                const customerDeposit = await prisma.finance_customer_deposit.create({
                     data: {
                         salespersonId: data.salesperson,
                         documentNumber: data.documentNumber,
@@ -49,12 +47,10 @@ export class TransactionController {
                 });
 
 
-              
-
                 // Create exchange record if exchange data exists
                 let exchangeId = null;
                 if (data.exchange) {
-                    const exchange = await this.prisma.finance_exchange.create({
+                    const exchange = await prisma.finance_exchange.create({
                         data: {
                             salespersonId: data.salesperson,
                             documentNumber: data.documentNumber,
@@ -75,7 +71,7 @@ export class TransactionController {
                     exchangeId = exchange.id;
 
 
-                    const  financial_recode = await this.prisma.financial_record.create({
+                    const  financial_recode = await prisma.financial_record.create({
                         data:{
                             date: new Date(data.date),
                             type: 'PAYMENT',
@@ -84,13 +80,13 @@ export class TransactionController {
                             transferDate: new Date(data.exchange.transferDate),
                             transferSlip: data.transferSlipUrl,
                             details :'',
-                            title:data.exchange.notes,
+                            title:data.type == 'order' ? 'ฝากสั่งซื้อ' : 'ฝากโอน',
                         }
                     })
                 }
 
                 // Create main transaction record
-                transactionData = await this.prisma.finance_transaction.create({
+                transactionData = await prisma.finance_transaction.create({
                     data: {
                         type: data.type,
                         customerDepositId: customerDeposit.id,
@@ -122,7 +118,7 @@ export class TransactionController {
 
     public async getTransactions(req: Request, res: Response) {
         try {
-            const transactions = await this.prisma.finance_transaction.findMany({
+            const transactions = await prisma.finance_transaction.findMany({
                 where: {
                     deletedAt: null
                 },
@@ -206,41 +202,51 @@ export class TransactionController {
         }
     }
 
-    // public async getTransactionById(req: Request, res: Response) {
-    //     try {
-    //         const { id } = req.params;
+    public async getTransactionById(req: Request, res: Response) {
+        try {
+            const { id } = req.params;
+            console.log(`Fetching transaction with ID: ${id}`);
 
-    //         const transaction = await this.prisma.finance_transaction.findUnique({
-    //             where: {
-    //                 id: id,
-    //                 deletedAt: null
-    //             },
-    //             include: {
-    //                 customerDeposit: true,
-    //                 consignment: true
-    //             }
-    //         });
+            const transaction = await prisma.finance_transaction.findUnique({
+                where: {
+                    id: id,
+                    deletedAt: null
+                },
+                include: {
+                    customerDeposit: true,
+                    exchange: true,
+                    user: {
+                        select: {
+                            id: true,
+                            fullname: true,
+                            email: true
+                        }
+                    },
+                }
+            });
 
-    //         if (!transaction) {
-    //             return res.status(404).json({
-    //                 message: "ไม่พบข้อมูลรายการ",
-    //                 statusCode: 404
-    //             });
-    //         }
+            if (!transaction) {
+                console.log(`Transaction with ID ${id} not found`);
+                return res.status(404).json({
+                    message: "ไม่พบข้อมูลรายการ",
+                    statusCode: 404
+                });
+            }
 
-    //         return res.status(200).json({
-    //             message: "ดึงข้อมูลสำเร็จ",
-    //             statusCode: 200,
-    //             data: transaction
-    //         });
-    //     } catch (error: any) {
-    //         console.error("Error fetching transaction:", error);
-    //         return res.status(500).json({
-    //             message: error.message || "เกิดข้อผิดพลาดในการดึงข้อมูล",
-    //             statusCode: 500
-    //         });
-    //     }
-    // }
+            console.log(`Successfully fetched transaction with ID: ${id}`);
+            return res.status(200).json({
+                message: "ดึงข้อมูลสำเร็จ",
+                statusCode: 200,
+                data: transaction
+            });
+        } catch (error: any) {
+            console.error("Error fetching transaction:", error);
+            return res.status(500).json({
+                message: error.message || "เกิดข้อผิดพลาดในการดึงข้อมูล",
+                statusCode: 500
+            });
+        }
+    }
 
     // public async updateTransaction(req: Request, res: Response) {
     //     try {
@@ -248,7 +254,7 @@ export class TransactionController {
     //         const data = req.body;
 
     //         // Check if transaction exists
-    //         const existingTransaction = await this.prisma.finance_transaction.findUnique({
+    //         const existingTransaction = await prisma.finance_transaction.findUnique({
     //             where: {
     //                 id: id,
     //                 deletedAt: null
@@ -269,7 +275,7 @@ export class TransactionController {
     //         // Update based on transaction type
     //         if (existingTransaction.type === "deposit" && existingTransaction.customerDeposit) {
     //             // Update customer deposit
-    //             await this.prisma.finance_customer_deposit.update({
+    //             await prisma.finance_customer_deposit.update({
     //                 where: {
     //                     id: existingTransaction.customerDeposit.id
     //                 },
@@ -296,7 +302,7 @@ export class TransactionController {
     //             });
     //         } else if ((existingTransaction.type === "order" || existingTransaction.type === "topup") && existingTransaction.consignment) {
     //             // Update consignment
-    //             await this.prisma.finance_consignment.update({
+    //             await prisma.finance_consignment.update({
     //                 where: {
     //                     id: existingTransaction.consignment.id
     //                 },
@@ -353,7 +359,7 @@ export class TransactionController {
             const { id } = req.params;
 
             // Soft delete by setting deletedAt
-            const transaction = await this.prisma.finance_transaction.update({
+            const transaction = await prisma.finance_transaction.update({
                 where: {
                     id: id
                 },
@@ -364,7 +370,7 @@ export class TransactionController {
 
             // Also soft delete related records
             if (transaction.customerDepositId) {
-                await this.prisma.finance_customer_deposit.update({
+                await prisma.finance_customer_deposit.update({
                     where: {
                         id: transaction.customerDepositId
                     },
@@ -375,7 +381,7 @@ export class TransactionController {
             }
 
             if (transaction.exchangeId) {
-                await this.prisma.finance_exchange.update({
+                await prisma.finance_exchange.update({
                     where: {
                         id: transaction.exchangeId
                     },

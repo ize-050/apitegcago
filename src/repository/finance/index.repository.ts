@@ -850,23 +850,48 @@ public async getPaymentDetailsByPurchaseId(purchaseFinanceId: string) {
 
   public async updateFinancialRecord(id: string, data: any): Promise<any> {
     try {
-      // Format dates and convert numeric fields
-      const formattedData = {
+      // --- Handle transfer slip deletion or update ---
+      let formattedData: any = {
         ...data,
         date: data.date ? new Date(data.date) : undefined,
         transferDate: data.transferDate ? new Date(data.transferDate) : undefined,
         updatedAt: new Date(),
-        // Convert string numbers to float
         amountRMB: data.amountRMB ? parseFloat(data.amountRMB) : undefined,
         amountTHB: data.amountTHB ? parseFloat(data.amountTHB) : undefined,
         exchangeRate: data.exchangeRate ? parseFloat(data.exchangeRate) : undefined
       };
 
+      // If deleteTransferSlip is requested, set transferSlip to null
+      if (data.deleteTransferSlip) {
+        // Optionally: remove the file from the file system
+        const oldRecord = await this.prisma.financial_record.findUnique({ where: { id } });
+        if (oldRecord && oldRecord.transferSlip) {
+          try {
+            const fs = require('fs');
+            const path = require('path');
+            const slipPath = path.join(__dirname, '../../../uploads/finance', oldRecord.transferSlip);
+            if (fs.existsSync(slipPath)) {
+              fs.unlinkSync(slipPath);
+            }
+          } catch (err) {
+            console.error('Failed to delete old transfer slip file:', err);
+          }
+        }
+        formattedData.transferSlip = null;
+      }
+
+      // If a new transfer slip is uploaded, it should already be set in data.transferSlip by the controller
+      // (No extra logic needed here)
+
+      // Remove helper field so Prisma doesn't complain
+      if ('deleteTransferSlip' in formattedData) {
+        delete formattedData.deleteTransferSlip;
+      }
+
       const record = await this.prisma.financial_record.update({
         where: { id },
         data: formattedData
       });
-      
       return record;
     } catch (error) {
       console.error(`Error updating financial record with ID ${id}:`, error);
