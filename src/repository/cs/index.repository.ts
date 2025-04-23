@@ -38,9 +38,37 @@ class CsRepository {
 
   async getPurchase(Request: Partial<any>): Promise<any> {
     try {
+      // สร้าง where condition สำหรับการค้นหา
+      let whereCondition: any = {};
+      
+      // ถ้ามีการค้นหา
+      if (Request.search && Request.search.trim() !== '') {
+        const searchTerm = Request.search.trim();
+        whereCondition = {
+          OR: [
+            { book_number: { contains: searchTerm } },
+            { d_route: { contains: searchTerm } },
+            { d_status: { contains: searchTerm } },
+            { d_term: { contains: searchTerm } },
+            { d_transport: { contains: searchTerm } },
+            { d_shipment_number: { contains: searchTerm } } // เพิ่มการค้นหาจากเลข shipment
+          ]
+        };
+      }
+      
+      // ถ้ามีการกรองตาม status
+      if (Request.status && Request.status.trim() !== '') {
+        whereCondition.d_status = Request.status;
+      }
+      
+      // ถ้ามีการค้นหา ไม่ต้องใช้ pagination
       const purchase = await this.prisma.d_purchase.findMany({
-        take: 10,
-        skip: Request.skip,
+        where: whereCondition,
+        // ถ้าไม่มีการค้นหา ให้ใช้ pagination ตามปกติ
+        ...((!Request.search || Request.search.trim() === '') ? {
+          take: 10,
+          skip: Request.skip,
+        } : {}),
         include: {
           d_purchase_emp: {
             include: {
@@ -57,7 +85,10 @@ class CsRepository {
         ],
       });
 
-      const Total = await this.prisma.d_purchase.findMany({});
+      // นับจำนวนรายการทั้งหมดที่ตรงกับเงื่อนไขการค้นหา
+      const Total = await this.prisma.d_purchase.count({
+        where: whereCondition
+      });
 
       purchase.sort((a: any, b: any) => {
         const extractParts = (shipmentNumber: string | null | undefined) => {
@@ -86,7 +117,7 @@ class CsRepository {
       
       const data = {
         purchase: purchase,
-        total: Total.length,
+        total: Total,
       };
 
       return data;
