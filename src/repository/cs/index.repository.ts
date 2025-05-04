@@ -1,16 +1,16 @@
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../../prisma/prisma-client";
 import moment from "moment";
 
 class CsRepository {
-  private prisma: PrismaClient;
+
 
   constructor() {
-    this.prisma = new PrismaClient();
+    // ใช้ prisma singleton แทนการสร้าง PrismaClient ใหม่
   }
 
   async getAllCs(Request: Partial<any>): Promise<any> {
     try {
-      const data = await this.prisma.d_purchase.findMany({
+      const data = await prisma.d_purchase.findMany({
         where: {
           d_status: {
             in: ['ปิดการขาย', 'ลูกค้าเครดิต', 'ค้างชำระเงิน'] // Include multiple statuses
@@ -23,7 +23,7 @@ class CsRepository {
         skip: Request.skip,
       });
 
-      const total = await this.prisma.d_purchase.count({
+      const total = await prisma.d_purchase.count({
         where: {
           d_status: {
             in: ['ปิดการขาย', 'ลูกค้าเครดิต', 'ค้างชำระเงิน'] // Include multiple statuses
@@ -62,7 +62,7 @@ class CsRepository {
       }
       
       // ถ้ามีการค้นหา ไม่ต้องใช้ pagination
-      const purchase = await this.prisma.d_purchase.findMany({
+      const purchase = await prisma.d_purchase.findMany({
         where: whereCondition,
         // ถ้าไม่มีการค้นหา ให้ใช้ pagination ตามปกติ
         ...((!Request.search || Request.search.trim() === '') ? {
@@ -86,7 +86,7 @@ class CsRepository {
       });
 
       // นับจำนวนรายการทั้งหมดที่ตรงกับเงื่อนไขการค้นหา
-      const Total = await this.prisma.d_purchase.count({
+      const Total = await prisma.d_purchase.count({
         where: whereCondition
       });
 
@@ -128,7 +128,7 @@ class CsRepository {
 
   async getPurchaseDetail(purchaseId: string): Promise<any> {
     try {
-      return await this.prisma.d_purchase.findFirst({
+      return await prisma.d_purchase.findFirst({
         where: {
           id: purchaseId,
         },
@@ -200,7 +200,7 @@ class CsRepository {
 
   async getPurchaseByid(id: string): Promise<any> {
     try {
-      const data = await this.prisma.d_purchase.findFirst({
+      const data = await prisma.d_purchase.findFirst({
         where: {
           id: id,
         },
@@ -233,7 +233,7 @@ class CsRepository {
     try {
       let data;
       if (user_id != "") {
-        data = await this.prisma.d_purchase.update({
+        data = await prisma.d_purchase.update({
           where: {
             id: purchase_id,
           },
@@ -246,7 +246,7 @@ class CsRepository {
 
       }
       else {
-        data = await this.prisma.d_purchase.update({
+        data = await prisma.d_purchase.update({
           where: {
             id: purchase_id,
           },
@@ -258,7 +258,7 @@ class CsRepository {
       }
 
       if (data) {
-        await this.prisma
+        await prisma
           .$transaction(async (tx) => {
             await tx.d_purchase_status.updateMany({
               where: {
@@ -293,7 +293,7 @@ class CsRepository {
 
   async getDocument(Request: Partial<any>): Promise<any> {
     try {
-      const data = await this.prisma.document.findFirst({
+      const data = await prisma.document.findFirst({
         where: {
           documennt_type: Request.transport,
           type_master: Request.route,
@@ -308,7 +308,7 @@ class CsRepository {
 
   async GetAgentCy(): Promise<any> {
     try {
-      const data = await this.prisma.agentcy.findMany();
+      const data = await prisma.agentcy.findMany();
       return data;
     } catch (err: any) {
       throw new Error(err);
@@ -448,7 +448,7 @@ class CsRepository {
 
   async updateAgencytoSale(Request: Partial<any>): Promise<any> {
     try {
-      return await this.prisma.d_agentcy.update({
+      return await prisma.d_agentcy.update({
         where: {
           id: Request.d_agentcy_id,
         },
@@ -467,7 +467,7 @@ class CsRepository {
     Request: Partial<any>
   ): Promise<boolean> {
     try {
-      await this.prisma.$transaction(async (tx) => {
+      await prisma.$transaction(async (tx) => {
         try {
           
           await tx.d_purchase.update({
@@ -528,7 +528,7 @@ class CsRepository {
     }
   }
   async getTransport(id: string): Promise<any> {
-    return await this.prisma.d_purchase.findFirst({
+    return await prisma.d_purchase.findFirst({
       where: { id },
       select: { d_transport: true },
     });
@@ -538,7 +538,7 @@ class CsRepository {
   async submitAddpayment(RequestData: Partial<any>): Promise<any> {
     try {
 
-      await this.prisma.$transaction(async (tx) => {
+      await prisma.$transaction(async (tx) => {
 
         const payment = await tx.payment_purchase.findMany({
           where: {

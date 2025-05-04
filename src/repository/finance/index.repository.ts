@@ -1,23 +1,24 @@
-import { PrismaClient, withdrawalInformaion } from "@prisma/client";
+import { withdrawalInformaion } from "@prisma/client";
 import moment from "moment";
 import crypto from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 
-//interface 
+// ใช้ prisma singleton จากไฟล์ prisma-client.ts
+import { prisma } from "../../prisma/prisma-client";
 
+//interface 
 import { FinanceInterface } from "../../services/finance/dto/finance.interface"
 import { PurchaseFinanceDataInterface } from "../../services/finance/dto/purchaseFinanceData.interface"
 
 class FinanceRepository {
-  private prisma: PrismaClient;
-
+  // ไม่ต้องสร้าง PrismaClient ใหม่ทุกครั้ง
   constructor() {
-    this.prisma = new PrismaClient();
+    // ไม่ต้องสร้าง PrismaClient ใหม่
   }
 
   public async getPurchaseBysearch(search: string): Promise<any> {
     try {
-      const purchase: any = await this.prisma.d_purchase.findMany({
+      const purchase: any = await prisma.d_purchase.findMany({
         where: {
           d_shipment_number: {
             contains: search
@@ -45,7 +46,7 @@ class FinanceRepository {
   public async getPurchase(Request: Partial<any>): Promise<any> {
     try {
       const { page, term, po_number } = Request
-      const purchase = await this.prisma.d_purchase.findMany({
+      const purchase = await prisma.d_purchase.findMany({
         where: {
           d_transport: term,
           d_shipment_number: {
@@ -98,7 +99,7 @@ class FinanceRepository {
         }
       })
 
-      const total = await this.prisma.d_purchase.count({
+      const total = await prisma.d_purchase.count({
         where: {
           OR: [
             {
@@ -131,7 +132,7 @@ class FinanceRepository {
 
   public async getPurchaseById(id: string): Promise<any> {
     try {
-      const purchase = await this.prisma.d_purchase.findUnique({
+      const purchase = await prisma.d_purchase.findUnique({
         where: {
           id: id
         },
@@ -182,7 +183,7 @@ class FinanceRepository {
 
   public async getWorkByid(d_purchase_id: string): Promise<any> {
     try {
-      const work = await this.prisma.purchase_finance.findFirst({
+      const work = await prisma.purchase_finance.findFirst({
         where: {
           d_purchase_id: d_purchase_id
         },
@@ -261,7 +262,7 @@ class FinanceRepository {
 
   public async getWidhdrawalInformationByShipmentNumber(d_shipment_number: string): Promise<any> {
     try {
-      const withdrawalInformation = await this.prisma.withdrawalInformaion.findFirst({
+      const withdrawalInformation = await prisma.withdrawalInformaion.findFirst({
         where: {
           invoice_package: d_shipment_number
         },
@@ -276,7 +277,7 @@ class FinanceRepository {
   public async submitPurchase(data: any): Promise<any> {
     try{
       // บันทึกข้อมูลหลักของการชำระเงิน
-      const purchaseFinance = await this.prisma.purchase_finance.create({
+      const purchaseFinance = await prisma.purchase_finance.create({
         data: {
           ...data
         }
@@ -296,7 +297,7 @@ public async createPaymentDetail(data: any) {
   try {
       console.log('Creating payment detail:', data);
       console.log('Payment detail data:', data);
-      return await this.prisma.finance_payment_detail.create({
+      return await prisma.finance_payment_detail.create({
           data: {
               purchase_finance_id: data.purchase_finance_id,
               payment_date: data.payment_date,
@@ -312,7 +313,7 @@ public async createPaymentDetail(data: any) {
 
 public async deletePaymentDetails(purchaseFinanceId: string) {
   try {
-      return await this.prisma.finance_payment_detail.deleteMany({
+      return await prisma.finance_payment_detail.deleteMany({
           where: {
               purchase_finance_id: purchaseFinanceId
           }
@@ -325,7 +326,7 @@ public async deletePaymentDetails(purchaseFinanceId: string) {
 
 public async getPaymentDetailsByPurchaseId(purchaseFinanceId: string) {
   try {
-      return await this.prisma.finance_payment_detail.findMany({
+      return await prisma.finance_payment_detail.findMany({
           where: {
               purchase_finance_id: purchaseFinanceId
           },
@@ -341,7 +342,7 @@ public async getPaymentDetailsByPurchaseId(purchaseFinanceId: string) {
 
   public async getPurchaseFinanceById(id: string): Promise<any> {
     try {
-      const purchaseFinance = await this.prisma.purchase_finance.findUnique({
+      const purchaseFinance = await prisma.purchase_finance.findUnique({
         where: {
           id: id
         }
@@ -357,7 +358,7 @@ public async getPaymentDetailsByPurchaseId(purchaseFinanceId: string) {
   public async updatePurchase(id: string, data: any): Promise<any> {
     try{
       // อัพเดทข้อมูลหลักของการซื้อ
-      const purchaseFinance = await this.prisma.purchase_finance.update({
+      const purchaseFinance = await prisma.purchase_finance.update({
         where: {
           id: id
         },
@@ -405,7 +406,7 @@ public async getPaymentDetailsByPurchaseId(purchaseFinanceId: string) {
       }
       
       // Get all withdrawal records with filters
-      const widhdrawalInformation = await this.prisma.withdrawalInformaion.findMany({
+      const widhdrawalInformation = await prisma.withdrawalInformaion.findMany({
         where,
         orderBy: {
           createdAt: 'desc'
@@ -415,7 +416,7 @@ public async getPaymentDetailsByPurchaseId(purchaseFinanceId: string) {
       console.log("Found withdrawal records:", widhdrawalInformation.length);
 
       // Get total count
-      const total = await this.prisma.withdrawalInformaion.count({ where });
+      const total = await prisma.withdrawalInformaion.count({ where });
 
       return {
         widhdrawalInformation,
@@ -429,7 +430,7 @@ public async getPaymentDetailsByPurchaseId(purchaseFinanceId: string) {
 
   public async CheckWidhdrawalInformation(Request: Partial<any>): Promise<any> {
     try {
-      const widhdrawalInformation = await this.prisma.withdrawalInformaion.findMany({
+      const widhdrawalInformation = await prisma.withdrawalInformaion.findMany({
         where: {
           invoice_package: Request.invoice_package
         }
@@ -474,7 +475,7 @@ public async getPaymentDetailsByPurchaseId(purchaseFinanceId: string) {
       // Create records for each withdrawal item
       const createdRecords = await Promise.all(
         withdrawalItems.map(async (item: any) => {
-          return await this.prisma.withdrawalInformaion.create({
+          return await prisma.withdrawalInformaion.create({
             data: {
               d_purchase_id: mainData.d_purchase_id || '',
               group_id: groupId,
@@ -506,7 +507,7 @@ public async getPaymentDetailsByPurchaseId(purchaseFinanceId: string) {
 
       // Create a summary record with total gasoline and other costs
       // This record will not have specific withdrawal item details
-      await this.prisma.withdrawalInformaion.create({
+      await prisma.withdrawalInformaion.create({
         data: {
           d_purchase_id: mainData.d_purchase_id || '',
           group_id: groupId,
@@ -578,7 +579,7 @@ public async getPaymentDetailsByPurchaseId(purchaseFinanceId: string) {
       const remainingAmount = transferAmount - totalWithdrawalAmount;
       
       // Get existing records for this group
-      const existingRecords = await this.prisma.withdrawalInformaion.findMany({
+      const existingRecords = await prisma.withdrawalInformaion.findMany({
         where: {
           group_id: groupId
         }
@@ -589,7 +590,7 @@ public async getPaymentDetailsByPurchaseId(purchaseFinanceId: string) {
       const existingRegularRecords = existingRecords.filter(record => record.invoice_package !== 'SUMMARY_RECORD');
       
       // Use transaction to ensure all updates are atomic
-      return await this.prisma.$transaction(async (prisma) => {
+      return await prisma.$transaction(async (prisma) => {
         const updatedRecords = [];
         
         // Update or create records for each withdrawal item
@@ -705,7 +706,7 @@ public async getPaymentDetailsByPurchaseId(purchaseFinanceId: string) {
 
   public async getWidhdrawalInformationByGroupId(groupId: string): Promise<any> {
     try {
-      const records = await this.prisma.withdrawalInformaion.findMany({
+      const records = await prisma.withdrawalInformaion.findMany({
         where: {
           group_id: groupId
         },
@@ -723,7 +724,7 @@ public async getPaymentDetailsByPurchaseId(purchaseFinanceId: string) {
 
   public async deleteWithdrawalInformation(id: string): Promise<any> {
     try {
-      const deleteWithdrawalInformation = await this.prisma.withdrawalInformaion.delete({
+      const deleteWithdrawalInformation = await prisma.withdrawalInformaion.delete({
         where: {
           id: id,
         },
@@ -738,7 +739,7 @@ public async getPaymentDetailsByPurchaseId(purchaseFinanceId: string) {
   public async deleteWithdrawalInformationByGroupId(groupId: string): Promise<any> {
     try {
       // ลบข้อมูลทั้งหมดที่มี group_id เดียวกัน
-      const deleteResult = await this.prisma.withdrawalInformaion.deleteMany({
+      const deleteResult = await prisma.withdrawalInformaion.deleteMany({
         where: {
           group_id: groupId,
         },
@@ -767,7 +768,7 @@ public async getPaymentDetailsByPurchaseId(purchaseFinanceId: string) {
         exchangeRate: data.exchangeRate ? parseFloat(data.exchangeRate) : null
       };
 
-      const record = await this.prisma.financial_record.create({
+      const record = await prisma.financial_record.create({
         data: formattedData
       });
       
@@ -819,10 +820,10 @@ public async getPaymentDetailsByPurchaseId(purchaseFinanceId: string) {
         
       }
       
-      const records = await this.prisma.financial_record.findMany({
+      const records = await prisma.financial_record.findMany({
         where,
         orderBy: {
-          date: 'desc'
+          createdAt: 'desc'
         }
       });
 
@@ -837,7 +838,7 @@ public async getPaymentDetailsByPurchaseId(purchaseFinanceId: string) {
 
   public async getFinancialRecordById(id: string): Promise<any> {
     try {
-      const record = await this.prisma.financial_record.findUnique({
+      const record = await prisma.financial_record.findUnique({
         where: { id }
       });
       
@@ -864,7 +865,7 @@ public async getPaymentDetailsByPurchaseId(purchaseFinanceId: string) {
       // If deleteTransferSlip is requested, set transferSlip to null
       if (data.deleteTransferSlip) {
         // Optionally: remove the file from the file system
-        const oldRecord = await this.prisma.financial_record.findUnique({ where: { id } });
+        const oldRecord = await prisma.financial_record.findUnique({ where: { id } });
         if (oldRecord && oldRecord.transferSlip) {
           try {
             const fs = require('fs');
@@ -888,7 +889,7 @@ public async getPaymentDetailsByPurchaseId(purchaseFinanceId: string) {
         delete formattedData.deleteTransferSlip;
       }
 
-      const record = await this.prisma.financial_record.update({
+      const record = await prisma.financial_record.update({
         where: { id },
         data: formattedData
       });
@@ -902,7 +903,7 @@ public async getPaymentDetailsByPurchaseId(purchaseFinanceId: string) {
   public async deleteFinancialRecord(id: string): Promise<any> {
     try {
       // Soft delete by setting deletedAt
-      const record = await this.prisma.financial_record.delete({
+      const record = await prisma.financial_record.delete({
         where: { id }
       });
       
@@ -916,7 +917,7 @@ public async getPaymentDetailsByPurchaseId(purchaseFinanceId: string) {
   public async hardDeleteFinancialRecord(id: string): Promise<any> {
     try {
       // Hard delete - use with caution
-      const record = await this.prisma.financial_record.delete({
+      const record = await prisma.financial_record.delete({
         where: { id }
       });
       
@@ -929,7 +930,7 @@ public async getPaymentDetailsByPurchaseId(purchaseFinanceId: string) {
 
   public async getCustomerAccounts(): Promise<any> {
     try {
-      const customerAccounts = await this.prisma.finance_customer_account.findMany({
+      const customerAccounts = await prisma.finance_customer_account.findMany({
         where: {
           deletedAt: null
         },
@@ -951,7 +952,7 @@ public async getPaymentDetailsByPurchaseId(purchaseFinanceId: string) {
 
   public async getCompanyAccounts(): Promise<any> {
     try {
-      const companyAccounts = await this.prisma.finance_company_account.findMany({
+      const companyAccounts = await prisma.finance_company_account.findMany({
         where: {
           deletedAt: null
         },

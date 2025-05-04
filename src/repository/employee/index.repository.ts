@@ -1,10 +1,8 @@
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../../prisma/prisma-client";
 
 class EmployeeRepository {
-  private prisma: PrismaClient;
-
   constructor() {
-    this.prisma = new PrismaClient();
+    // ใช้ prisma singleton แทนการสร้าง PrismaClient ใหม่
   }
 
   /**
@@ -14,7 +12,7 @@ class EmployeeRepository {
    */
   async getEmployeesByRole(roleName: string): Promise<any[]> {
     try {
-      const employees = await this.prisma.user.findMany({
+      const employees = await prisma.user.findMany({
         where: {
           roles: {
             roles_name: roleName
@@ -55,7 +53,7 @@ class EmployeeRepository {
    */
   async getAllEmployees(): Promise<any[]> {
     try {
-      const employees = await this.prisma.user.findMany({
+      const employees = await prisma.user.findMany({
         where: {
           deletedAt: null
         },

@@ -1,12 +1,11 @@
 import { Request, Response } from "express";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../../prisma/prisma-client";
 import bcrypt from "bcrypt";
 
 class SuperadminRepository {
-  private prisma: PrismaClient;
 
   constructor() {
-    this.prisma = new PrismaClient();
+    // ใช้ prisma singleton แทนการสร้าง PrismaClient ใหม่
   }
 
   async getEmployee(request: any): Promise<any> {
@@ -18,7 +17,7 @@ class SuperadminRepository {
           roles_name: request.role_name,
         };
       }
-      const data = await this.prisma.user.findMany({
+      const data = await prisma.user.findMany({
         where: whereCondition,
         skip: request.skip,
         take: request.take,
@@ -27,7 +26,7 @@ class SuperadminRepository {
         },
       });
 
-      const total = await this.prisma.user.count({
+      const total = await prisma.user.count({
         where: whereCondition,
       });
 

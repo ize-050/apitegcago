@@ -40,13 +40,20 @@ const financeController = new FinanceController();
 const consignmentController = new ConsignmentController();
 const transactionController = new TransactionController();
 
-router.post('/record-money', authMiddleware, transactionController.createTransaction.bind(transactionController));
-
-// Get all transactions
+// Record Money Routes
+router.post('/record-money', authMiddleware, upload.fields([
+  { name: 'file', maxCount: 1 },
+  { name: 'customerDepositFile', maxCount: 1 },
+  { name: 'exchangeFile', maxCount: 1 }
+]), transactionController.createTransaction.bind(transactionController));
 router.get('/record-money', authMiddleware, transactionController.getTransactions.bind(transactionController));
-
-// Get transaction by ID
 router.get('/record-money/:id', authMiddleware, transactionController.getTransactionById.bind(transactionController));
+router.put('/record-money/:id', authMiddleware, upload.fields([
+  { name: 'file', maxCount: 1 },
+  { name: 'customerDepositFile', maxCount: 1 },
+  { name: 'exchangeFile', maxCount: 1 }
+]), transactionController.updateTransaction.bind(transactionController));
+router.delete('/record-money/:id', authMiddleware, transactionController.deleteTransaction.bind(transactionController));
 
 // Employee routes
 // router.get('/employee/role/salesupport', authMiddleware, (req, res) => employeeController.getSalesSupportEmployees(req, res));

@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../../prisma/prisma-client";
 
 import {
   Requestcustomer,
@@ -15,15 +15,14 @@ import moment from "moment";
 
 class SaleRepository {
   
-  private prisma: PrismaClient;
 
   constructor() {
-    this.prisma = new PrismaClient();
+    // ใช้ prisma singleton แทนการสร้าง PrismaClient ใหม่
   }
 
   async checkShipmentNumber(d_transport: string): Promise<any> {
     const today = moment().format('YYMMDD')
-    const existingBookNumber :any = await this.prisma.d_purchase.findFirst({
+    const existingBookNumber :any = await prisma.d_purchase.findFirst({
       where: {
         d_shipment_number: {
           startsWith: `${d_transport}001`,
@@ -38,7 +37,7 @@ class SaleRepository {
   }
 
   async checkShipmentNumberLast(d_transport: string): Promise<any> {
-    const existingBookNumber :any = await this.prisma.d_purchase.findFirst({
+    const existingBookNumber :any = await prisma.d_purchase.findFirst({
       where: {
         d_shipment_number: {
           startsWith: `${d_transport}`,
@@ -60,7 +59,7 @@ class SaleRepository {
 
       const skip = RequestData.skip;
 
-      const customer = await this.prisma.customer.findMany({
+      const customer = await prisma.customer.findMany({
         skip: skip,
         take: 10,
         include: {
@@ -90,7 +89,7 @@ class SaleRepository {
         },
       });
 
-      const Total = await this.prisma.customer.findMany({
+      const Total = await prisma.customer.findMany({
         include: {
           details: true,
           customer_emp: true,
@@ -125,7 +124,7 @@ class SaleRepository {
 
   async getCustomerDetail(customerId: string): Promise<any> {
     try {
-      return await this.prisma.customer.findUnique({
+      return await prisma.customer.findUnique({
         where: {
           id: customerId,
         },
@@ -153,7 +152,7 @@ class SaleRepository {
 
   async CheckEmpid(cus_code: string): Promise<any> {
     try {
-      const CheckEmpid = await this.prisma.customer.findFirst({
+      const CheckEmpid = await prisma.customer.findFirst({
         where: {
           cus_code: cus_code,
         },
@@ -176,12 +175,12 @@ class SaleRepository {
         createdAt: new Date(moment().utc(true).format('YYYY-MM-DD HH:mm:ss'))
       };
 
-      const InsertCustomer = await this.prisma.customer.create({
+      const InsertCustomer = await prisma.customer.create({
         data: customer,
       });
 
       if (InsertCustomer) {
-        const InsertCustomerDetail = await this.prisma.customer_detail.create({
+        const InsertCustomerDetail = await prisma.customer_detail.create({
           data: {
             customer_id: InsertCustomer.id,
             cd_company: RequestData.cd_company,
@@ -193,11 +192,11 @@ class SaleRepository {
           cus_status: RequestData.cus_status,
           active: "active",
         };
-        const InsertCustomerStatus = await this.prisma.customer_status.create({
+        const InsertCustomerStatus = await prisma.customer_status.create({
           data: CustomerStatus,
         });
 
-        const InsertCustomerEmp = await this.prisma.customer_emp.create({
+        const InsertCustomerEmp = await prisma.customer_emp.create({
           data: {
             customer_id: InsertCustomer.id,
             user_id: RequestData.userId,
@@ -206,7 +205,7 @@ class SaleRepository {
           },
         });
 
-        // const insertStatus = await this.prisma.d_purchase_status.create({
+        // const insertStatus = await prisma.d_purchase_status.create({
         //   data: {
         //     customer_id: InsertCustomer.id,
         //     status_name: "กำลังดูแล",
@@ -229,7 +228,7 @@ class SaleRepository {
         status: RequestData.cus_status,
       };
 
-      const CheckStatus = await this.prisma.customer_status.findFirst({
+      const CheckStatus = await prisma.customer_status.findFirst({
         where: {
           customer_id: RequestData.customer_id,
           active: "active",
@@ -257,7 +256,7 @@ class SaleRepository {
         updatedAt: new Date(),
       };
 
-      const UpdateCustomer = await this.prisma.customer.update({
+      const UpdateCustomer = await prisma.customer.update({
         where: {
           id: RequestData.customer_id,
         },
@@ -289,7 +288,7 @@ class SaleRepository {
           updatedAt: new Date(),
         };
 
-        const UpdateCustomerDetail = await this.prisma.customer_detail.update({
+        const UpdateCustomerDetail = await prisma.customer_detail.update({
           where: {
             customer_id: RequestData.customer_id,
           },
@@ -308,7 +307,7 @@ class SaleRepository {
 
 
   async getEmpAllCS(): Promise<any> {
-    return await this.prisma.user.findMany({
+    return await prisma.user.findMany({
       where: {
         roles: {
           is: { roles_name: "Cs" }
@@ -324,7 +323,7 @@ class SaleRepository {
       const customerId = RequestStatus.customer_id;
       const statusString: Tagstatus = RequestStatus.status;
 
-      const UpdateStatus = await this.prisma.customer_status.updateMany({
+      const UpdateStatus = await prisma.customer_status.updateMany({
         //เปลี่ยนสถานะเป็น nonactive ล่าสุด
         where: {
           customer_id: customerId,
@@ -336,7 +335,7 @@ class SaleRepository {
       });
 
       if (UpdateStatus) {
-        await this.prisma.customer_status.create({
+        await prisma.customer_status.create({
           data: {
             customer_id: customerId,
             cus_status: statusString,
@@ -353,7 +352,7 @@ class SaleRepository {
   async getAllEstimate(RequestData: any): Promise<any> {
     try {
       console.log("dfgsdfsdfs", RequestData.userId);
-      const purchase = await this.prisma.d_purchase.findMany({
+      const purchase = await prisma.d_purchase.findMany({
         skip: RequestData.skip,
         take: 10,
         where: {
@@ -381,7 +380,7 @@ class SaleRepository {
         },
       });
 
-      const Total = await this.prisma.d_purchase.findMany({
+      const Total = await prisma.d_purchase.findMany({
         where: {
           d_purchase_emp: {
             some: {
@@ -405,7 +404,7 @@ class SaleRepository {
 
       console.log("purchaseId", purchaseId);
 
-      return await this.prisma.d_purchase.findFirst({
+      return await prisma.d_purchase.findFirst({
         where: {
           id: purchaseId,
         },
@@ -488,7 +487,7 @@ class SaleRepository {
   async getEmployee(employeeId: string): Promise<any> {
     //เซลลที่ไม่ใช่เรา
     try {
-      return await this.prisma.user.findMany({
+      return await prisma.user.findMany({
         where: {
           id: {
             not: employeeId,
@@ -507,8 +506,7 @@ class SaleRepository {
 
   async cancelEstimate(RequestData: Partial<any>): Promise<any> {
     try {
-      await this.prisma
-        .$transaction(async (tx) => {
+      await prisma.$transaction(async (tx) => {
           const purchaseId = RequestData.purchase_id;
           await this.ChangePurchaseStatus(
             tx,
@@ -542,7 +540,7 @@ class SaleRepository {
 
   async applyEmployee(RequestData: Partial<any>): Promise<any> {
     try {
-      const data = await this.prisma.$transaction(async (tx: any) => {
+      const data = await prisma.$transaction(async (tx: any) => {
         await tx.d_purchase_emp.create({
           data: {
             d_purchase_id: RequestData.id,
@@ -584,7 +582,7 @@ class SaleRepository {
 
   async acceptJob(id: string, RequestData: Partial<any>): Promise<any> {
     try {
-      const data = await this.prisma.$transaction(async (tx: any) => {
+      const data = await prisma.$transaction(async (tx: any) => {
         await tx.d_purchase_emp.updateMany({
           where: {
             d_purchase_id: id,
@@ -623,7 +621,7 @@ class SaleRepository {
 
   async cancelJob(id: string, user_id: string): Promise<any> {
     try {
-      const data = await this.prisma.$transaction(async (tx: any) => {
+      const data = await prisma.$transaction(async (tx: any) => {
         await tx.d_purchase_emp.deleteMany({
           where: { d_purchase_id: id, user_id: user_id },
         });
@@ -709,7 +707,7 @@ class SaleRepository {
 
   async checkEdit(tx: any, id: string, IdnoChange: any): Promise<any> {
     try {
-      return await this.prisma.d_product_image.findMany({
+      return await prisma.d_product_image.findMany({
         where: {
           d_purchase_id: id,
           id: {
@@ -724,7 +722,7 @@ class SaleRepository {
 
   async submitEstimateDocumentfile(data: any): Promise<any> {
     try {
-      return await this.prisma.d_document_file.create({
+      return await prisma.d_document_file.create({
         data: data,
       });
     } catch (err: any) {
@@ -810,7 +808,7 @@ class SaleRepository {
 
   async getCheckbooking(): Promise<any> {
     try {
-      return await this.prisma.d_purchase.findMany({});
+      return await prisma.d_purchase.findMany({});
     } catch (err: any) {
       throw new Error(err);
     }

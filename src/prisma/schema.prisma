@@ -952,7 +952,8 @@ model financial_record {
   transferDate        DateTime
   details             String?   @db.Text
   transferSlip        String?   @db.Text
-  
+
+  financial_transaction_id String? 
   // Receipt specific fields
   amountTHB           Float?
   exchangeRate        Float?
@@ -962,6 +963,8 @@ model financial_record {
   
   createdAt           DateTime  @default(now())
   updatedAt           DateTime?
+  
+  // Relations
 }
 
 model purchase_finance {
@@ -1175,6 +1178,7 @@ model finance_customer_deposit {
   amount                Float?     
   vat                   Float?     
   totalWithVat          Float?     
+  totalDepositAmount    Float?     
   transferDate          DateTime?
   receivingAccount      String?    
   notes                 String?   @db.Text
@@ -1201,6 +1205,7 @@ model finance_transaction {
   updatedAt             DateTime?
   deletedAt             DateTime?
   customerDeposit       finance_customer_deposit? @relation(fields: [customerDepositId], references: [id])
+  
   exchange              finance_exchange?         @relation(fields: [exchangeId], references: [id])
   user                  user?                     @relation(fields: [salespersonId], references: [id])
 }

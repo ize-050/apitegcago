@@ -1,19 +1,18 @@
 import { Request, Response } from "express";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../../prisma/prisma-client";
 import bcrypt from "bcrypt";
 
 class UserRepository {
-  private prisma: PrismaClient;
 
   constructor() {
-    this.prisma = new PrismaClient();
+    // ใช้ prisma singleton แทนการสร้าง PrismaClient ใหม่
   }
 
   async login(request: { email: string; password: string }): Promise<any> {
     try {
       const { email, password } = request;
 
-      const user = await this.prisma.user.findUnique({
+      const user = await prisma.user.findUnique({
         where: { email },
         include: {
           roles: true,

@@ -1,17 +1,17 @@
-import { PrismaClient  } from "@prisma/client";
+import { prisma } from "../../prisma/prisma-client";
 import moment from "moment";
 import { CSStatusService } from '../../services/cs_status/index.service';
 
 class CsStatusRepository {
-  private prisma: PrismaClient;
+ 
 
   constructor() {
-    this.prisma = new PrismaClient();
+    // ใช้ prisma singleton แทนการสร้าง PrismaClient ใหม่
   }
 
   async getDataCsStatus(id: string): Promise<any> {
     try {
-      const cs_purchase = await this.prisma.cs_purchase.findMany({
+      const cs_purchase = await prisma.cs_purchase.findMany({
         where: {
           d_purchase_id: id,
         },
@@ -28,7 +28,7 @@ class CsStatusRepository {
 
   async getDocumentStatus(id: string): Promise<any> {
     try {
-      const document = await this.prisma.cs_document.findFirst({
+      const document = await prisma.cs_document.findFirst({
         where: {
           cs_purchase_id: id,
         },
@@ -45,7 +45,7 @@ class CsStatusRepository {
 
   async getDeparture(id: string): Promise<any> {
     try {
-      const departure = await this.prisma.provedeparture.findFirst({
+      const departure = await prisma.provedeparture.findFirst({
         where: {
           cs_purchase_id: id,
         },
@@ -59,7 +59,7 @@ class CsStatusRepository {
 
   async getWaitRelease(id: string): Promise<any> {
     try {
-      const wait_release = await this.prisma.waitrelease.findFirst({
+      const wait_release = await prisma.waitrelease.findFirst({
         where: {
           cs_purchase_id: id,
         },
@@ -76,7 +76,7 @@ class CsStatusRepository {
 
   async getSuccessRelease(id: string): Promise<any> {
     try {
-      const success_release = await this.prisma.cs_inspection.findFirst({
+      const success_release = await prisma.cs_inspection.findFirst({
         where: {
           cs_purchase_id: id,
         },
@@ -93,7 +93,7 @@ class CsStatusRepository {
 
   async getDestination(id: string): Promise<any> {
     try {
-      const destination = await this.prisma.cs_wait_destination.findFirst({
+      const destination = await prisma.cs_wait_destination.findFirst({
         where: {
           cs_purchase_id: id,
         },
@@ -111,7 +111,7 @@ class CsStatusRepository {
 
   async getLeave(id: string): Promise<any> {
     try {
-      const leave = await this.prisma.leave.findFirst({
+      const leave = await prisma.leave.findFirst({
         where: {
           cs_purchase_id: id,
         },
@@ -128,7 +128,7 @@ class CsStatusRepository {
 
   async getSentSuccess(id: string): Promise<any> {
     try {
-      const sent_success = await this.prisma.cs_already_sent.findFirst({
+      const sent_success = await prisma.cs_already_sent.findFirst({
         where: {
           cs_purchase_id: id,
         },
@@ -145,7 +145,7 @@ class CsStatusRepository {
 
   async getReturn(id: string): Promise<any> {
     try {
-      const getReturn = await this.prisma.cs_return_cabinet.findFirst({
+      const getReturn = await prisma.cs_return_cabinet.findFirst({
         where: {
           cs_purchase_id: id,
         },
@@ -208,7 +208,7 @@ class CsStatusRepository {
   }
   async getBookcabinet(id: string): Promise<any> {
     try {
-      const book_cabinet = await this.prisma.bookcabinet.findFirst({
+      const book_cabinet = await prisma.bookcabinet.findFirst({
         where: {
           cs_purchase_id: id,
         },
@@ -225,7 +225,7 @@ class CsStatusRepository {
 
   async getReceipt(id: string): Promise<any> {
     try {
-      const getReceipt = await this.prisma.receive.findFirst({
+      const getReceipt = await prisma.receive.findFirst({
         where: {
           cs_purchase_id: id,
         },
@@ -244,7 +244,7 @@ class CsStatusRepository {
 
   async getContain(id: string): Promise<any> {
     try {
-      const getContain = await this.prisma.contain.findFirst({
+      const getContain = await prisma.contain.findFirst({
         where: {
           cs_purchase_id: id,
         },
@@ -541,7 +541,7 @@ class CsStatusRepository {
 
   async getEtc(id: string): Promise<any> {
     try {
-      const etc = await this.prisma.cs_etc.findFirst({
+      const etc = await prisma.cs_etc.findFirst({
         where: {
           cs_purchase_id: id,
         },

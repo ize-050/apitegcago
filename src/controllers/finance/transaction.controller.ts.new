@@ -1,0 +1,408 @@
+import { Request, Response } from "express";
+import { TransactionCreateDto, TransactionUpdateDto } from "../../services/finance/dto/transaction.interface";
+import { ConsignmentCreateDto } from "../../services/finance/dto/consignment.interface";
+import z from "zod";
+import upload from "../../config/multerConfig";
+import { PrismaClient } from "@prisma/client";
+import { v4 as uuidv4 } from 'uuid';
+import * as fs from 'fs';
+import * as path from 'path';
+
+const prisma = new PrismaClient();
+
+export class TransactionController {
+    constructor() {
+        // ไม่ต้องสร้าง PrismaClient ใหม่ เพราะเราใช้ singleton จาก lib/prisma.ts
+    }
+
+    public async createTransaction(req: Request, res: Response) {
+        try {
+            const file = req.file;
+            const data = req.body;
+            
+            // ตรวจสอบว่ามีไฟล์หรือไม่
+            let transferSlipUrl = null;
+            
+            // ถ้ามีไฟล์ให้บันทึกไฟล์
+            if (file) {
+                // สร้างชื่อไฟล์ใหม่เพื่อป้องกันการซ้ำกัน
+                const fileName = `${Date.now()}-${uuidv4()}${path.extname(file.originalname)}`;
+                const uploadPath = path.join('public/images/transferSlip', fileName);
+                
+                // บันทึกไฟล์
+                fs.renameSync(file.path, uploadPath);
+                
+                // กำหนด URL สำหรับไฟล์
+                transferSlipUrl = `/images/transferSlip/${fileName}`;
+                
+                // กำหนด transferSlipUrl ในข้อมูล
+                data.transferSlipUrl = transferSlipUrl;
+            }
+            
+            // ถ้าข้อมูลส่งมาเป็น JSON string ให้แปลงเป็น object
+            if (typeof data.customerDeposit === 'string') {
+                data.customerDeposit = JSON.parse(data.customerDeposit);
+            }
+            
+            if (typeof data.exchange === 'string') {
+                data.exchange = JSON.parse(data.exchange);
+            }
+            
+            // สร้าง transaction
+            const transaction = await prisma.finance_transaction.create({
+                data: {
+                    date: data.date ? new Date(data.date) : new Date(),
+                    salespersonId: data.salespersonId,
+                    documentNumber: data.documentNumber,
+                    customerId: data.customerId,
+                    type: data.type,
+                    deposit_purpose: data.deposit_purpose,
+                    transferSlipUrl: transferSlipUrl,
+                    createdAt: new Date(),
+                    updatedAt: new Date()
+                }
+            });
+            
+            // สร้าง customer deposit ถ้าเป็นประเภท deposit
+            if (data.type === 'deposit' && data.customerDeposit) {
+                await prisma.finance_customer_deposit.create({
+                    data: {
+                        transactionId: transaction.id,
+                        date: data.date ? new Date(data.date) : new Date(),
+                        salespersonId: data.salespersonId,
+                        documentNumber: data.documentNumber,
+                        customerId: data.customerId,
+                        amountRMB: data.customerDeposit.amountRMB ? parseFloat(data.customerDeposit.amountRMB) : 0,
+                        priceDifference: data.customerDeposit.priceDifference ? parseFloat(data.customerDeposit.priceDifference) : 0,
+                        exchangeRate: data.customerDeposit.exchangeRate ? parseFloat(data.customerDeposit.exchangeRate) : 0,
+                        fee: data.customerDeposit.fee ? parseFloat(data.customerDeposit.fee) : 0,
+                        amount: data.customerDeposit.amount ? parseFloat(data.customerDeposit.amount) : 0,
+                        vat: data.customerDeposit.vat ? parseFloat(data.customerDeposit.vat) : 0,
+                        totalWithVat: data.customerDeposit.totalWithVat ? parseFloat(data.customerDeposit.totalWithVat) : 0,
+                        transferDate: data.customerDeposit.transferDate ? new Date(data.customerDeposit.transferDate) : null,
+                        receivingAccount: data.customerDeposit.receivingAccount,
+                        exchangeRateProfit: data.customerDeposit.exchangeRateProfit ? parseFloat(data.customerDeposit.exchangeRateProfit) : 0,
+                        incomePerTransaction: data.customerDeposit.incomePerTransaction ? parseFloat(data.customerDeposit.incomePerTransaction) : 0,
+                        totalDepositAmount: data.customerDeposit.totalDepositAmount ? parseFloat(data.customerDeposit.totalDepositAmount) : 0,
+                        includeVat: data.customerDeposit.includeVat || false,
+                        notes: data.customerDeposit.notes,
+                        transferSlipUrl: transferSlipUrl,
+                        createdAt: new Date(),
+                        updatedAt: new Date()
+                    }
+                });
+            }
+            
+            // สร้าง exchange ถ้าเป็นประเภท order หรือ exchange
+            if ((data.type === 'order' || data.type === 'exchange') && data.exchange) {
+                await prisma.finance_exchange.create({
+                    data: {
+                        transactionId: transaction.id,
+                        date: data.date ? new Date(data.date) : new Date(),
+                        salespersonId: data.salespersonId,
+                        documentNumber: data.documentNumber,
+                        customerId: data.customerId,
+                        amountRMB: data.exchange.amountRMB ? parseFloat(data.exchange.amountRMB) : 0,
+                        priceDifference: data.exchange.priceDifference ? parseFloat(data.exchange.priceDifference) : 0,
+                        exchangeRate: data.exchange.exchangeRate ? parseFloat(data.exchange.exchangeRate) : 0,
+                        fee: data.exchange.fee ? parseFloat(data.exchange.fee) : 0,
+                        amount: data.exchange.amount ? parseFloat(data.exchange.amount) : 0,
+                        transferDate: data.exchange.transferDate ? new Date(data.exchange.transferDate) : null,
+                        receivingAccount: data.exchange.receivingAccount,
+                        exchangeRateProfit: data.exchange.exchangeRateProfit ? parseFloat(data.exchange.exchangeRateProfit) : 0,
+                        incomePerTransaction: data.exchange.incomePerTransaction ? parseFloat(data.exchange.incomePerTransaction) : 0,
+                        includeVat: data.exchange.includeVat || false,
+                        vatAmount: data.exchange.vatAmount ? parseFloat(data.exchange.vatAmount) : 0,
+                        totalWithVat: data.exchange.totalWithVat ? parseFloat(data.exchange.totalWithVat) : 0,
+                        notes: data.exchange.notes,
+                        transferSlipUrl: transferSlipUrl, // ใช้ transferSlipUrl ที่อัพโหลด
+                        createdAt: new Date(),
+                        updatedAt: new Date()
+                    }
+                });
+            }
+            
+            return res.status(201).json({
+                message: "สร้างรายการเงินสำเร็จ",
+                statusCode: 201,
+                data: transaction
+            });
+        } catch (error) {
+            console.error("Error creating transaction:", error);
+            return res.status(500).json({
+                message: "เกิดข้อผิดพลาดในการสร้างรายการเงิน",
+                statusCode: 500,
+                error: error
+            });
+        }
+    }
+
+    public async updateTransaction(req: Request, res: Response) {
+        try {
+            const { id } = req.params;
+            const file = req.file;
+            const data = req.body;
+            
+            // ตรวจสอบว่ามีไฟล์หรือไม่
+            let transferSlipUrl = null;
+            
+            // ถ้ามีไฟล์ให้บันทึกไฟล์
+            if (file) {
+                // สร้างชื่อไฟล์ใหม่เพื่อป้องกันการซ้ำกัน
+                const fileName = `${Date.now()}-${uuidv4()}${path.extname(file.originalname)}`;
+                const uploadPath = path.join('public/images/transferSlip', fileName);
+                
+                // บันทึกไฟล์
+                fs.renameSync(file.path, uploadPath);
+                
+                // กำหนด URL สำหรับไฟล์
+                transferSlipUrl = `/images/transferSlip/${fileName}`;
+                
+                // กำหนด transferSlipUrl ในข้อมูล
+                data.transferSlipUrl = transferSlipUrl;
+                console.log('File uploaded, transferSlipUrl set to:', transferSlipUrl);
+            }
+            
+            // ถ้าข้อมูลส่งมาเป็น JSON string ให้แปลงเป็น object
+            if (typeof data.customerDeposit === 'string') {
+                data.customerDeposit = JSON.parse(data.customerDeposit);
+            }
+            
+            if (typeof data.exchange === 'string') {
+                data.exchange = JSON.parse(data.exchange);
+            }
+            
+            // ถ้ามีไฟล์อัพโหลดใหม่และมีข้อมูล exchange ให้กำหนด transferSlipUrl ใน exchange ด้วย
+            if (file && transferSlipUrl && data.exchange) {
+                console.log('Setting transferSlipUrl in exchange data:', transferSlipUrl);
+                data.exchange.transferSlipUrl = transferSlipUrl;
+            }
+            
+            console.log('Request data after processing:', {
+                id,
+                transferSlipUrl,
+                'data.transferSlipUrl': data.transferSlipUrl,
+                'data.exchange?.transferSlipUrl': data.exchange?.transferSlipUrl
+            });
+
+            // Check if transaction exists
+            const existingTransaction = await prisma.finance_transaction.findUnique({
+                where: {
+                    id: id,
+                    deletedAt: null
+                },
+                include: {
+                    customerDeposit: true,
+                    exchange: true
+                }
+            });
+
+            if (!existingTransaction) {
+                return res.status(404).json({
+                    message: "ไม่พบข้อมูลรายการ",
+                    statusCode: 404
+                });
+            }
+
+            // Update based on transaction type
+            if (existingTransaction.type === "deposit" && existingTransaction.customerDeposit) {
+                // Update customer deposit
+                await prisma.finance_customer_deposit.update({
+                    where: {
+                        id: existingTransaction.customerDeposit.id
+                    },
+                    data: {
+                        date: data.date ? new Date(data.date) : undefined,
+                        salespersonId: data.salespersonId,
+                        documentNumber: data.documentNumber,
+                        customerId: data.customerId,
+                        amountRMB: data.amountRMB ? parseFloat(data.amountRMB) : undefined,
+                        priceDifference: data.priceDifference ? parseFloat(data.priceDifference) : undefined,
+                        exchangeRate: data.exchangeRate ? parseFloat(data.exchangeRate) : undefined,
+                        fee: data.fee ? parseFloat(data.fee) : undefined,
+                        amount: data.amount ? parseFloat(data.amount) : undefined,
+                        vat: data.vat ? parseFloat(data.vat) : undefined,
+                        totalWithVat: data.totalWithVat ? parseFloat(data.totalWithVat) : undefined,
+                        transferDate: data.transferDate ? new Date(data.transferDate) : undefined,
+                        receivingAccount: data.receivingAccount,
+                        notes: data.notes,
+                        transferSlipUrl: data.transferSlipUrl,
+                        updatedAt: new Date()
+                    }
+                });
+            } else if (existingTransaction.type === "order" || existingTransaction.type === "topup" || existingTransaction.type === "exchange") {
+                // อัพเดต exchange ถ้ามี
+                if (existingTransaction.exchange) {
+                    console.log('Updating exchange with transferSlipUrl:', data.transferSlipUrl);
+                    await prisma.finance_exchange.update({
+                        where: {
+                            id: existingTransaction.exchange.id
+                        },
+                        data: {
+                            date: data.date ? new Date(data.date) : undefined,
+                            salespersonId: data.salespersonId,
+                            documentNumber: data.documentNumber,
+                            customerId: data.customerId,
+                            amountRMB: data.exchange.amountRMB ? parseFloat(data.exchange.amountRMB) : undefined,
+                            priceDifference: data.exchange.priceDifference ? parseFloat(data.exchange.priceDifference) : undefined,
+                            exchangeRate: data.exchange.exchangeRate ? parseFloat(data.exchange.exchangeRate) : undefined,
+                            fee: data.exchange.fee ? parseFloat(data.exchange.fee) : undefined,
+                            amount: data.exchange.amount ? parseFloat(data.exchange.amount) : undefined,
+                            transferDate: data.exchange.transferDate ? new Date(data.exchange.transferDate) : undefined,
+                            receivingAccount: data.exchange.receivingAccount,
+                            exchangeRateProfit: data.exchange.exchangeRateProfit ? parseFloat(data.exchange.exchangeRateProfit) : undefined,
+                            incomePerTransaction: data.exchange.incomePerTransaction ? parseFloat(data.exchange.incomePerTransaction) : undefined,
+                            notes: data.exchange.notes,
+                            transferSlipUrl: file ? transferSlipUrl : (data.exchange.transferSlipUrl || data.transferSlipUrl),
+                            updatedAt: new Date()
+                        }
+                    });
+                }
+            }
+
+            // Update transaction
+            const updatedTransaction = await prisma.finance_transaction.update({
+                where: {
+                    id: id
+                },
+                data: {
+                    date: data.date ? new Date(data.date) : undefined,
+                    salespersonId: data.salespersonId,
+                    documentNumber: data.documentNumber,
+                    customerId: data.customerId,
+                    type: data.type,
+                    deposit_purpose: data.deposit_purpose,
+                    transferSlipUrl: data.transferSlipUrl,
+                    updatedAt: new Date()
+                }
+            });
+
+            return res.status(200).json({
+                message: "อัปเดตรายการเงินสำเร็จ",
+                statusCode: 200,
+                data: updatedTransaction
+            });
+        } catch (error) {
+            console.error("Error updating transaction:", error);
+            return res.status(500).json({
+                message: "เกิดข้อผิดพลาดในการอัปเดตรายการเงิน",
+                statusCode: 500,
+                error: error
+            });
+        }
+    }
+
+    public async deleteTransaction(req: Request, res: Response) {
+        try {
+            const { id } = req.params;
+
+            // Check if transaction exists
+            const existingTransaction = await prisma.finance_transaction.findUnique({
+                where: {
+                    id: id,
+                    deletedAt: null
+                }
+            });
+
+            if (!existingTransaction) {
+                return res.status(404).json({
+                    message: "ไม่พบข้อมูลรายการ",
+                    statusCode: 404
+                });
+            }
+
+            // Soft delete transaction
+            await prisma.finance_transaction.update({
+                where: {
+                    id: id
+                },
+                data: {
+                    deletedAt: new Date()
+                }
+            });
+
+            return res.status(200).json({
+                message: "ลบรายการเงินสำเร็จ",
+                statusCode: 200
+            });
+        } catch (error) {
+            console.error("Error deleting transaction:", error);
+            return res.status(500).json({
+                message: "เกิดข้อผิดพลาดในการลบรายการเงิน",
+                statusCode: 500,
+                error: error
+            });
+        }
+    }
+
+    public async getTransactions(req: Request, res: Response) {
+        try {
+            const transactions = await prisma.finance_transaction.findMany({
+                where: {
+                    deletedAt: null
+                },
+                include: {
+                    customer: true,
+                    salesperson: true,
+                    customerDeposit: true,
+                    exchange: true
+                },
+                orderBy: {
+                    createdAt: 'desc'
+                }
+            });
+
+            return res.status(200).json({
+                message: "ดึงข้อมูลรายการเงินสำเร็จ",
+                statusCode: 200,
+                data: transactions
+            });
+        } catch (error) {
+            console.error("Error getting transactions:", error);
+            return res.status(500).json({
+                message: "เกิดข้อผิดพลาดในการดึงข้อมูลรายการเงิน",
+                statusCode: 500,
+                error: error
+            });
+        }
+    }
+
+    public async getTransactionById(req: Request, res: Response) {
+        try {
+            const { id } = req.params;
+
+            const transaction = await prisma.finance_transaction.findUnique({
+                where: {
+                    id: id,
+                    deletedAt: null
+                },
+                include: {
+                    customer: true,
+                    salesperson: true,
+                    customerDeposit: true,
+                    exchange: true
+                }
+            });
+
+            if (!transaction) {
+                return res.status(404).json({
+                    message: "ไม่พบข้อมูลรายการ",
+                    statusCode: 404
+                });
+            }
+
+            return res.status(200).json({
+                message: "ดึงข้อมูลรายการเงินสำเร็จ",
+                statusCode: 200,
+                data: transaction
+            });
+        } catch (error) {
+            console.error("Error getting transaction:", error);
+            return res.status(500).json({
+                message: "เกิดข้อผิดพลาดในการดึงข้อมูลรายการเงิน",
+                statusCode: 500,
+                error: error
+            });
+        }
+    }
+}

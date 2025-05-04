@@ -1,17 +1,17 @@
-import { PrismaClient, customer } from "@prisma/client";
+import { customer } from "@prisma/client";
+import { prisma } from "../../prisma/prisma-client";
 import moment from "moment";
 
 class NotificationRepository {
-    private prisma: PrismaClient;
 
     constructor() {
-        this.prisma = new PrismaClient();
-    }
+    // ใช้ prisma singleton แทนการสร้าง PrismaClient ใหม่
+  }
 
     async getDataAgency(page: number): Promise<any> { //ดึงข้อมูล  Agency
         try {
             console.log("page", page)
-            const data = await this.prisma.agentcy.findMany({
+            const data = await prisma.agentcy.findMany({
                 skip: (page - 1) * 10,
                 take: 10,
                 orderBy: {
@@ -22,7 +22,7 @@ class NotificationRepository {
                 }
             });
 
-            const TotalPage = await this.prisma.agentcy.count();
+            const TotalPage = await prisma.agentcy.count();
             return {
                 data: data,
                 TotalPage: TotalPage
@@ -34,7 +34,7 @@ class NotificationRepository {
 
     async createAgency(data: any): Promise<any> { //สร้าง Agency
         try {
-            const Total = await this.prisma.agentcy.create({
+            const Total = await prisma.agentcy.create({
                 data: {
                     ...data
                 },
@@ -48,7 +48,7 @@ class NotificationRepository {
 
     async updateAgency(data: any, id: string): Promise<any> {
         try {
-            const Total = await this.prisma.agentcy.update({
+            const Total = await prisma.agentcy.update({
                 where: {
                     id: id
                 },
@@ -66,7 +66,7 @@ class NotificationRepository {
 
     async deleteAgency(id: string): Promise<any> {
         try {
-            const Total = await this.prisma.agentcy.update({
+            const Total = await prisma.agentcy.update({
                 where: {
                     id: id
                 },
@@ -84,7 +84,7 @@ class NotificationRepository {
 
     async getCurrentData(page: number): Promise<any> {
         try {
-            const data = await this.prisma.currency.findMany({
+            const data = await prisma.currency.findMany({
                 skip: (page - 1) * 10,
                 take: 10,
                 orderBy: {
@@ -94,7 +94,7 @@ class NotificationRepository {
                     deletedAt:null
                 }
             });
-            const TotalPage = await this.prisma.currency.count();
+            const TotalPage = await prisma.currency.count();
             return {
                 data: data,
                 TotalPage: TotalPage
@@ -106,7 +106,7 @@ class NotificationRepository {
 
     async createCurrent(data: any): Promise<any> {
         try {
-            const Total = await this.prisma.currency.create({
+            const Total = await prisma.currency.create({
                 data: {
                     ...data
                 },
@@ -120,7 +120,7 @@ class NotificationRepository {
 
     async updateCurrent(data: any, id: string): Promise<any> {
         try {
-            const Total = await this.prisma.currency.update({
+            const Total = await prisma.currency.update({
                 where: {
                     id: id
                 },
@@ -137,7 +137,7 @@ class NotificationRepository {
     }
     async deleteCurrent(id: string): Promise<any> {
         try {
-            const Total = await this.prisma.currency.update({
+            const Total = await prisma.currency.update({
                 where: {
                     id: id
                 },
@@ -155,7 +155,7 @@ class NotificationRepository {
 
     async getDocumentData(page: number): Promise<any> {
         try {
-            const data = await this.prisma.document.findMany({
+            const data = await prisma.document.findMany({
                 skip: (page - 1) * 10,
                 take: 10,
                 orderBy: {
@@ -165,7 +165,7 @@ class NotificationRepository {
                     deletedAt:null
                 }
             });
-            const TotalPage = await this.prisma.document.count();
+            const TotalPage = await prisma.document.count();
             return {
                 data: data,
                 TotalPage: TotalPage

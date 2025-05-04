@@ -1,11 +1,12 @@
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../../prisma/prisma-client";
 import { ConsignmentCreateDto, ConsignmentUpdateDto } from "../../services/finance/dto/consignment.interface";
+import moment from "moment";
 
 class ConsignmentRepository {
-  private prisma: PrismaClient;
+ 
 
   constructor() {
-    this.prisma = new PrismaClient();
+    // ใช้ prisma singleton แทนการสร้าง PrismaClient ใหม่
   }
 
   public async createConsignment(data: ConsignmentCreateDto): Promise<any> {
@@ -19,7 +20,7 @@ class ConsignmentRepository {
         amountRMB: typeof data.amountRMB === 'string' ? parseFloat(data.amountRMB) : data.amountRMB,
       };
 
-      const record = await this.prisma.finance_exchange.create({
+      const record = await prisma.finance_exchange.create({
         data: formattedData
       });
       
@@ -45,14 +46,14 @@ class ConsignmentRepository {
         if (filters.startDate) {
           where.date = {
             ...(where.date || {}),
-            gte: new Date(filters.startDate)
+            gte: moment(filters.startDate).utc(true).toDate()
           };
         }
         
         if (filters.endDate) {
           where.date = {
             ...(where.date || {}),
-            lte: new Date(filters.endDate)
+            lte: moment(filters.endDate).utc(true).toDate()
           };
         }
         
@@ -71,7 +72,7 @@ class ConsignmentRepository {
       }
       
       // Get total count for pagination
-      const totalCount = await this.prisma.finance_exchange.count({ where });
+      const totalCount = await prisma.finance_exchange.count({ where });
       
       // Parse pagination parameters
       const page = filters?.page ? parseInt(filters.page as string) : 1;
@@ -79,10 +80,10 @@ class ConsignmentRepository {
       const skip = (page - 1) * limit;
       
       // Get records with paginationไ
-      const records = await this.prisma.finance_exchange.findMany({
+      const records = await prisma.finance_exchange.findMany({
         where,
         orderBy: {
-          date: 'desc'
+          createdAt: 'desc'
         },
         skip,
         take: limit
@@ -108,7 +109,7 @@ class ConsignmentRepository {
 
   public async getConsignmentById(id: string): Promise<any> {
     try {
-      const record = await this.prisma.finance_exchange.findUnique({
+      const record = await prisma.finance_exchange.findUnique({
         where: { id }
       });
       
@@ -141,7 +142,7 @@ class ConsignmentRepository {
         formattedData.amountRMB = parseFloat(data.amountRMB);
       }
 
-      const record = await this.prisma.finance_customer_deposit.update({
+      const record = await prisma.finance_customer_deposit.update({
         where: { id },
         data: formattedData
       });
@@ -155,7 +156,7 @@ class ConsignmentRepository {
 
   public async deleteConsignment(id: string): Promise<any> {
     try {
-      const record = await this.prisma.finance_exchange.delete({
+      const record = await prisma.finance_exchange.delete({
         where: { id }
       });
       

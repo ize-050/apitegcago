@@ -1,16 +1,17 @@
-import { PrismaClient, customer } from "@prisma/client";
+import { customer } from "@prisma/client";
+import { prisma } from "../../prisma/prisma-client";
 import moment from "moment";
 
 class NotificationRepository {
-    private prisma: PrismaClient;
+    
 
     constructor() {
-        this.prisma = new PrismaClient();
-    }
+    // ใช้ prisma singleton แทนการสร้าง PrismaClient ใหม่
+  }
 
     async getNotification(id: string): Promise<any> { //ดึงข้อมูล Notification by Userid
         try {
-            const data = await this.prisma.notification.findMany({
+            const data = await prisma.notification.findMany({
                 where: {
                     user_id: id,
                     status: false,
@@ -30,7 +31,7 @@ class NotificationRepository {
 
     async sendNotification(Request: Partial<any>): Promise<any> {  //ส่งNotification ให้ทุกคน
         try {
-            const Total = await this.prisma.notification.create({
+            const Total = await prisma.notification.create({
                 data: {
                     title: Request.title,
                     message: Request.message,
@@ -50,7 +51,7 @@ class NotificationRepository {
 
     async readNotification(id: string): Promise<any> { //อ่าน Notification
         try {
-            const Total = await this.prisma.notification.update({
+            const Total = await prisma.notification.update({
                 where: {
                     id: id,
                 },
@@ -67,7 +68,7 @@ class NotificationRepository {
 
     async readAllNotifications(userId:string): Promise<any> { //อ่านทุก Notification
         try {
-            const Total = await this.prisma.notification.updateMany({
+            const Total = await prisma.notification.updateMany({
                 where: {
                     user_id: userId,
                 },
