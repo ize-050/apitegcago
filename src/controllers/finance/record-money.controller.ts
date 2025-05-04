@@ -226,16 +226,16 @@ export class RecordMoneyController {
       }
       
       // ลบไฟล์เก่าถ้ามี
-      if (existingRecord.transferSlipUrl) {
-        const oldFilePath = path.join(__dirname, '../../public', existingRecord.transferSlipUrl);
-        if (fs.existsSync(oldFilePath)) {
-          try {
-            fs.unlinkSync(oldFilePath);
-          } catch (unlinkError) {
-            console.error('Error deleting old file:', unlinkError);
-          }
-        }
-      }
+      // if (existingRecord.transferSlipUrl) {
+      //   const oldFilePath = path.join(__dirname, '../../public', existingRecord.transferSlipUrl);
+      //   if (fs.existsSync(oldFilePath)) {
+      //     try {
+      //       fs.unlinkSync(oldFilePath);
+      //     } catch (unlinkError) {
+      //       console.error('Error deleting old file:', unlinkError);
+      //     }
+      //   }
+      // }
       
       // เพิ่ม URL ของไฟล์ที่อัพโหลดลงในข้อมูลรายการเงิน
       const fileUrl = `/uploads/record-money/${path.basename(req.file.path)}`;
@@ -291,16 +291,16 @@ export class RecordMoneyController {
       }
       
       // ลบไฟล์หลักฐานการโอนถ้ามี
-      if (existingRecord.transferSlipUrl) {
-        const filePath = path.join(__dirname, '../../public', existingRecord.transferSlipUrl);
-        if (fs.existsSync(filePath)) {
-          try {
-            fs.unlinkSync(filePath);
-          } catch (unlinkError) {
-            console.error('Error deleting file:', unlinkError);
-          }
-        }
-      }
+      // if (existingRecord.transferSlipUrl) {
+      //   const filePath = path.join(__dirname, '../../public', existingRecord.transferSlipUrl);
+      //   if (fs.existsSync(filePath)) {
+      //     try {
+      //       fs.unlinkSync(filePath);
+      //     } catch (unlinkError) {
+      //       console.error('Error deleting file:', unlinkError);
+      //     }
+      //   }
+      // }
       
       // ลบรายการเงิน
       await this.financeRepository.deleteRecordMoney(id);
