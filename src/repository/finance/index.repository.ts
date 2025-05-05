@@ -95,7 +95,11 @@ class FinanceRepository {
               provedeparture:true,
             }
           },
-          purchase_finance: true
+          purchase_finance: {
+            include: {
+              shipping_details: true,
+            }
+          }
         }
       })
 

@@ -233,7 +233,8 @@ class FinanceService {
                 th_shipping_advance: allData.th_shipping_advance || null,
                 th_shipping_remaining: allData.th_shipping_remaining || null,
                 th_shipping_return_to: allData.th_shipping_return_to || null,
-                th_total_shipping: allData.th_total_shipping || null
+                th_total_shipping: allData.th_total_shipping || null,
+                shipping_advance_status: allData.shipping_advance_status || null
             };
             
             // บันทึกข้อมูล Shipping
@@ -400,7 +401,8 @@ class FinanceService {
                     th_shipping_advance: allData.th_shipping_advance || null,
                     th_shipping_remaining: allData.th_shipping_remaining || null,
                     th_shipping_return_to: allData.th_shipping_return_to || null,
-                    th_total_shipping: allData.th_total_shipping || null
+                    th_total_shipping: allData.th_total_shipping || null,
+                    shipping_advance_status: allData.shipping_advance_status || null
                 };
                 
                 // อัพเดทหรือสร้างข้อมูล Shipping

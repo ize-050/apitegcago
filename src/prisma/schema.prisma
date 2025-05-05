@@ -1103,6 +1103,7 @@ model purchase_finance_shipping {
   th_shipping_remaining  String?
   th_shipping_return_to  String?
   th_total_shipping      String?
+  shipping_advance_status String?  // สถานะ Shipping เบิก: เคลียร์ครบแล้ว, ยังไม่ได้เคลียร์, เคลียร์บางส่วน
   
   purchase_finance       purchase_finance @relation(fields: [purchase_finance_id], references: [id], onDelete: Cascade)
   
