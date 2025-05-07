@@ -98,6 +98,9 @@ class FinanceRepository {
           purchase_finance: {
             include: {
               shipping_details: true,
+              thailand_expenses:true,
+
+              
             }
           }
         }
