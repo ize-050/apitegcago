@@ -110,6 +110,9 @@ router.get('/export-withdrawal-excel', authMiddleware, (req, res) => financeCont
 // Export finance work data to Excel
 router.get('/export-finance-work', authMiddleware, (req, res) => financeController.exportFinanceWorkToExcel(req, res));
 
+// Export record money data to Excel
+router.get('/export-record-money', authMiddleware, (req, res) => financeController.exportRecordMoneyToExcel(req, res));
+
 // Consignment Routes
 router.post('/consignments', authMiddleware, (req, res) => consignmentController.createConsignment(req, res));
 router.get('/consignments', authMiddleware, (req, res) => consignmentController.getConsignments(req, res));

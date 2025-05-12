@@ -9,6 +9,7 @@ import path from 'path';
 import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 import FinanceRepository from "../../repository/finance/index.repository";
+import prisma from "../../lib/prisma";
 
 export class FinanceController {
     private financeService;
@@ -883,7 +884,7 @@ export class FinanceController {
                 { header: 'Invoice & PackingList No.', key: 'invoice_package', width: 30 },
                 { header: 'Consignee', key: 'consignee', width: 30 },
                 { header: 'วันที่เบิก', key: 'withdrawal_date', width: 15 },
-                { header: 'ยอดเบิก', key: 'withdrawal_amount', width: 15 },
+                { header: 'ยอดเบิก', key: 'withdrawal_amou   nt', width: 15 },
                 { header: 'ยอดโอน', key: 'transfer_amount', width: 15 },
                 { header: 'ค่าอื่นๆ', key: 'pay_price', width: 15 },
                 { header: 'ค่าน้ำมัน', key: 'pay_gasoline', width: 15 },
@@ -1126,6 +1127,303 @@ export class FinanceController {
         }
     }
 
+    // Export record money data to Excel
+    public async exportRecordMoneyToExcel(req: Request, res: Response) {
+        try {
+            const filters: any = req.query;
+            
+            // ดึงข้อมูลรายการเงินตามฟิลเตอร์
+            const where: any = {
+                deletedAt: null
+            };
+
+            // ฟิลเตอร์ตามประเภท
+            if (filters.type && filters.type !== 'all') {
+                where.type = filters.type;
+            }
+
+            // ฟิลเตอร์ตามวันที่
+            if (filters.startDate || filters.endDate) {
+                where.date = {};
+                
+                if (filters.startDate) {
+                    where.date.gte = new Date(filters.startDate);
+                }
+                
+                if (filters.endDate) {
+                    where.date.lte = new Date(filters.endDate);
+                }
+            }
+
+            // ฟิลเตอร์ตามคำค้นหา
+            if (filters.search) {
+                where.OR = [
+                    { documentNumber: { contains: filters.search } }
+                ];
+            }
+
+            // ดึงข้อมูลทั้งหมดโดยไม่มีการแบ่งหน้า
+             const transactions = await prisma.finance_transaction.findMany({
+                            where: {
+                                deletedAt: null
+                            },
+                            include: {
+                                customerDeposit: true,
+                                exchange: true,
+                                user: true
+                            },
+                            orderBy: {
+                                createdAt: 'desc'
+                            }
+                        });
+
+            if (!transactions || transactions.length === 0) {
+                return res.status(404).json({ message: 'ไม่พบข้อมูล' });
+            }
+
+            // Create a new Excel workbook
+            const workbook = new ExcelJS.Workbook();
+            workbook.creator = 'Tegcago Financial System';
+            workbook.lastModifiedBy = 'Tegcago';
+            workbook.created = new Date();
+            workbook.modified = new Date();
+
+            // Add a worksheet
+            const worksheet = workbook.addWorksheet('รายงานการเงิน', {
+                pageSetup: {
+                    paperSize: 9, // A4
+                    orientation: 'landscape',
+                    fitToPage: true
+                }
+            });
+
+            // Set column widths
+            worksheet.columns = [
+                { key: 'index', width: 5 },
+                { key: 'date', width: 15 },
+                { key: 'type', width: 15 },
+                { key: 'documentNumber', width: 15 },
+                { key: 'customerName', width: 25 },
+                { key: 'salesperson', width: 20 },
+                { key: 'amountRMB', width: 15 },
+                { key: 'exchangeRate', width: 15 },
+                { key: 'amountTHB', width: 15 },
+                { key: 'transferDate', width: 15 },
+                { key: 'depositPurpose', width: 20 },
+                { key: 'exchangeRateProfit', width: 15 },
+                { key: 'incomePerTransaction', width: 15 }
+            ];
+
+            // Add title
+            const titleRow = worksheet.addRow(['รายงานการเงิน']);
+            titleRow.font = { bold: true, size: 16 };
+            titleRow.alignment = { horizontal: 'center' };
+            worksheet.mergeCells(`A${titleRow.number}:M${titleRow.number}`);
+
+            // Add date
+            const dateRow = worksheet.addRow([`วันที่พิมพ์: ${new Date().toLocaleDateString('th-TH')}`, '', '', '', '', '', '', '', '', '', '', '', '']);
+            dateRow.font = { bold: true };
+            worksheet.mergeCells(`A${dateRow.number}:M${dateRow.number}`);
+
+            // Add filter information if filters were applied
+            if (filters.startDate || filters.endDate || filters.type) {
+                const filterRow = worksheet.addRow(['ตัวกรอง:']);
+                filterRow.font = { bold: true };
+                
+                let filterText = '';
+                
+                if (filters.startDate && filters.endDate) {
+                    const startDate = new Date(filters.startDate);
+                    const endDate = new Date(filters.endDate);
+                    filterText += `วันที่: ${startDate.toLocaleDateString('th-TH')} ถึง ${endDate.toLocaleDateString('th-TH')} `;
+                } else if (filters.startDate) {
+                    const startDate = new Date(filters.startDate);
+                    filterText += `วันที่ตั้งแต่: ${startDate.toLocaleDateString('th-TH')} `;
+                } else if (filters.endDate) {
+                    const endDate = new Date(filters.endDate);
+                    filterText += `วันที่ถึง: ${endDate.toLocaleDateString('th-TH')} `;
+                }
+                
+                if (filters.type && filters.type !== 'all') {
+                    const typeMap: { [key: string]: string } = {
+                        'deposit': 'ฝากโอน',
+                        'withdraw': 'ถอน',
+                        'exchange': 'แลกเปลี่ยน'
+                    };
+                    filterText += `ประเภท: ${typeMap[filters.type] || filters.type}`;
+                }
+                
+                if (filterText) {
+                    const filterInfoRow = worksheet.addRow([filterText]);
+                    worksheet.mergeCells(`A${filterInfoRow.number}:M${filterInfoRow.number}`);
+                }
+            }
+
+            // Add empty row for spacing
+            worksheet.addRow([]);
+
+            // Add headers
+            const headerRow = worksheet.addRow([
+                'ลำดับ',
+                'วันที่',
+                'ประเภท',
+                'เลขที่เอกสาร',
+                'ชื่อลูกค้า',
+                'พนักงานขาย',
+                'จำนวนเงิน (RMB)',
+                'อัตราแลกเปลี่ยน',
+                'จำนวนเงิน (THB)',
+                'วันที่โอน',
+                'ฝากเรื่อง',
+                'กำไรอัตราแลกเปลี่ยน',
+                'รายรับต่อรายการธุรกรรม'
+            ]);
+
+            // Style the header row
+            headerRow.eachCell((cell) => {
+                cell.font = { bold: true };
+                cell.fill = {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb: 'FFE0E0E0' }
+                };
+                cell.border = {
+                    top: { style: 'thin' },
+                    left: { style: 'thin' },
+                    bottom: { style: 'thin' },
+                    right: { style: 'thin' }
+                };
+                cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+            });
+
+            // Map transaction types to Thai
+            const typeMap: { [key: string]: string } = {
+                'deposit': 'ฝากโอน',
+                'withdraw': 'ถอน',
+                'exchange': 'แลกเปลี่ยน'
+            };
+
+            // Add data rows
+            transactions.forEach((transaction: any, index: number) => {
+                const customerDeposit = transaction.customerDeposit || {};
+                const exchange = transaction.exchange || {};
+                
+                const row = worksheet.addRow([
+                    index + 1,
+                    transaction.date ? new Date(transaction.date).toLocaleDateString('th-TH') : '',
+                    typeMap[transaction.type] || transaction.type,
+                    transaction.documentNumber || '',
+                    transaction.customer?.name || '',
+                    transaction.salesperson?.name || '',
+                    customerDeposit.amountRMB || '',
+                    customerDeposit.exchangeRate || '',
+                    customerDeposit.amount || '',
+                    customerDeposit.transferDate ? new Date(customerDeposit.transferDate).toLocaleDateString('th-TH') : '',
+                    transaction.customerDeposit?.deposit_purpose || '',
+                    exchange.exchangeRateProfit || '',
+                    exchange.incomePerTransaction || ''
+                ]);
+
+                // Style the row
+                row.eachCell((cell) => {
+                    cell.border = {
+                        top: { style: 'thin' },
+                        left: { style: 'thin' },
+                        bottom: { style: 'thin' },
+                        right: { style: 'thin' }
+                    };
+                });
+
+                // Format number cells
+                row.getCell(7).numFmt = '#,##0.00'; // RMB amount
+                row.getCell(8).numFmt = '#,##0.00'; // Exchange rate
+                row.getCell(9).numFmt = '#,##0.00'; // THB amount
+                row.getCell(12).numFmt = '#,##0.00'; // Exchange rate profit
+                row.getCell(13).numFmt = '#,##0.00'; // Income per transaction
+            });
+
+            // Calculate totals
+            let totalRMB = 0;
+            let totalTHB = 0;
+            let totalExchangeRateProfit = 0;
+            let totalIncomePerTransaction = 0;
+
+            transactions.forEach((transaction: any) => {
+                const customerDeposit = transaction.customerDeposit || {};
+                const exchange = transaction.exchange || {};
+                
+                totalRMB += Number(customerDeposit.amountRMB || 0);
+                totalTHB += Number(customerDeposit.amount || 0);
+                totalExchangeRateProfit += Number(exchange.exchangeRateProfit || 0);
+                totalIncomePerTransaction += Number(exchange.incomePerTransaction || 0);
+            });
+
+            // Add total row
+            const totalRow = worksheet.addRow([
+                '',
+                '',
+                '',
+                '',
+                '',
+                'รวมทั้งหมด',
+                totalRMB,
+                '',
+                totalTHB,
+                '',
+                '',
+                totalExchangeRateProfit,
+                totalIncomePerTransaction
+            ]);
+
+            // Style the total row
+            totalRow.eachCell((cell) => {
+                cell.font = { bold: true };
+                cell.border = {
+                    top: { style: 'thin' },
+                    left: { style: 'thin' },
+                    bottom: { style: 'thin' },
+                    right: { style: 'thin' }
+                };
+            });
+
+            // Format number cells in total row
+            totalRow.getCell(7).numFmt = '#,##0.00'; // Total RMB
+            totalRow.getCell(9).numFmt = '#,##0.00'; // Total THB
+            totalRow.getCell(12).numFmt = '#,##0.00'; // Total Exchange rate profit
+            totalRow.getCell(13).numFmt = '#,##0.00'; // Total Income per transaction
+
+            // Create directory for excel files if it doesn't exist
+            const excelDir = path.join(process.cwd(), 'public', 'excel');
+            if (!fs.existsSync(excelDir)) {
+                fs.mkdirSync(excelDir, { recursive: true });
+            }
+
+            // Generate a unique filename
+            const fileName = `record_money_${new Date().toISOString().slice(0, 10)}_${uuidv4()}.xlsx`;
+            const filePath = path.join(excelDir, fileName);
+
+            // Write the file
+            await workbook.xlsx.writeFile(filePath);
+
+            // Set headers for file download
+            res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+            res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+            res.setHeader('Content-Length', fs.statSync(filePath).size);
+
+            // Stream the file to the client
+            const fileStream = fs.createReadStream(filePath);
+            fileStream.pipe(res);
+
+        } catch (error: any) {
+            console.error('Error exporting record money to Excel:', error);
+            return res.status(500).json({
+                success: false,
+                message: 'Error generating Excel file',
+                error: error.message
+            });
+        }
+    }
+
     // Export finance work data to Excel
     public async exportFinanceWorkToExcel(req: Request, res: Response) {
         try {
@@ -1164,6 +1462,7 @@ export class FinanceController {
             // Set column widths
             worksheet.columns = [
                 { key: 'index', width: 5 },
+                { key: 'shipmentNumber', width: 15 },
                 { key: 'bookNumber', width: 15 },
                 { key: 'date', width: 12 },
                 { key: 'shipmentType', width: 15 },
@@ -1174,8 +1473,11 @@ export class FinanceController {
                 { key: 'shippingLine', width: 15 },
                 { key: 'etd', width: 12 },
                 { key: 'eta', width: 12 },
-                { key: 'shipmentNumber', width: 15 },
-                { key: 'status', width: 15 },
+                { key: 'totalShippingExpense', width: 15 },
+                { key: 'totalShippingAdvance', width: 15 },
+                { key: 'returnTo', width: 20 },
+                { key: 'totalBeforeVat', width: 15 },
+                { key: 'shippingStatus', width: 15 },
                 { key: 'paymentStatus', width: 20 }
             ];
 
@@ -1183,12 +1485,12 @@ export class FinanceController {
             const titleRow = worksheet.addRow(['รายงานการเงิน']);
             titleRow.font = { bold: true, size: 16 };
             titleRow.alignment = { horizontal: 'center' };
-            worksheet.mergeCells(`A${titleRow.number}:N${titleRow.number}`);
+            worksheet.mergeCells(`A${titleRow.number}:R${titleRow.number}`);
 
             // Add date
             const dateRow = worksheet.addRow([`วันที่พิมพ์: ${new Date().toLocaleDateString('th-TH')}`]);
             dateRow.font = { bold: true };
-            worksheet.mergeCells(`A${dateRow.number}:N${dateRow.number}`);
+            worksheet.mergeCells(`A${dateRow.number}:R${dateRow.number}`);
 
             // Add filter information if filters were applied
             if (filters.startDate || filters.endDate || filters.shipmentType) {
@@ -1215,7 +1517,7 @@ export class FinanceController {
                 
                 if (filterText) {
                     const filterInfoRow = worksheet.addRow([filterText]);
-                    worksheet.mergeCells(`A${filterInfoRow.number}:N${filterInfoRow.number}`);
+                    worksheet.mergeCells(`A${filterInfoRow.number}:R${filterInfoRow.number}`);
                 }
             }
 
@@ -1225,7 +1527,8 @@ export class FinanceController {
             // Add headers
             const headerRow = worksheet.addRow([
                 'ลำดับ',
-                'เลขที่บุ๊คกิ้ง',
+                'เลข Shipment',
+                'เลขที่ตีราคา',
                 'วันที่',
                 'ประเภท Shipment',
                 'Container No',
@@ -1235,9 +1538,12 @@ export class FinanceController {
                 'สายเรือ',
                 'ETD',
                 'ETA',
-                'เลข Shipment',
-                'สถานะ',
-                'สถานะการชำระเงิน'
+                'รวมค่าใช้จ่าย Shipping',
+                'รวม Shipping เบิก',
+                'คืนใคร',
+                'ยอดเรียกเก็บ ก่อน Vat',
+                'สถานะ Shipping',
+                'สถานะทางบัญชี'
             ]);
 
             // Style the header row
@@ -1259,8 +1565,40 @@ export class FinanceController {
 
             // Add data rows
             records.forEach((data: any, index: number) => {
+                // Calculate total shipping expense (รวมค่าใช้จ่าย Shipping)
+                let totalShippingExpense = 0;
+                if (data?.purchase_finance?.length > 0 && data?.purchase_finance[0]?.shipping_details?.th_total_shipping) {
+                    totalShippingExpense = data?.purchase_finance[0]?.shipping_details?.th_total_shipping - (data?.purchase_finance[0]?.thailand_expenses?.th_hairy || 0);
+                }
+
+                // Get shipping advance (รวม Shipping เบิก)
+                let shippingAdvance = 0;
+                if (data?.purchase_finance?.length > 0 && data?.purchase_finance[0]?.shipping_details?.th_shipping_advance) {
+                    shippingAdvance = Number(data?.purchase_finance[0]?.shipping_details?.th_shipping_advance);
+                }
+
+                // Get shipping remaining and return to (คืนใคร)
+                let shippingRemaining = 0;
+                let returnTo = '';
+                if (data?.purchase_finance?.length > 0 && data?.purchase_finance[0]?.shipping_details?.th_shipping_remaining) {
+                    shippingRemaining = Number(data?.purchase_finance[0]?.shipping_details?.th_shipping_remaining);
+                    returnTo = data?.purchase_finance[0]?.shipping_details?.th_shipping_return_to || '';
+                }
+
+                // Get total before VAT (ยอดเรียกเก็บ ก่อน Vat)
+                let totalBeforeVat = 0;
+                if (data?.purchase_finance?.length > 0 && data?.purchase_finance[0]?.total_before_vat) {
+                    totalBeforeVat = Number(data?.purchase_finance[0]?.total_before_vat);
+                }
+
+                // Format numbers with 2 decimal places
+                const formatNumber = (num: number) => {
+                    return num.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                };
+
                 const row = worksheet.addRow([
                     index + 1,
+                    data?.d_shipment_number || '',
                     data?.book_number || '',
                     data?.createdAt ? new Date(data.createdAt).toLocaleDateString('th-TH') : '',
                     data?.d_transport || '',
@@ -1283,9 +1621,12 @@ export class FinanceController {
                         ? data.d_agentcy.find((agency: any) => agency?.d_sale_agentcy?.length > 0)
                             ?.d_sale_agentcy[0]?.d_agentcy?.agentcy_eta || ''
                         : '',
-                    data?.d_shipment_number || '',
-                    data?.d_status || '',
-                    data?.purchase_finance?.length > 0 ? data?.purchase_finance[0]?.payment_status : ''
+                    totalShippingExpense ? formatNumber(totalShippingExpense) : '',
+                    shippingAdvance ? formatNumber(shippingAdvance) : '',
+                    shippingRemaining ? `${formatNumber(shippingRemaining)} (${returnTo})` : '',
+                    totalBeforeVat ? formatNumber(totalBeforeVat) : '',
+                    data?.purchase_finance?.length > 0 ? data?.purchase_finance[0]?.shipping_details?.shipping_advance_status || '' : '',
+                    data?.purchase_finance?.length > 0 ? data?.purchase_finance[0]?.payment_status || '' : ''
                 ]);
 
                 // Style data rows
@@ -1299,33 +1640,43 @@ export class FinanceController {
                 });
             });
 
-            // Generate a unique filename
-            const fileName = `รายงานการเงิน_${new Date().toISOString().slice(0, 10)}.xlsx`;
-            const filePath = path.join('public', 'exports', fileName);
-
-            // Ensure the directory exists
-            if (!fs.existsSync(path.join('public', 'exports'))) {
-                fs.mkdirSync(path.join('public', 'exports'), { recursive: true });
+            // Generate a temporary file path
+            const tempFilePath = path.join(__dirname, `../../../temp/finance_work_export_${uuidv4()}.xlsx`);
+            
+            // Ensure the temp directory exists
+            const tempDir = path.dirname(tempFilePath);
+            if (!fs.existsSync(tempDir)) {
+                fs.mkdirSync(tempDir, { recursive: true });
             }
-
-            // Write the file
-            await workbook.xlsx.writeFile(filePath);
-
-            // Send the file as a download
-            res.download(filePath, fileName, (err) => {
-                if (err) {
-                    console.error('Error downloading file:', err);
-                    // Clean up the file after download attempt
-                    if (fs.existsSync(filePath)) {
-                        fs.unlinkSync(filePath);
+            
+            // Auto-fit columns based on content
+            if (worksheet.columns) {
+                worksheet.columns.forEach((column:any) => {
+                    if (column) {
+                        let maxLength = 0;
+                        column.eachCell({ includeEmpty: true }, (cell:any) => {
+                            const columnLength = cell.value ? cell.value.toString().length : 10;
+                            if (columnLength > maxLength) {
+                                maxLength = columnLength;
+                            }
+                        });
+                        column.width = maxLength < 10 ? 10 : maxLength + 2;
                     }
-                } else {
-                    // Clean up the file after successful download
-                    setTimeout(() => {
-                        if (fs.existsSync(filePath)) {
-                            fs.unlinkSync(filePath);
-                        }
-                    }, 60000); // Delete after 1 minute
+                });
+            }
+            
+            // Write the workbook to a file
+            await workbook.xlsx.writeFile(tempFilePath);
+            
+            // Send the file to the client
+            res.download(tempFilePath, 'รายงานการเงิน.xlsx', (err) => {
+                // Delete the temporary file after sending
+                if (fs.existsSync(tempFilePath)) {
+                    fs.unlinkSync(tempFilePath);
+                }
+                
+                if (err) {
+                    console.error('Error sending file:', err);
                 }
             });
         } catch (err: any) {
