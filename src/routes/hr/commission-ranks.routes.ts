@@ -9,7 +9,9 @@ import {
   checkCommissionStatus,
   getEmployeeCommissions,
   getCsCommission,
-  getCommissionSummaryForExport
+  getCommissionSummaryForExport,
+  getPurchaseCommissionStatus,
+  exportCommissionData
 } from "../../controllers/hr/commission-ranks.controller";
 
 const router = express.Router();
@@ -39,7 +41,13 @@ router.get("/employee-commissions/:purchaseId", getEmployeeCommissions);
 // Get CS department commission for a specific purchase
 router.get("/cs-commission/:purchaseId", getCsCommission);
 
+// Get commission status for a specific purchase (both employee and CS)
+router.get("/purchase-commission-status/:purchaseId", getPurchaseCommissionStatus);
+
 // Get commission summary for export
 router.get("/export", getCommissionSummaryForExport);
+
+// Export commission data with CS commission
+router.get("/export-commission-data", exportCommissionData);
 
 export default router;

@@ -184,7 +184,7 @@ export const submitCommission = async (req: Request, res: Response) => {
           await tx.cs_department_commission.create({
             data: {
               d_purchase_id,
-              commission_amount: 300, // Fixed 300 baht per purchase
+              commission_amount: 200, // Fixed 300 baht per purchase
               is_paid: false,
               status: "saved"
             }
@@ -367,6 +367,49 @@ export const getEmployeeCommissions = async (req: Request, res: Response) => {
   }
 };
 
+// Get commission status for a specific purchase (both employee and CS)
+export const getPurchaseCommissionStatus = async (req: Request, res: Response) => {
+  try {
+    const { purchaseId } = req.params;
+    
+    if (!purchaseId) {
+      return res.status(400).json({ success: false, message: "Purchase ID is required" });
+    }
+    
+    // Get employee commissions
+    const employeeCommissions = await prisma.employee_commission.findMany({
+      where: { d_purchase_id: purchaseId },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+    
+    // Get CS department commission
+    const csCommission = await prisma.cs_department_commission.findFirst({
+      where: { d_purchase_id: purchaseId }
+    });
+    
+    // Determine overall status
+    const hasCommission = employeeCommissions.length > 0 || csCommission !== null;
+    const isPaid = hasCommission && 
+      (employeeCommissions.length > 0 ? employeeCommissions.every(comm => comm.status === 'saved') : true) && 
+      (csCommission ? csCommission.status === 'saved' : true);
+    
+    return res.status(200).json({
+      success: true,
+      data: {
+        hasCommission,
+        status: isPaid ? 'paid' : (hasCommission ? 'saved' : 'pending'),
+        employeeCommissions,
+        csCommission
+      }
+    });
+  } catch (error) {
+    console.error("Error fetching commission status:", error);
+    return res.status(500).json({ success: false, message: "Failed to fetch commission status" });
+  }
+};
+
 // Get CS department commission for a specific purchase
 export const getCsCommission = async (req: Request, res: Response) => {
   try {
@@ -437,6 +480,703 @@ interface CsCommission {
     [key: string]: any;
   };
 }
+
+/**
+ * Export commission data with CS commission as Excel file
+ * @param req Request
+ * @param res Response
+ * @returns Promise<Response>
+ */
+export const exportCommissionData = async (req: Request, res: Response): Promise<Response> => {
+  try {
+    const prisma = new PrismaClient();
+    
+    // Get month and year from query parameters
+    const month = (req.query.month as string) || 'all';
+    const year = (req.query.year as string) || 'all';
+    
+    // ไม่จำเป็นต้องตรวจสอบว่ามีค่าหรือไม่ เพราะเรากำหนดค่าเริ่มต้นเป็น 'all' แล้ว
+    
+    // Check if we need to filter by month and year
+    const filterByDate = month !== 'all' && year !== 'all';
+    
+    // Get all purchases with commission data
+    let purchases;
+    
+    if (filterByDate) {
+      // Filter by specific month and year
+      purchases = await prisma.$queryRaw`
+        SELECT 
+          p.id, p.book_number, p.d_term, p.createdAt,
+          c.cus_fullname,
+          u.fullname as sales_person,
+          ec.id as employee_commission_id, ec.commission_type, ec.commission_value, ec.commission_amount, ec.status as employee_status,
+          cs.id as cs_commission_id, cs.commission_amount as cs_commission_amount, cs.is_paid as cs_is_paid,
+          pf.billing_amount, fpd.profit_loss, fpd.management_fee as management_fee,
+          fpd.net_profit
+        FROM d_purchase p
+        LEFT JOIN employee_commissions ec ON p.id = ec.d_purchase_id
+        LEFT JOIN cs_department_commissions cs ON p.id = cs.d_purchase_id
+        LEFT JOIN customer c ON p.customer_id = c.id
+        LEFT JOIN d_purchase_emp dpe ON p.id = dpe.d_purchase_id
+        LEFT JOIN user u ON dpe.user_id = u.id
+        LEFT JOIN purchase_finance pf ON p.id = pf.d_purchase_id
+        LEFT JOIN purchase_finance_payment fpd ON pf.id = fpd.purchase_finance_id
+        WHERE (ec.id IS NOT NULL OR cs.id IS NOT NULL)
+        AND (MONTH(p.createdAt) = ${parseInt(month)} AND YEAR(p.createdAt) = ${parseInt(year)})
+        ORDER BY p.createdAt DESC
+      `;
+    } else {
+      // Get all data without date filtering
+      purchases = await prisma.$queryRaw`
+        SELECT 
+          p.id, p.book_number, p.d_term, p.createdAt,
+          c.cus_fullname,
+          u.fullname as sales_person,
+          ec.id as employee_commission_id, ec.commission_type, ec.commission_value, ec.commission_amount, ec.status as employee_status,
+          cs.id as cs_commission_id, cs.commission_amount as cs_commission_amount, cs.is_paid as cs_is_paid,
+          pf.billing_amount, fpd.profit_loss, fpd.management_fee as management_fee,
+          fpd.net_profit
+        FROM d_purchase p
+        LEFT JOIN employee_commissions ec ON p.id = ec.d_purchase_id
+        LEFT JOIN cs_department_commissions cs ON p.id = cs.d_purchase_id
+        LEFT JOIN customer c ON p.customer_id = c.id
+        LEFT JOIN d_purchase_emp dpe ON p.id = dpe.d_purchase_id
+        LEFT JOIN user u ON dpe.user_id = u.id
+        LEFT JOIN purchase_finance pf ON p.id = pf.d_purchase_id
+        LEFT JOIN purchase_finance_payment fpd ON pf.id = fpd.purchase_finance_id
+        WHERE ec.id IS NOT NULL OR cs.id IS NOT NULL
+        ORDER BY p.createdAt DESC
+      `;
+    }
+
+    // Create a new Excel workbook
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Commission Data');
+
+    // Define columns
+    worksheet.columns = [
+      { header: 'เดือน', key: 'month', width: 10 },
+      { header: 'เลขที่ตู้', key: 'containerNumber', width: 15 },
+      { header: 'ลูกค้า', key: 'customer', width: 20 },
+      { header: 'ประเภทตู้', key: 'containerType', width: 15 },
+      { header: 'กำไรสุทธิ', key: 'netProfit', width: 15, style: { numFmt: '#,##0.00' } },
+      { header: 'ค่าบริหาร', key: 'adminFee', width: 15, style: { numFmt: '#,##0.00' } },
+      { header: 'กำไรสุทธิ', key: 'netProfit', width: 15, style: { numFmt: '#,##0.00' } },
+      { header: '%', key: 'percentage', width: 8 },
+      { header: 'สุทธิ', key: 'commission', width: 15, style: { numFmt: '#,##0.00' } },
+      { header: 'SALE', key: 'salesPerson', width: 15 }
+    ];
+
+    // Style the header row
+    worksheet.getRow(1).font = { bold: true, size: 11 };
+    worksheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF9BC2E6' }  // Light blue background
+    };
+    worksheet.getRow(1).alignment = { horizontal: 'center', vertical: 'middle' };
+    
+    // Set border for header
+    worksheet.getRow(1).eachCell({ includeEmpty: true }, (cell) => {
+      cell.border = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' }
+      };
+    });
+
+    // Add data to the worksheet
+    (purchases as any[]).forEach((purchase: any, index: number) => {
+      // Extract data from raw query result
+      const profit = parseFloat(purchase.profit_loss?.toString() || '0');
+      const adminFee = parseFloat(purchase.management_fee?.toString() || '0');
+      const netProfit = parseFloat(purchase.net_profit?.toString() || '0');
+
+      // Get employee commission amount
+      const employeeCommissionAmount = purchase.commission_amount ? 
+        parseFloat(purchase.commission_amount.toString() || '0') : 0;
+
+      // Get commission percentage
+      const commissionPercentage = purchase.commission_value ? 
+        parseFloat(purchase.commission_value.toString() || '0') : 
+        (netProfit > 0 ? Math.round((employeeCommissionAmount / netProfit) * 100) : 0);
+
+      // Format date to Thai month/year format
+      const createdDate = purchase.createdAt ? new Date(purchase.createdAt) : new Date();
+      const thaiMonth = format(createdDate, 'MM/yyyy');
+      
+      // Add row to worksheet
+      const row = worksheet.addRow({
+        month: thaiMonth,
+        containerNumber: purchase.book_number || '',
+        customer: purchase.cus_fullname || '',
+        containerType: purchase.d_term || '',
+        netProfit: netProfit,
+        adminFee: adminFee,
+        percentage: `${commissionPercentage}%`,
+        commission: employeeCommissionAmount,
+        salesPerson: purchase.sales_person || 'ADMIN'
+      });
+      
+      // Style the row
+      row.eachCell({ includeEmpty: true }, (cell) => {
+        // Add borders to each cell
+        cell.border = {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' }
+        };
+        
+        // Center align text cells based on column index
+        const columnIndex = cell.col;
+        const columnKey = worksheet.getColumn(columnIndex).key || '';
+        
+        if (['month', 'containerNumber', 'containerType', 'percentage', 'salesPerson'].includes(columnKey)) {
+          cell.alignment = { horizontal: 'center' };
+        }
+        
+        // Right align number cells
+        if (['netProfit', 'adminFee', 'commission'].includes(columnKey)) {
+          cell.alignment = { horizontal: 'right' };
+        }
+      });
+      
+      // Alternate row colors for better readability
+      if (index % 2 === 1) {
+        row.eachCell({ includeEmpty: true }, (cell) => {
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FFF2F2F2' }  // Light gray background
+          };
+        });
+      }
+    });
+
+    // Format numbers for all numeric columns
+    worksheet.eachRow((row, rowNumber) => {
+      if (rowNumber > 1) {  // Skip header row
+        ['netProfit', 'adminFee', 'commission'].forEach(key => {
+          const cell = row.getCell(worksheet.getColumn(key).number);
+          if (cell.value !== null && cell.value !== undefined) {
+            cell.numFmt = '#,##0.00';
+          }
+        });
+      }
+    });
+    
+    // Get current month/year for title
+    const currentDate = new Date();
+    const thaiMonth = format(currentDate, 'MM/yyyy');
+    
+    // Add title above the table
+    worksheet.insertRow(1, [`รายงานคอมมิชชั่น ประจำเดือน ${thaiMonth}`]);
+    worksheet.mergeCells('A1:J1');
+    const titleCell = worksheet.getCell('A1');
+    titleCell.font = { bold: true, size: 14 };
+    titleCell.alignment = { horizontal: 'center' };
+    
+    // ดึงข้อมูล CS commissions จากฐานข้อมูล
+    let csCommissions;
+    
+    if (filterByDate) {
+      // Filter by specific month and year
+      const csCommissionsQuery = `
+        SELECT 
+          cs.id,
+          cs.d_purchase_id,
+          cs.commission_amount,
+          cs.is_paid,
+          cs.status,
+          cs.paid_date,
+          cs.createdAt,
+          cs.updatedAt,
+          'CS' as cs_person,
+          p.createdAt as purchase_created_at
+        FROM cs_department_commissions cs
+        JOIN d_purchase p ON cs.d_purchase_id = p.id
+        WHERE MONTH(p.createdAt) = ? AND YEAR(p.createdAt) = ?
+      `;
+      
+      csCommissions = await prisma.$queryRawUnsafe(csCommissionsQuery, parseInt(month), parseInt(year));
+    } else {
+      // Get all data without date filtering
+      const csCommissionsQuery = `
+        SELECT 
+          cs.id,
+          cs.d_purchase_id,
+          cs.commission_amount,
+          cs.is_paid,
+          cs.status,
+          cs.paid_date,
+          cs.createdAt,
+          cs.updatedAt,
+          'CS' as cs_person,
+          p.createdAt as purchase_created_at
+        FROM cs_department_commissions cs
+        JOIN d_purchase p ON cs.d_purchase_id = p.id
+      `;
+      
+      csCommissions = await prisma.$queryRawUnsafe(csCommissionsQuery);
+    }
+    
+    // Get unique sales persons and their total commissions
+    const salesSummary: { [key: string]: number } = {};
+    (purchases as any[]).forEach((purchase: any) => {
+      const salesPerson = purchase.sales_person || 'ADMIN';
+      const commission = purchase.commission_amount ? 
+        parseFloat(purchase.commission_amount.toString() || '0') : 0;
+      
+      if (!salesSummary[salesPerson]) {
+        salesSummary[salesPerson] = 0;
+      }
+      salesSummary[salesPerson] += commission;
+    });
+    
+    // Get unique CS persons and their total commissions
+    const csSummary: { [key: string]: number } = {};
+    (csCommissions as any[]).forEach((commission: any) => {
+      const csPerson = commission.cs_person || 'CS';
+      const commissionAmount = commission.commission_amount ? 
+        parseFloat(commission.commission_amount.toString() || '0') : 0;
+      
+      if (!csSummary[csPerson]) {
+        csSummary[csPerson] = 0;
+      }
+      csSummary[csPerson] += commissionAmount;
+    });
+    
+    // Add empty rows after data for better separation
+    const lastDataRow = worksheet.rowCount;
+    worksheet.addRow([]);
+    worksheet.addRow([]);
+    
+    // เพิ่มแถวว่างเพื่อแบ่งส่วน
+    worksheet.addRow([]);
+    
+    // 1. สร้างส่วนหัวข้อ "เซลล์"
+    const saleHeaderRow = worksheet.addRow(['', '', '', '', '', '', '', '', '', '']);
+    saleHeaderRow.getCell(1).value = 'เซลล์';
+    
+    // จัดรูปแบบส่วนหัวข้อ
+    saleHeaderRow.eachCell({ includeEmpty: true }, (cell) => {
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFBFBFBF' }  // สีพื้นหลังเทา
+      };
+      cell.border = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' }
+      };
+      cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      cell.font = { bold: true };
+    });
+    
+    // 2. สร้างแถวข้อมูลพนักงานขายและคอมมิชชั่น
+    Object.entries(salesSummary).forEach(([salesPerson, commission]) => {
+      
+      // กำหนดสีพื้นหลังตามประเภทพนักงาน
+      const rowColor = salesPerson === 'ADMIN' ? 'FFFF0000' : // สีแดงสำหรับ ADMIN
+                       salesPerson === 'POND' ? 'FF00FF00' : // สีเขียวสำหรับ POND
+                       'FFBFBFBF'; // สีเทาสำหรับคนอื่นๆ
+      
+      const salesRow = worksheet.addRow(['', '', '', '', '', '', '', '', '', '']);
+      
+      // ใส่ข้อมูลพนักงานและคอมมิชชั่น
+      salesRow.getCell(1).value = salesPerson;
+      salesRow.getCell(3).value = commission;
+      salesRow.getCell(3).numFmt = '#,##0.00';
+      
+      // ใส่สีพื้นหลังให้เซลล์ชื่อพนักงาน
+      salesRow.getCell(1).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: rowColor }
+      };
+      
+      // เพิ่มเส้นขอบให้ทุกเซลล์ในแถว
+      salesRow.eachCell({ includeEmpty: true }, (cell) => {
+        cell.border = {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' }
+        };
+      });
+      
+      // จัดตำแหน่งข้อความ
+      salesRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+      salesRow.getCell(1).font = { bold: true };
+      salesRow.getCell(3).alignment = { horizontal: 'right', vertical: 'middle' };
+    });
+    
+    // เพิ่มแถวว่างเพื่อแบ่งส่วน
+    worksheet.addRow([]);
+    worksheet.addRow([]);
+    
+    // ===== ส่วนที่ 1: สรุปผลรวมคอมมิชชั่นพนักงานขาย =====
+    
+    // สร้างส่วนสรุปผลรวมของ Sales
+    const salesSummaryHeaderRow = worksheet.addRow(['', '', '', '', '', '', '', '', '', '']);
+    salesSummaryHeaderRow.getCell(1).value = 'สรุปผลรวมคอมมิชชั่นพนักงานขาย';
+    salesSummaryHeaderRow.getCell(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFBDD7EE' } // สีพื้นหลังฟ้าอ่อน
+    };
+    
+    // รวมเซลล์ในส่วนหัวข้อ
+    const salesSummaryHeaderRowNum = worksheet.rowCount;
+    worksheet.mergeCells(`A${salesSummaryHeaderRowNum}:D${salesSummaryHeaderRowNum}`);
+    
+    // เพิ่มเส้นขอบให้ทุกเซลล์ในแถว
+    salesSummaryHeaderRow.eachCell({ includeEmpty: true }, (cell) => {
+      cell.border = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' }
+      };
+      cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      cell.font = { bold: true, size: 12 };
+    });
+    
+    // คำนวณยอดรวมคอมมิชชั่นของพนักงานขายทั้งหมด
+    const totalSalesCommission = Object.values(salesSummary).reduce((sum, commission) => sum + commission, 0);
+    
+    // คำนวณผลรวมกำไรสุทธิทั้งหมด
+    const totalNetProfit = (purchases as any[]).reduce((sum, purchase) => {
+      const netProfit = purchase.net_profit ? 
+        parseFloat(purchase.net_profit.toString() || '0') : 0;
+      return sum + netProfit;
+    }, 0);
+    
+    // สร้างแถวข้อมูลยอดรวมของ Sales
+    const salesTotalRow = worksheet.addRow(['', '', '', '', '', '', '', '', '', '']);
+    salesTotalRow.getCell(1).value = 'ยอดรวมคอมมิชชั่นพนักงานขาย';
+    salesTotalRow.getCell(3).value = totalSalesCommission;
+    salesTotalRow.getCell(3).numFmt = '#,##0.00';
+    salesTotalRow.getCell(5).value = 'ยอดรวมกำไรสุทธิ';
+    salesTotalRow.getCell(7).value = totalNetProfit;
+    salesTotalRow.getCell(7).numFmt = '#,##0.00';
+    
+    // เพิ่มเส้นขอบและจัดรูปแบบแถวข้อมูลยอดรวม
+    salesTotalRow.eachCell({ includeEmpty: true }, (cell) => {
+      cell.border = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' }
+      };
+    });
+    salesTotalRow.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' };
+    salesTotalRow.getCell(1).font = { bold: true };
+    salesTotalRow.getCell(3).alignment = { horizontal: 'right', vertical: 'middle' };
+    salesTotalRow.getCell(3).font = { bold: true };
+    salesTotalRow.getCell(5).alignment = { horizontal: 'left', vertical: 'middle' };
+    salesTotalRow.getCell(5).font = { bold: true };
+    salesTotalRow.getCell(7).alignment = { horizontal: 'right', vertical: 'middle' };
+    salesTotalRow.getCell(7).font = { bold: true };
+    
+    // รวมเซลล์ในส่วนข้อมูล
+    const salesTotalRowNum = worksheet.rowCount;
+    worksheet.mergeCells(`A${salesTotalRowNum}:B${salesTotalRowNum}`);
+    worksheet.mergeCells(`E${salesTotalRowNum}:F${salesTotalRowNum}`);
+    
+    // ===== ส่วนที่ 2: สรุปผลรวมคอมมิชชั่น CS =====
+    
+    // เพิ่มแถวว่างเพื่อแบ่งส่วน
+    worksheet.addRow([]);
+    worksheet.addRow([]);
+    
+    // สร้างส่วนสรุปผลรวมของ CS
+    const csSummaryHeaderRow = worksheet.addRow(['', '', '', '', '', '', '', '', '', '']);
+    csSummaryHeaderRow.getCell(5).value = 'สรุปผลรวมคอมมิชชั่น CS';
+    csSummaryHeaderRow.getCell(5).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFE2EFDA' } // สีพื้นหลังเขียวอ่อน
+    };
+    
+    // รวมเซลล์ในส่วนหัวข้อ
+    const csSummaryHeaderRowNum = worksheet.rowCount;
+    worksheet.mergeCells(`E${csSummaryHeaderRowNum}:H${csSummaryHeaderRowNum}`);
+    
+    // เพิ่มเส้นขอบให้ทุกเซลล์ในแถว
+    csSummaryHeaderRow.eachCell({ includeEmpty: true }, (cell) => {
+      cell.border = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' }
+      };
+      cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      cell.font = { bold: true, size: 12 };
+    });
+    
+    // คำนวณยอดรวมคอมมิชชั่นของ CS ทั้งหมด
+    const totalCSCommission = Object.values(csSummary).reduce((sum, commission) => sum + commission, 0);
+    
+    // สร้างแถวข้อมูลยอดรวมของ CS
+    const csTotalRow = worksheet.addRow(['', '', '', '', '', '', '', '', '', '']);
+    csTotalRow.getCell(5).value = 'ยอดรวมคอมมิชชั่น CS';
+    csTotalRow.getCell(7).value = totalCSCommission;
+    csTotalRow.getCell(7).numFmt = '#,##0.00';
+    
+    // เพิ่มเส้นขอบและจัดรูปแบบแถวข้อมูลยอดรวม
+    csTotalRow.eachCell({ includeEmpty: true }, (cell) => {
+      cell.border = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' }
+      };
+    });
+    csTotalRow.getCell(5).alignment = { horizontal: 'left', vertical: 'middle' };
+    csTotalRow.getCell(5).font = { bold: true };
+    csTotalRow.getCell(7).alignment = { horizontal: 'right', vertical: 'middle' };
+    csTotalRow.getCell(7).font = { bold: true };
+    
+    // รวมเซลล์ในส่วนข้อมูล
+    const csTotalRowNum = worksheet.rowCount;
+    worksheet.mergeCells(`E${csTotalRowNum}:F${csTotalRowNum}`);
+    
+    // ===== ส่วนที่ 3: สรุปผลรวมคอมมิชชั่น Sale Support =====
+    
+    // เพิ่มแถวว่างเพื่อแบ่งส่วน
+    worksheet.addRow([]);
+    worksheet.addRow([]);
+    
+    // สร้างส่วนสรุปสำหรับ Sale Support
+    const saleSupportHeaderRow = worksheet.addRow(['', '', '', '', '', '', '', '', '', '']);
+    saleSupportHeaderRow.getCell(1).value = 'สรุปคอมมิชชั่น Sale Support';
+    saleSupportHeaderRow.getCell(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFFCE4D6' } // สีพื้นหลังส้มอ่อน
+    };
+    
+    // รวมเซลล์ในส่วนหัวข้อ
+    const saleSupportHeaderRowNum = worksheet.rowCount;
+    worksheet.mergeCells(`A${saleSupportHeaderRowNum}:D${saleSupportHeaderRowNum}`);
+    
+    // เพิ่มเส้นขอบให้ทุกเซลล์ในแถว
+    saleSupportHeaderRow.eachCell({ includeEmpty: true }, (cell) => {
+      cell.border = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' }
+      };
+      cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      cell.font = { bold: true, size: 12 };
+    });
+    
+    // คำนวณยอดรวมคอมมิชชั่นของ Sale Support
+    const saleSupCommission = totalSalesCommission * 0.05;
+    
+    // สร้างแถวข้อมูล Sale Support
+    const saleSupportRow = worksheet.addRow(['', '', '', '', '', '', '', '', '', '']);
+    saleSupportRow.getCell(1).value = 'Sale Support';
+    saleSupportRow.getCell(3).value = saleSupCommission;
+    saleSupportRow.getCell(3).numFmt = '#,##0.00';
+    saleSupportRow.getCell(4).value = '5%';
+    
+    // เพิ่มเส้นขอบและจัดรูปแบบแถวข้อมูล
+    saleSupportRow.eachCell({ includeEmpty: true }, (cell) => {
+      cell.border = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' }
+      };
+    });
+    saleSupportRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+    saleSupportRow.getCell(1).font = { bold: true };
+    saleSupportRow.getCell(3).alignment = { horizontal: 'right', vertical: 'middle' };
+    saleSupportRow.getCell(4).alignment = { horizontal: 'center', vertical: 'middle' };
+    
+    // เพิ่มแถวว่างเพื่อแบ่งส่วน
+    worksheet.addRow([]);
+    worksheet.addRow([]);
+    
+    // ===== เพิ่มตารางแสดงข้อมูล commission_role =====
+    
+    // ดึงข้อมูล commission_role จากฐานข้อมูล
+    const commissionRoles = await prisma.commission_role.findMany({
+      where: {
+        is_active: true
+      },
+      orderBy: {
+        role_name: 'asc'
+      }
+    });
+    
+    // สร้างส่วนหัวข้อตาราง commission_role
+    const roleHeaderRow = worksheet.addRow(['', '', '', '', '', '', '', '', '', '']);
+    roleHeaderRow.getCell(1).value = 'ตารางแสดงค่าคอมมิชชั่นตามบทบาท';
+    roleHeaderRow.getCell(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFFFD966' } // สีพื้นหลังเหลือง
+    };
+    
+    // รวมเซลล์ในส่วนหัวข้อ
+    const roleHeaderRowNum = worksheet.rowCount;
+    worksheet.mergeCells(`A${roleHeaderRowNum}:D${roleHeaderRowNum}`);
+    
+    // เพิ่มเส้นขอบให้ทุกเซลล์ในแถว
+    roleHeaderRow.eachCell({ includeEmpty: true }, (cell) => {
+      cell.border = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' }
+      };
+      cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      cell.font = { bold: true, size: 12 };
+    });
+    
+    // สร้างแถวหัวข้อคอลัมน์
+    const roleColumnHeaderRow = worksheet.addRow(['', '', '', '', '', '', '', '', '', '']);
+    roleColumnHeaderRow.getCell(1).value = 'บทบาท';
+    roleColumnHeaderRow.getCell(2).value = 'เปอร์เซ็นต์';
+    roleColumnHeaderRow.getCell(3).value = 'คำนวณจากค่าคอมมิชชั่น';
+    roleColumnHeaderRow.getCell(4).value = 'คอมมิชชั่น';
+    
+    // จัดรูปแบบแถวหัวข้อคอลัมน์
+    roleColumnHeaderRow.eachCell({ includeEmpty: true }, (cell) => {
+      cell.border = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' }
+      };
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFF2F2F2' } // สีพื้นหลังเทาอ่อน
+      };
+      cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      cell.font = { bold: true };
+    });
+    
+    // เพิ่มข้อมูลแต่ละบทบาท
+    let totalRoleCommission = 0;
+    
+    // ใช้เฉพาะค่าคอมมิชชั่นของ sale ทั้งหมดในการคำนวณ
+    const commissionForCalculation = totalSalesCommission;
+    
+    commissionRoles.forEach((role, index) => {
+      const commissionPercentage = parseFloat(role.commission_percentage.toString());
+      const calculatedCommission = (commissionForCalculation * commissionPercentage) / 100;
+      totalRoleCommission += calculatedCommission;
+      
+      const roleRow = worksheet.addRow(['', '', '', '', '', '', '', '', '', '']);
+      roleRow.getCell(1).value = role.role_name;
+      roleRow.getCell(2).value = `${commissionPercentage}%`;
+      roleRow.getCell(3).value = commissionForCalculation;
+      roleRow.getCell(4).value = calculatedCommission;
+      
+      // จัดรูปแบบแถวข้อมูล
+      roleRow.eachCell({ includeEmpty: true }, (cell) => {
+        cell.border = {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' }
+        };
+      });
+      
+      // Alternate row colors for better readability
+      if (index % 2 === 1) {
+        roleRow.eachCell({ includeEmpty: true }, (cell) => {
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FFF2F2F2' }  // Light gray background
+          };
+        });
+      }
+      
+      roleRow.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' };
+      roleRow.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' };
+      roleRow.getCell(3).alignment = { horizontal: 'right', vertical: 'middle' };
+      roleRow.getCell(3).numFmt = '#,##0.00';
+      roleRow.getCell(4).alignment = { horizontal: 'right', vertical: 'middle' };
+      roleRow.getCell(4).numFmt = '#,##0.00';
+    });
+    
+    // สร้างแถวผลรวม
+    const roleTotalRow = worksheet.addRow(['', '', '', '', '', '', '', '', '', '']);
+    roleTotalRow.getCell(1).value = 'รวมค่าคอมมิชชั่นทั้งหมด';
+    roleTotalRow.getCell(4).value = totalRoleCommission;
+    
+    // จัดรูปแบบแถวผลรวม
+    roleTotalRow.eachCell({ includeEmpty: true }, (cell) => {
+      cell.border = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' }
+      };
+    });
+    roleTotalRow.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' };
+    roleTotalRow.getCell(1).font = { bold: true };
+    roleTotalRow.getCell(4).alignment = { horizontal: 'right', vertical: 'middle' };
+    roleTotalRow.getCell(4).numFmt = '#,##0.00';
+    roleTotalRow.getCell(4).font = { bold: true };
+    
+    // รวมเซลล์ในส่วนผลรวม
+    const roleTotalRowNum = worksheet.rowCount;
+    worksheet.mergeCells(`A${roleTotalRowNum}:C${roleTotalRowNum}`);
+    
+    // เพิ่มแถวเปรียบเทียบกับยอดขายรวม
+    const rolePercentRow = worksheet.addRow(['', '', '', '', '', '', '', '', '', '']);
+    rolePercentRow.getCell(1).value = 'คิดเป็นเปอร์เซ็นต์จากค่าคอมมิชชั่นรวม';
+    rolePercentRow.getCell(4).value = totalSalesCommission > 0 ? 
+      `${(totalRoleCommission / totalSalesCommission * 100).toFixed(2)}%` : '0%';
+    
+    // จัดรูปแบบแถวเปอร์เซ็นต์
+    rolePercentRow.eachCell({ includeEmpty: true }, (cell) => {
+      cell.border = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' }
+      };
+    });
+    rolePercentRow.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' };
+    rolePercentRow.getCell(1).font = { bold: true };
+    rolePercentRow.getCell(4).alignment = { horizontal: 'right', vertical: 'middle' };
+    rolePercentRow.getCell(4).font = { bold: true };
+    
+    // รวมเซลล์ในส่วนเปอร์เซ็นต์
+    const rolePercentRowNum = worksheet.rowCount;
+    worksheet.mergeCells(`A${rolePercentRowNum}:C${rolePercentRowNum}`);
+    
+    // Set response headers
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename=commission_data_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+
+    // Write to buffer and send response
+    const buffer = await workbook.xlsx.writeBuffer();
+    return res.send(buffer);
+
+  } catch (error) {
+    console.error('Error exporting commission data:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to export commission data'
+    });
+  }
+};
 
 /**
  * Get commission summary data for export as Excel file
@@ -574,7 +1314,7 @@ export const getCommissionSummaryForExport = async (req: Request, res: Response)
       // Get finance data
       const financeData = commission.d_purchase?.purchase_finance[0];
       const billingAmount = financeData ? parseFloat(financeData.billing_amount.toString()) : 0;
-      const profit = financeData ? parseFloat(financeData.total_profit_loss.toString()) : 0;
+      const profit = financeData ? parseFloat(financeData.profit_loss.toString()) : 0;
       
       employee.commissions.push({
         employeeName: employeeName,

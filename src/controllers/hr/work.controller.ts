@@ -108,6 +108,9 @@ export class HrWorkController {
             where: {
               deletedAt: null,
             },
+            include:{
+              payment_prefix: true
+            }
           },
           d_purchase_emp: {
             where: {

@@ -1347,3 +1347,14 @@ enum AccountOwner {
   AHYONG
   GINNY
 }
+
+// Commission roles for different positions
+model commission_role {
+  id                    String    @id @default(uuid())
+  role_name             String    @unique
+  commission_percentage Decimal   @db.Decimal(10, 2)
+  description           String?
+  is_active             Boolean   @default(true)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+}
