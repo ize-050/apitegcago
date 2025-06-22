@@ -200,6 +200,78 @@ export const updateCommissionStatus = async (req: Request, res: Response) => {
 };
 
 /**
+ * Update commission amount
+ * @param req Request
+ * @param res Response
+ * @returns Response
+ */
+export const updateCommissionAmount = async (req: Request, res: Response) => {
+  try {
+    const { commissionId } = req.params;
+    const { amount } = req.body;
+
+    // Validate required fields
+    if (!commissionId || amount === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: "Commission ID and amount are required",
+      });
+    }
+
+    // Validate amount
+    const commissionAmount = parseFloat(amount.toString());
+    if (isNaN(commissionAmount) || commissionAmount < 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid commission amount. Must be a positive number",
+      });
+    }
+
+    // Check if commission exists
+    const existingCommission = await prisma.finance_commission.findUnique({
+      where: { id: commissionId },
+    });
+
+    if (!existingCommission) {
+      return res.status(404).json({
+        success: false,
+        message: "Commission not found",
+      });
+    }
+
+    // Update commission amount
+    const result = await prisma.finance_commission.update({
+      where: { id: commissionId },
+      data: {
+        amount: commissionAmount,
+        updatedAt: new Date(),
+      },
+      include: {
+        employee: {
+          select: {
+            id: true,
+            fullname: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Commission amount updated successfully",
+      data: result,
+    });
+  } catch (error) {
+    console.error("Error updating commission amount:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+/**
  * Get commission summary data for export
  * @param req Request
  * @param res Response
@@ -241,21 +313,9 @@ export const getCommissionSummary = async (req: Request, res: Response) => {
         ft.date, 
         ft.documentNumber as document_number, 
         ft.amountRMB as amount_rmb, 
-        CASE
-          WHEN fcd.amount IS NOT NULL THEN fcd.amount
-          WHEN fe.amount IS NOT NULL THEN fe.amount
-          ELSE 0
-        END as amount_thb,
-        CASE
-          WHEN fcd.exchangeRate IS NOT NULL THEN fcd.exchangeRate
-          WHEN fe.exchangeRate IS NOT NULL THEN fe.exchangeRate
-          ELSE 0
-        END as exchange_rate,
-        CASE
-          WHEN fcd.fee IS NOT NULL THEN fcd.fee
-          WHEN fe.fee IS NOT NULL THEN fe.fee
-          ELSE 0
-        END as fee,
+        fcd.amount as amount_thb,
+        fcd.exchangeRate as exchange_rate,
+        fcd.fee,
         u.id as employee_id,
         u.fullname as employee_name,
         fc.id as commission_id,
@@ -264,13 +324,11 @@ export const getCommissionSummary = async (req: Request, res: Response) => {
       FROM 
         finance_transaction ft
       LEFT JOIN 
+        finance_customer_deposit fcd ON ft.customerDepositId = fcd.id
+      LEFT JOIN 
         user u ON ft.salespersonId = u.id
       LEFT JOIN 
         finance_commission fc ON ft.id = fc.transfer_id
-      LEFT JOIN
-        finance_customer_deposit fcd ON ft.customerDepositId = fcd.id
-      LEFT JOIN
-        finance_exchange fe ON ft.exchangeId = fe.id
       WHERE 
         ft.date BETWEEN ${parsedStartDate} AND ${parsedEndDate}
         AND ft.deletedAt IS NULL
@@ -336,8 +394,9 @@ export const getCommissionSummary = async (req: Request, res: Response) => {
         };
       }
       
-      // Calculate commission amount (15 บาทต่อรายการ)
-      const commissionAmount = 15;
+      // Calculate commission amount - use only actual commission from DB
+      const commissionAmount = transaction.commission_amount ? 
+        Number(transaction.commission_amount) : 0;
       
       // Update counts and totals
       summaryByEmployee[transaction.employee_id].types[thaiTypeName].count += 1;
@@ -356,7 +415,7 @@ export const getCommissionSummary = async (req: Request, res: Response) => {
         exchangeRate: Number(transaction.exchange_rate) || 0,
         fee: Number(transaction.fee) || 0,
         commission: {
-          amount: commissionAmount,
+          amount: commissionAmount, // Use actual commission amount
           status: transaction.commission_id ? transaction.commission_status : 'PENDING'
         }
       });
@@ -540,7 +599,7 @@ export const getCommissionSummary = async (req: Request, res: Response) => {
         day: 'numeric',
       })}`],
       [],
-      ['พนักงาน', 'ประเภทรายการ', 'จำนวนรายการ', 'ค่าคอมมิชชั่นต่อรายการ (THB)', 'ค่าคอมมิชชั่นรวม (THB)'],
+      ['พนักงาน', 'ประเภทรายการ', 'จำนวนรายการ', 'ค่าคอมมิชชั่นรวม (THB)'],
     ];
     
     // Add summary data
@@ -550,14 +609,10 @@ export const getCommissionSummary = async (req: Request, res: Response) => {
       // Add data for each transaction type in the defined order
       Object.keys(employee.types).forEach(typeName => {
         if (employee.types[typeName] && employee.types[typeName].count > 0) {
-          // ค่าคอมมิชชั่นต่อรายการคงที่ 15 บาท
-          const commissionPerTransaction = 15.00;
-            
           summaryData.push([
             isFirstTypeForEmployee ? employee.name : '',
             typeName,
             employee.types[typeName].count,
-            commissionPerTransaction.toFixed(2),
             employee.types[typeName].totalCommission.toFixed(2),
           ]);
           isFirstTypeForEmployee = false;
@@ -569,12 +624,11 @@ export const getCommissionSummary = async (req: Request, res: Response) => {
         '',
         'รวม',
         employee.totalCount,
-        '15.00',
         employee.totalCommission.toFixed(2),
       ]);
       
       // Add empty row between employees
-      summaryData.push(['', '', '', '', '']);
+      summaryData.push(['', '', '', '']);
     });
     
     const summaryWorksheet = XLSX.utils.aoa_to_sheet(summaryData);
@@ -584,7 +638,6 @@ export const getCommissionSummary = async (req: Request, res: Response) => {
       { wch: 25 }, // Employee
       { wch: 20 }, // Type
       { wch: 15 }, // Count
-      { wch: 30 }, // Avg Commission
       { wch: 20 }, // Total Commission
     ];
     summaryWorksheet['!cols'] = summaryColWidths;
@@ -619,57 +672,113 @@ export const getCommissionSummary = async (req: Request, res: Response) => {
  */
 export const exportCommissionSummary = async (req: Request, res: Response) => {
   try {
-    const { startDate, endDate } = req.query;
+    const { startDate, endDate, month, year } = req.query;
     
-    if (!startDate || !endDate) {
-      return res.status(400).json({
-        success: false,
-        message: "Start date and end date are required"
+    // Make date parameters optional
+    let formattedStartDate = '';
+    let formattedEndDate = '';
+    let dateFilter = '';
+    
+    if (month && year) {
+      // Handle month/year filter
+      const monthStr = month.toString().padStart(2, '0');
+      const yearStr = year.toString();
+      
+      // Create first and last day of the month
+      const firstDay = `${yearStr}-${monthStr}-01`;
+      const lastDay = new Date(parseInt(yearStr), parseInt(monthStr), 0).getDate();
+      const lastDayOfMonth = `${yearStr}-${monthStr}-${lastDay.toString().padStart(2, '0')}`;
+      
+      formattedStartDate = new Date(firstDay).toLocaleDateString('th-TH', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
       });
+      
+      formattedEndDate = new Date(lastDayOfMonth).toLocaleDateString('th-TH', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
+      
+      dateFilter = `AND ft.date >= '${firstDay}' AND ft.date <= '${lastDayOfMonth}'`;
+    } else if (startDate && endDate) {
+      // Handle date range filter
+      const parsedStartDate = new Date(startDate as string);
+      const parsedEndDate = new Date(endDate as string);
+      
+      formattedStartDate = parsedStartDate.toLocaleDateString('th-TH', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
+      
+      formattedEndDate = parsedEndDate.toLocaleDateString('th-TH', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
+      
+      dateFilter = `AND ft.date >= '${startDate}' AND ft.date <= '${endDate}'`;
+    } else {
+      formattedStartDate = 'ทั้งหมด';
+      formattedEndDate = 'ทั้งหมด';
     }
     
-    // Parse dates
-    const parsedStartDate = new Date(startDate as string);
-    const parsedEndDate = new Date(endDate as string);
+    // Query transactions with commission data (with optional date filter)
+    let transactions;
     
-    // Format dates for display
-    const formattedStartDate = parsedStartDate.toLocaleDateString('th-TH', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-    
-    const formattedEndDate = parsedEndDate.toLocaleDateString('th-TH', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-    
-    // Query transactions with commission data
-    const transactions = await prisma.$queryRaw`
-      SELECT 
-        ft.id, 
-        ft.type, 
-        ft.date, 
-        ft.documentNumber as document_number, 
-        ft.amountRMB as amount_rmb,
-        fcd.amountRMB as amount_rmb_deposit,
-        fcd.exchangeRate as exchange_rate,
-        fcd.fee,
-        fcd.amount as amount_thb,
-        u.id as employee_id,
-        u.fullname as employee_name,
-        fc.id as commission_id,
-        fc.amount as commission_amount,
-        fc.status as commission_status
-      FROM finance_transaction ft
-      LEFT JOIN finance_customer_deposit fcd ON ft.customerDepositId = fcd.id
-      LEFT JOIN user u ON ft.salespersonId = u.id
-      LEFT JOIN finance_commission fc ON ft.id = fc.transfer_id
-      WHERE ft.date BETWEEN ${parsedStartDate} AND ${parsedEndDate}
-      AND ft.deletedAt IS NULL
-      ORDER BY u.fullname, ft.date
-    `;
+    if (dateFilter) {
+      // Query with date filter
+      transactions = await prisma.$queryRawUnsafe(`
+        SELECT 
+          ft.id, 
+          ft.type, 
+          ft.date, 
+          ft.documentNumber as document_number, 
+          ft.amountRMB as amount_rmb,
+          fcd.amountRMB as amount_rmb_deposit,
+          fcd.exchangeRate as exchange_rate,
+          fcd.fee,
+          fcd.amount as amount_thb,
+          u.id as employee_id,
+          u.fullname as employee_name,
+          fc.id as commission_id,
+          fc.amount as commission_amount,
+          fc.status as commission_status
+        FROM finance_transaction ft
+        LEFT JOIN finance_customer_deposit fcd ON ft.customerDepositId = fcd.id
+        LEFT JOIN user u ON ft.salespersonId = u.id
+        LEFT JOIN finance_commission fc ON ft.id = fc.transfer_id
+        WHERE ft.deletedAt IS NULL ${dateFilter}
+        ORDER BY u.fullname, ft.date
+      `);
+    } else {
+      // Query without date filter (all data)
+      transactions = await prisma.$queryRaw`
+        SELECT 
+          ft.id, 
+          ft.type, 
+          ft.date, 
+          ft.documentNumber as document_number, 
+          ft.amountRMB as amount_rmb,
+          fcd.amountRMB as amount_rmb_deposit,
+          fcd.exchangeRate as exchange_rate,
+          fcd.fee,
+          fcd.amount as amount_thb,
+          u.id as employee_id,
+          u.fullname as employee_name,
+          fc.id as commission_id,
+          fc.amount as commission_amount,
+          fc.status as commission_status
+        FROM finance_transaction ft
+        LEFT JOIN finance_customer_deposit fcd ON ft.customerDepositId = fcd.id
+        LEFT JOIN user u ON ft.salespersonId = u.id
+        LEFT JOIN finance_commission fc ON ft.id = fc.transfer_id
+        WHERE ft.deletedAt IS NULL
+        ORDER BY u.fullname, ft.date
+      `;
+    }
     
     // Define transaction types mapping
     const thaiTypeNames: { [key: string]: string } = {
@@ -724,8 +833,9 @@ export const exportCommissionSummary = async (req: Request, res: Response) => {
         };
       }
       
-      // Calculate commission amount (15 บาทต่อรายการ)
-      const commissionAmount = 15;
+      // Calculate commission amount - use only actual commission from DB
+      const commissionAmount = transaction.commission_amount ? 
+        Number(transaction.commission_amount) : 0;
       
       // Update counts and totals
       summaryByEmployee[transaction.employee_id].types[thaiTypeName].count += 1;
@@ -744,7 +854,7 @@ export const exportCommissionSummary = async (req: Request, res: Response) => {
         exchangeRate: Number(transaction.exchange_rate) || 0,
         fee: Number(transaction.fee) || 0,
         commission: {
-          amount: commissionAmount,
+          amount: commissionAmount, // Use actual commission amount
           status: transaction.commission_id ? transaction.commission_status : 'PENDING'
         }
       });
@@ -765,7 +875,7 @@ export const exportCommissionSummary = async (req: Request, res: Response) => {
       ['รายงานสรุปค่าคอมมิชชั่นแยกตามพนักงาน'],
       [`วันที่: ${formattedStartDate} ถึง ${formattedEndDate}`],
       [],
-      ['พนักงาน', 'ประเภทรายการ (Type)', 'จำนวนรายการ', 'ค่าคอมมิชชั่นต่อรายการ (THB)', 'ค่าคอมมิชชั่นรวม (THB)'],
+      ['พนักงาน', 'ประเภทรายการ (Type)', 'จำนวนรายการ', 'ค่าคอมมิชชั่นรวม (THB)'],
     ];
     
     // Add summary data
@@ -775,14 +885,10 @@ export const exportCommissionSummary = async (req: Request, res: Response) => {
       // แสดงทุกประเภทรายการที่พนักงานมี
       Object.keys(employee.types).forEach(typeName => {
         if (employee.types[typeName].count > 0) {
-          // ค่าคอมมิชชั่นต่อรายการคงที่ 15 บาท
-          const commissionPerTransaction = 15.00;
-            
           summaryData.push([
             isFirstTypeForEmployee ? employee.name : '',
             typeName,
             employee.types[typeName].count,
-            commissionPerTransaction.toFixed(2),
             employee.types[typeName].totalCommission.toFixed(2),
           ]);
           isFirstTypeForEmployee = false;
@@ -794,12 +900,11 @@ export const exportCommissionSummary = async (req: Request, res: Response) => {
         '',
         'รวม',
         employee.totalCount,
-        '15.00',
         employee.totalCommission.toFixed(2),
       ]);
       
       // Add empty row between employees
-      summaryData.push(['', '', '', '', '']);
+      summaryData.push(['', '', '', '']);
     });
     
     const summaryWorksheet = XLSX.utils.aoa_to_sheet(summaryData);
@@ -809,7 +914,6 @@ export const exportCommissionSummary = async (req: Request, res: Response) => {
       { wch: 25 }, // Employee
       { wch: 20 }, // Type
       { wch: 15 }, // Count
-      { wch: 30 }, // Commission Per Transaction
       { wch: 20 }, // Total Commission
     ];
     summaryWorksheet['!cols'] = summaryColWidths;
@@ -850,14 +954,6 @@ export const exportCommissionSummary = async (req: Request, res: Response) => {
           ],
         ];
         
-        // Sort transactions by employee and date
-        typeTransactions.sort((a, b) => {
-          if (a.employeeName !== b.employeeName) {
-            return a.employeeName.localeCompare(b.employeeName);
-          }
-          return new Date(a.date).getTime() - new Date(b.date).getTime();
-        });
-        
         // Add transaction data
         let currentEmployee = '';
         typeTransactions.forEach((transaction: any) => {
@@ -872,24 +968,22 @@ export const exportCommissionSummary = async (req: Request, res: Response) => {
               : transaction.commission.status
             : '-';
           
-          // Add empty row between employees
-          if (currentEmployee && currentEmployee !== transaction.employeeName) {
-            detailData.push(['', '', '', '', '', '', '', '', '', '']);
-          }
-          currentEmployee = transaction.employeeName;
-          
           detailData.push([
-            transaction.employeeName,
+            transaction.employeeName !== currentEmployee ? transaction.employeeName : '',
             date,
             transaction.documentNumber || '',
-            transaction.type || '-',
+            transaction.type,
             transaction.amountRMB.toFixed(2),
             transaction.amountTHB.toFixed(2),
-            transaction.exchangeRate.toFixed(2),
+            transaction.exchangeRate.toFixed(4),
             transaction.fee.toFixed(2),
-            transaction.commission ? transaction.commission.amount.toFixed(2) : '-',
+            transaction.commission ? transaction.commission.amount.toFixed(2) : '0.00', // Show actual commission
             status,
           ]);
+          
+          if (transaction.employeeName !== currentEmployee) {
+            currentEmployee = transaction.employeeName;
+          }
         });
         
         const detailWorksheet = XLSX.utils.aoa_to_sheet(detailData);
@@ -930,6 +1024,56 @@ export const exportCommissionSummary = async (req: Request, res: Response) => {
       success: false,
       message: "Failed to export commission summary",
       error: error instanceof Error ? error.message : String(error)
+    });
+  }
+};
+
+/**
+ * Get commission by commission ID
+ * @param req Request
+ * @param res Response
+ * @returns Response
+ */
+export const getCommissionById = async (req: Request, res: Response) => {
+  try {
+    const { commissionId } = req.params;
+
+    if (!commissionId) {
+      return res.status(400).json({
+        success: false,
+        message: "Commission ID is required",
+      });
+    }
+
+    const commission = await prisma.finance_commission.findUnique({
+      where: { id: commissionId },
+      include: {
+        employee: {
+          select: {
+            id: true,
+            fullname: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    if (!commission) {
+      return res.status(404).json({
+        success: false,
+        message: "Commission not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: commission,
+    });
+  } catch (error) {
+    console.error("Error getting commission by ID:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
     });
   }
 };

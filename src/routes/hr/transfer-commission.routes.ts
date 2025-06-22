@@ -1,5 +1,13 @@
 import express from "express";
-import { saveTransferCommission, getTransferCommission, updateCommissionStatus, getCommissionSummary, exportCommissionSummary } from "../../controllers/hr/transfer-commission.controller";
+import {
+  saveTransferCommission,
+  getTransferCommission,
+  getCommissionById,
+  updateCommissionStatus,
+  updateCommissionAmount,
+  getCommissionSummary,
+  exportCommissionSummary,
+} from "../../controllers/hr/transfer-commission.controller";
 import authMiddleware from "../../middleware/authMiddleware";
 
 const router = express.Router();
@@ -7,11 +15,13 @@ const router = express.Router();
 // Apply authentication middleware
 router.use(authMiddleware);
 
-// Routes
+// Routes - put more specific routes first
 router.post("/", saveTransferCommission);
 router.get("/summary", getCommissionSummary);
 router.get("/export", exportCommissionSummary);
-router.get("/:transferId", getTransferCommission);
+router.get("/commission/:commissionId", getCommissionById);
 router.put("/:commissionId/status", updateCommissionStatus);
+router.put("/:commissionId/amount", updateCommissionAmount);
+router.get("/:transferId", getTransferCommission);
 
 export default router;
