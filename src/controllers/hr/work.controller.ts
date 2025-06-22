@@ -85,9 +85,25 @@ export class HrWorkController {
         // ตรวจสอบว่ามี date filter หรือไม่ก่อนใช้งาน
         if (Object.keys(commissionDateFilter).length > 0) {
           if (dateFilterType === 'booking') {
-            whereConditions.createdAt = commissionDateFilter;
-          } else {
+            // Use accounting close date (purchase_finance.updatedAt) for booking filter
+            whereConditions.purchase_finance = {
+              ...whereConditions.purchase_finance,
+              some: {
+                ...whereConditions.purchase_finance.some,
+                updatedAt: commissionDateFilter
+              }
+            };
+          } else if (dateFilterType === 'commission') {
             employeeCommissionFilter.createdAt = commissionDateFilter;
+          } else {
+            // Default: use accounting close date (purchase_finance.updatedAt)
+            whereConditions.purchase_finance = {
+              ...whereConditions.purchase_finance,
+              some: {
+                ...whereConditions.purchase_finance.some,
+                updatedAt: commissionDateFilter
+              }
+            };
           }
         }
       }
