@@ -607,7 +607,7 @@ export const exportCommissionData = async (req: Request, res: Response): Promise
         purchases = await prisma.$queryRawUnsafe(query, monthNum, yearNum);
       }
 
-      // Get CS department commissions with date filtering
+      // Get CS department commissions with date filtering based on CS commission creation date
       const csCommissionsQuery = `
         SELECT 
           cs.id,
@@ -622,7 +622,7 @@ export const exportCommissionData = async (req: Request, res: Response): Promise
           p.createdAt as purchase_created_at
         FROM cs_department_commissions cs
         JOIN d_purchase p ON cs.d_purchase_id = p.id
-        WHERE MONTH(p.createdAt) = ? AND YEAR(p.createdAt) = ?
+        WHERE MONTH(cs.createdAt) = ? AND YEAR(cs.createdAt) = ?
       `;
       csCommissions = await prisma.$queryRawUnsafe(csCommissionsQuery, monthNum, yearNum);
     } else {
@@ -664,6 +664,7 @@ export const exportCommissionData = async (req: Request, res: Response): Promise
           p.createdAt as purchase_created_at
         FROM cs_department_commissions cs
         JOIN d_purchase p ON cs.d_purchase_id = p.id
+        WHERE cs.deletedAt IS NULL
       `;
       csCommissions = await prisma.$queryRawUnsafe(csCommissionsQuery);
     }
@@ -822,24 +823,7 @@ export const exportCommissionData = async (req: Request, res: Response): Promise
     titleCell.font = { bold: true, size: 14 };
     titleCell.alignment = { horizontal: 'center' };
 
-    // Get CS department commissions with date filtering
-    const csCommissionsQuery = `
-      SELECT 
-        cs.id,
-        cs.d_purchase_id,
-        cs.commission_amount,
-        cs.is_paid,
-        cs.status,
-        cs.paid_date,
-        cs.createdAt,
-        cs.updatedAt,
-        'CS' as cs_person,
-        p.createdAt as purchase_created_at
-      FROM cs_department_commissions cs
-      JOIN d_purchase p ON cs.d_purchase_id = p.id
-      WHERE MONTH(p.createdAt) = ? AND YEAR(p.createdAt) = ?
-    `;
-    csCommissions = await prisma.$queryRawUnsafe(csCommissionsQuery, monthNum, yearNum);
+    // Remove duplicate CS commission query - already queried above
 
     // Get unique sales persons and their total commissions
     const salesSummary: { [key: string]: number } = {};
@@ -854,6 +838,10 @@ export const exportCommissionData = async (req: Request, res: Response): Promise
       salesSummary[salesPerson] += commission;
     });
 
+    // Debug log for CS commissions
+    console.log('CS Commissions data:', csCommissions);
+    console.log('CS Commissions count:', (csCommissions as any[]).length);
+
     // Get unique CS persons and their total commissions
     const csSummary: { [key: string]: number } = {};
     (csCommissions as any[]).forEach((commission: any) => {
@@ -861,11 +849,15 @@ export const exportCommissionData = async (req: Request, res: Response): Promise
       const commissionAmount = commission.commission_amount ?
         parseFloat(commission.commission_amount.toString() || '0') : 0;
 
+      console.log(`CS Commission: ${csPerson} = ${commissionAmount}`);
+
       if (!csSummary[csPerson]) {
         csSummary[csPerson] = 0;
       }
       csSummary[csPerson] += commissionAmount;
     });
+
+    console.log('CS Summary:', csSummary);
 
     // Add empty rows after data for better separation
     const lastDataRow = worksheet.rowCount;

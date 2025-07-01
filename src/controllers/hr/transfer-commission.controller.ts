@@ -1077,3 +1077,197 @@ export const getCommissionById = async (req: Request, res: Response) => {
     });
   }
 };
+
+export const getTransferTypes = async (req: Request, res: Response) => {
+  try {
+    const transferTypes = await prisma.finance_transfer_type.findMany({
+      where: {
+        deletedAt: null
+      }
+    });
+    
+    return res.status(200).json({
+      success: true,
+      data: transferTypes
+    });
+  } catch (error) {
+    console.error("Error getting transfer types:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error"
+    });
+  }
+};
+
+export const bulkCalculateTransferCommission = async (req: Request, res: Response) => {
+  try {
+    const { transfer_ids } = req.body;
+
+    if (!Array.isArray(transfer_ids) || transfer_ids.length === 0) {
+      return res.status(400).json({ 
+        success: false,
+        message: "กรุณาระบุรายการที่ต้องการคำนวณค่าคอมมิชชั่น" 
+      });
+    }
+
+    const results = [];
+    const errors = [];
+
+    // Process each transfer
+    for (const transferId of transfer_ids) {
+      try {
+        // Get transfer data
+        const transfer = await prisma.finance_transaction.findUnique({
+          where: { id: transferId },
+          include: {
+            user: true,
+            customerDeposit: true,
+            exchange: true
+          }
+        });
+
+        if (!transfer) {
+          errors.push({ transferId, error: "ไม่พบข้อมูลการโอน" });
+          continue;
+        }
+
+        // Check if salesperson exists
+        if (!transfer.salespersonId) {
+          errors.push({ transferId, error: "ไม่พบข้อมูลพนักงานขาย" });
+          continue;
+        }
+
+        // Check if commission already exists
+        const existingCommission = await prisma.finance_commission.findFirst({
+          where: { 
+            transfer_id: transferId,
+            deletedAt: null
+          }
+        });
+
+        if (existingCommission) {
+          errors.push({ transferId, error: "มีการคำนวณค่าคอมมิชชั่นแล้ว" });
+          continue;
+        }
+
+        // Get transfer type name - ใช้ logic เดียวกับ frontend
+        let transferTypeName = '';
+        
+        // ตรวจสอบว่า type เป็นภาษาไทยอยู่แล้วหรือไม่
+        const thaiTypes = ["ฝากโอน", "ฝากสั่ง", "ฝากเติม", "ฝากสั่งซื้อ", "ฝากชำระ"];
+        if (transfer.type && thaiTypes.includes(transfer.type)) {
+          transferTypeName = transfer.type;
+        } 
+        // แปลงประเภทรายการเป็นภาษาไทย
+        else if (transfer.type) {
+          const typeMapping: Record<string, string> = {
+            'DEPOSIT': 'ฝากโอน',
+            'deposit': 'ฝากโอน',
+            'PURCHASE': 'ฝากสั่ง',
+            'purchase': 'ฝากสั่ง',
+            'TOPUP': 'ฝากเติม',
+            'topup': 'ฝากเติม',
+            'ORDER': 'ฝากสั่ง',
+            'order': 'ฝากสั่ง',
+            'PAYMENT': 'ฝากชำระ',
+            'payment': 'ฝากชำระ',
+            'PAY': 'ฝากชำระ',
+            'pay': 'ฝากชำระ'
+          };
+          transferTypeName = typeMapping[transfer.type] || '';
+        }
+        
+        // ตรวจสอบประเภทรายการจากข้อมูลที่มี (ตาม logic frontend)
+        if (!transferTypeName) {
+          if (transfer.customerDeposit) {
+            transferTypeName = "ฝากโอน";
+          } else if (transfer.exchange) {
+            const exchangeType = transfer.exchange.type?.toLowerCase() || "";
+            
+            if (exchangeType === "purchase") {
+              transferTypeName = "ฝากสั่ง";
+            } else if (exchangeType === "topup") {
+              transferTypeName = "ฝากเติม";
+            } else if (exchangeType === "order") {
+              transferTypeName = "ฝากสั่ง";
+            } else if (exchangeType === "payment" || exchangeType === "pay") {
+              transferTypeName = "ฝากชำระ";
+            } else {
+              // แสดงค่า type จาก exchange ถ้ามี
+              transferTypeName = transfer.exchange.type || "ฝากโอน";
+            }
+          } else {
+            transferTypeName = "ฝากโอน"; // default
+          }
+        }
+
+        // Debug log
+        console.log(`Transfer ${transferId}: type_name = "${transferTypeName}"`);
+
+        // Get commission rate from transfer type settings
+        const transferTypeConfig = await prisma.finance_transfer_type.findFirst({
+          where: {
+            type_name: transferTypeName,
+            is_active: true,
+            deletedAt: null
+          }
+        });
+
+        // Debug log
+        console.log(`Transfer type config found:`, transferTypeConfig);
+
+        if (!transferTypeConfig || !transferTypeConfig.commission_rate) {
+          errors.push({ transferId, error: `ไม่พบการตั้งค่าอัตราค่าคอมสำหรับประเภท ${transferTypeName}` });
+          continue;
+        }
+
+        // Use fixed commission amount per transaction (not percentage)
+        // commission_rate field contains the fixed amount per transaction
+        const commissionAmount = transferTypeConfig.commission_rate;
+
+        // Create commission record
+        const commission = await prisma.finance_commission.create({
+          data: {
+            transfer_id: transferId,
+            employee_id: transfer.salespersonId,
+            amount: commissionAmount,
+            status: "PENDING",
+            createdAt: new Date(),
+            updatedAt: new Date()
+          }
+        });
+
+        results.push({
+          transferId,
+          commissionId: commission.id,
+          amount: commissionAmount,
+          status: "created"
+        });
+
+      } catch (error) {
+        console.error(`Error processing transfer ${transferId}:`, error);
+        errors.push({ 
+          transferId, 
+          error: "เกิดข้อผิดพลาดในการคำนวณค่าคอมมิชชั่น" 
+        });
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `คำนวณค่าคอมมิชชั่นสำเร็จ ${results.length} รายการ`,
+      results,
+      errors,
+      total: transfer_ids.length,
+      successful: results.length,
+      failed: errors.length
+    });
+
+  } catch (error) {
+    console.error("Error in bulk transfer commission calculation:", error);
+    return res.status(500).json({ 
+      success: false,
+      message: "เกิดข้อผิดพลาดในการคำนวณค่าคอมมิชชั่น" 
+    });
+  }
+};
