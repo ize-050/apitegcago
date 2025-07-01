@@ -1236,6 +1236,7 @@ model finance_company_account {
 // Commission Rank model
 model commission_rank {
   id           String   @id @default(uuid())
+  work_type    String   @default("ALL IN")  // ประเภทงาน: ALL IN, เคลียร์ฝั่งไทย, เคลียร์ฝั่งจีน, GREEN, FOB, EXW, CIF, CUSTOMER CLEAR
   min_amount   Float
   max_amount   Float
   percentage   Float

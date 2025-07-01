@@ -57,6 +57,7 @@ export const saveCommissionRanks = async (req: Request, res: Response) => {
         ranks.map(rank =>
           tx.commission_rank.create({
             data: {
+              work_type: rank.work_type || "ALL IN",
               min_amount: rank.min_amount,
               max_amount: rank.max_amount,
               percentage: rank.percentage,
@@ -75,18 +76,22 @@ export const saveCommissionRanks = async (req: Request, res: Response) => {
   }
 };
 
-// Calculate commission based on profit amount
+// Calculate commission based on profit amount and work type
 export const calculateCommission = async (req: Request, res: Response) => {
   try {
-    const { profit_amount } = req.body;
+    const { profit_amount, work_type } = req.body;
 
     if (typeof profit_amount !== 'number' || isNaN(profit_amount)) {
       return res.status(400).json({ message: "Invalid profit amount" });
     }
 
-    // Find the appropriate rank for the profit amount
+    // ถ้าไม่มี work_type ใส่มา ให้ใช้ ALL IN เป็นค่า default
+    const workTypeToUse = work_type || "ALL IN";
+
+    // Find the appropriate rank for the profit amount and work type
     const rank = await prisma.commission_rank.findFirst({
       where: {
+        work_type: workTypeToUse,
         min_amount: { lte: profit_amount },
         max_amount: { gte: profit_amount },
       },
@@ -94,8 +99,9 @@ export const calculateCommission = async (req: Request, res: Response) => {
 
     if (!rank) {
       return res.status(404).json({
-        message: "No commission rank found for the given profit amount",
-        commission: 0
+        message: `No commission rank found for work type "${workTypeToUse}" and profit amount ${profit_amount}`,
+        commission: 0,
+        work_type: workTypeToUse
       });
     }
 
@@ -105,6 +111,7 @@ export const calculateCommission = async (req: Request, res: Response) => {
     return res.status(200).json({
       rank,
       profit_amount,
+      work_type: workTypeToUse,
       commission,
     });
   } catch (error) {
@@ -1309,6 +1316,172 @@ export const exportCommissionData = async (req: Request, res: Response): Promise
  * @param res Response
  * @returns Promise<Response>
  */
+// Bulk commission calculation for multiple purchases
+export const bulkCalculateCommission = async (req: Request, res: Response) => {
+  try {
+    const { purchase_ids } = req.body;
+
+    if (!Array.isArray(purchase_ids) || purchase_ids.length === 0) {
+      return res.status(400).json({ 
+        success: false,
+        message: "กรุณาระบุรายการที่ต้องการคำนวณค่าคอมมิชชั่น" 
+      });
+    }
+
+    const results = [];
+    const errors = [];
+
+    // Process each purchase
+    for (const purchaseId of purchase_ids) {
+      try {
+        // Get purchase data with finance information
+        const purchase = await prisma.d_purchase.findUnique({
+          where: { id: purchaseId },
+          include: {
+            purchase_finance: {
+              where: {
+                payment_status: "ชำระครบแล้ว",
+                deletedAt: null
+              },
+              include: {
+                payment_prefix: true
+              }
+            },
+            d_purchase_emp: {
+              include: {
+                user: true
+              }
+            }
+          }
+        });
+
+        if (!purchase) {
+          errors.push({ purchaseId, error: "ไม่พบข้อมูลการจอง" });
+          continue;
+        }
+
+        if (!purchase.purchase_finance || purchase.purchase_finance.length === 0) {
+          errors.push({ purchaseId, error: "ไม่พบข้อมูลการเงินที่ชำระครบแล้ว" });
+          continue;
+        }
+
+        const finance = purchase.purchase_finance[0];
+        const profitLoss = parseFloat(finance.payment_prefix?.profit_loss?.toString() || "0");
+        const managementFee = parseFloat(finance.payment_prefix?.management_fee?.toString() || "0");
+        const workType = purchase.d_term || "ALL IN";
+
+        // Calculate commission for each employee
+        const employeeCommissions: any[] = [];
+        
+        if (purchase.d_purchase_emp && purchase.d_purchase_emp.length > 0) {
+          // Find commission rank based on profit and work type
+          const rank = await prisma.commission_rank.findFirst({
+            where: {
+              work_type: workType,
+              min_amount: { lte: profitLoss },
+              max_amount: { gte: profitLoss },
+            },
+          });
+
+          const percentageValue = rank ? rank.percentage : 5; // Default 5% if no rank found
+
+          for (const emp of purchase.d_purchase_emp) {
+            // Check if it's CS employee (simplified check)
+            const isCS = emp.user?.email?.toLowerCase().includes('cs') || false;
+
+            const commissionData = {
+              employee_id: emp.user_id,
+              commission_type: isCS ? "fixed" : "percentage",
+              commission_value: isCS ? 200 : percentageValue,
+              commission_amount: isCS ? 200 : (profitLoss * percentageValue) / 100,
+              status: "saved"
+            };
+
+            employeeCommissions.push(commissionData);
+          }
+        }
+
+        // Save commission data
+        await prisma.$transaction(async (tx) => {
+          // Delete existing commissions for this purchase
+          await tx.employee_commission.deleteMany({
+            where: { d_purchase_id: purchaseId }
+          });
+
+          // Create new commission records
+          if (employeeCommissions.length > 0) {
+            await Promise.all(
+              employeeCommissions.map(async (comm) => {
+                return await tx.employee_commission.create({
+                  data: {
+                    d_purchase_id: purchaseId,
+                    employee_id: comm.employee_id,
+                    commission_type: comm.commission_type,
+                    commission_value: comm.commission_value,
+                    commission_amount: comm.commission_amount,
+                    status: comm.status
+                  }
+                });
+              })
+            );
+          }
+
+          // Create CS department commission (fixed 200 baht)
+          const existingCsCommission = await tx.cs_department_commission.findUnique({
+            where: { d_purchase_id: purchaseId }
+          });
+
+          if (!existingCsCommission) {
+            await tx.cs_department_commission.create({
+              data: {
+                d_purchase_id: purchaseId,
+                commission_amount: 200,
+                is_paid: false,
+                status: "saved"
+              }
+            });
+          }
+        });
+
+        results.push({
+          purchaseId,
+          success: true,
+          commissionsCount: employeeCommissions.length,
+          totalCommission: employeeCommissions.reduce((sum, comm) => sum + comm.commission_amount, 0)
+        });
+
+      } catch (error) {
+        console.error(`Error processing purchase ${purchaseId}:`, error);
+        errors.push({ 
+          purchaseId, 
+          error: error instanceof Error ? error.message : "เกิดข้อผิดพลาดไม่ทราบสาเหตุ" 
+        });
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `ประมวลผลสำเร็จ ${results.length} รายการ`,
+      data: {
+        successful: results,
+        errors: errors,
+        summary: {
+          total: purchase_ids.length,
+          successful: results.length,
+          failed: errors.length
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error("Error in bulk commission calculation:", error);
+    return res.status(500).json({ 
+      success: false,
+      message: "เกิดข้อผิดพลาดในการคำนวณค่าคอมมิชชั่น" 
+    });
+  }
+};
+
 export const getCommissionSummaryForExport = async (req: Request, res: Response) => {
   try {
     const { 

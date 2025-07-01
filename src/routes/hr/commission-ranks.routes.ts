@@ -11,7 +11,8 @@ import {
   getCsCommission,
   getCommissionSummaryForExport,
   getPurchaseCommissionStatus,
-  exportCommissionData
+  exportCommissionData,
+  bulkCalculateCommission
 } from "../../controllers/hr/commission-ranks.controller";
 
 const router = express.Router();
@@ -27,6 +28,9 @@ router.post("/calculate", calculateCommission);
 
 // Submit commission data
 router.post("/submit", submitCommission);
+
+// Bulk calculate commission for multiple purchases
+router.post("/bulk-calculate", bulkCalculateCommission);
 
 // CS Department Commission routes
 router.get("/cs-commissions", getCsDepartmentCommissions);
