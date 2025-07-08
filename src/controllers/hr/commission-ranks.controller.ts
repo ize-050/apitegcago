@@ -22,6 +22,39 @@ export const getCommissionRanks = async (req: Request, res: Response) => {
   }
 };
 
+// Delete a single commission rank
+export const deleteCommissionRank = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({ message: "Commission rank ID is required" });
+    }
+
+    // Check if the commission rank exists
+    const existingRank = await prisma.commission_rank.findUnique({
+      where: { id },
+    });
+
+    if (!existingRank) {
+      return res.status(404).json({ message: "Commission rank not found" });
+    }
+
+    // Delete the commission rank
+    await prisma.commission_rank.delete({
+      where: { id },
+    });
+
+    return res.status(200).json({ 
+      success: true,
+      message: "Commission rank deleted successfully" 
+    });
+  } catch (error) {
+    console.error("Error deleting commission rank:", error);
+    return res.status(500).json({ message: "Failed to delete commission rank" });
+  }
+};
+
 // Create or update commission ranks
 export const saveCommissionRanks = async (req: Request, res: Response) => {
   try {
@@ -31,19 +64,38 @@ export const saveCommissionRanks = async (req: Request, res: Response) => {
       return res.status(400).json({ message: "Invalid data format" });
     }
 
-    // Validate ranks
-    for (let i = 0; i < ranks.length; i++) {
-      const rank = ranks[i];
-      if (rank.min_amount >= rank.max_amount) {
-        return res.status(400).json({
-          message: `Rank ${i + 1} has invalid range (min must be less than max)`
-        });
+    // Group ranks by work_type for validation
+    const ranksByWorkType = ranks.reduce((groups: Record<string, any[]>, rank: any) => {
+      if (!groups[rank.work_type]) {
+        groups[rank.work_type] = [];
       }
+      groups[rank.work_type].push(rank);
+      return groups;
+    }, {});
 
-      if (i > 0 && rank.min_amount <= ranks[i - 1].max_amount) {
-        return res.status(400).json({
-          message: `Rank ${i + 1} overlaps with previous rank`
-        });
+    // Validate ranks by work_type
+    for (const workType in ranksByWorkType) {
+      const workTypeRanks = ranksByWorkType[workType];
+      
+      // Sort by min_amount for proper validation
+      workTypeRanks.sort((a, b) => a.min_amount - b.min_amount);
+      
+      for (let i = 0; i < workTypeRanks.length; i++) {
+        const rank = workTypeRanks[i];
+        
+        // Check if min_amount < max_amount
+        if (rank.min_amount >= rank.max_amount) {
+          return res.status(400).json({
+            message: `Work type "${workType}" rank ${i + 1} has invalid range (min must be less than max)`
+          });
+        }
+        
+        // Check overlap with previous rank in the same work_type
+        if (i > 0 && rank.min_amount <= workTypeRanks[i - 1].max_amount) {
+          return res.status(400).json({
+            message: `Work type "${workType}" rank ${i + 1} overlaps with previous rank`
+          });
+        }
       }
     }
 

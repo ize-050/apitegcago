@@ -44,22 +44,31 @@ export const getAllTransfers = async (req: Request, res: Response) => {
     }
 
     // Filter by transaction type
-    if (type) {
-      const typeValue = type.toString();
-      if (typeValue === 'DEPOSIT') {
-        where.customerDepositId = { not: null };
-      } else if (typeValue === 'PURCHASE' || typeValue === 'TOPUP') {
-        where.exchangeId = { not: null };
-        where.exchange = {
-          type: typeValue
-        };
-      }
-    }
+   if(type){
+     if(type.toString() === 'DEPOSIT' || type.toString() === 'deposit') {
+      where.type = 'deposit';
+     } else if(type.toString() === 'PURCHASE' || type.toString() === 'purchase') {
+      where.type = 'order';
+     } else if(type.toString() === 'TOPUP' || type.toString() === 'topup') {
+      where.type = 'topup';
+     }
+    console.log("type", type);
+   }
 
-    // Search by document number
+    // Search by document number or customer ID
     if (searchTerm) {
       where.OR = [
         { documentNumber: { contains: searchTerm.toString() } },
+        { customerId: { contains: searchTerm.toString() } },
+      ];
+    }
+
+
+    // Search by document number or customer ID
+    if (searchTerm) {
+      where.OR = [
+        { documentNumber: { contains: searchTerm.toString() } },
+        { customerId: { contains: searchTerm.toString() } },
       ];
     }
 

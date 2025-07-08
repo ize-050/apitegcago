@@ -2,6 +2,7 @@ import express from "express";
 import { 
   getCommissionRanks, 
   saveCommissionRanks,
+  deleteCommissionRank,
   calculateCommission,
   submitCommission,
   getCsDepartmentCommissions,
@@ -14,6 +15,7 @@ import {
   exportCommissionData,
   bulkCalculateCommission
 } from "../../controllers/hr/commission-ranks.controller";
+import authMiddleware from "../../middleware/authMiddleware";
 
 const router = express.Router();
 
@@ -22,6 +24,9 @@ router.get("/", getCommissionRanks);
 
 // Save commission ranks
 router.post("/", saveCommissionRanks);
+
+// Delete a single commission rank
+router.delete("/:id", authMiddleware, deleteCommissionRank);
 
 // Calculate commission based on profit amount
 router.post("/calculate", calculateCommission);
