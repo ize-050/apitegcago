@@ -22,6 +22,26 @@ export const getCommissionRanks = async (req: Request, res: Response) => {
   }
 };
 
+// ฟังก์ชันตรวจสอบว่าเป็น default rank หรือไม่
+const isDefaultRank = (rank: any) => {
+  const defaultRanks = [
+    { work_type: 'ALL IN', min_amount: 0, max_amount: 50000 },
+    { work_type: 'เคลียร์ฝั่งไทย', min_amount: 0, max_amount: 30000 },
+    { work_type: 'เคลียร์ฝั่งจีน', min_amount: 0, max_amount: 35000 },
+    { work_type: 'GREEN', min_amount: 0, max_amount: 20000 },
+    { work_type: 'FOB', min_amount: 0, max_amount: 25000 },
+    { work_type: 'EXW', min_amount: 0, max_amount: 15000 },
+    { work_type: 'CIF', min_amount: 0, max_amount: 40000 },
+    { work_type: 'CUSTOMER CLEAR', min_amount: 0, max_amount: 20000 },
+  ];
+
+  return defaultRanks.some(defaultRank => 
+    defaultRank.work_type === rank.work_type &&
+    defaultRank.min_amount === rank.min_amount &&
+    defaultRank.max_amount === rank.max_amount
+  );
+};
+
 // Delete a single commission rank
 export const deleteCommissionRank = async (req: Request, res: Response) => {
   try {
@@ -38,6 +58,14 @@ export const deleteCommissionRank = async (req: Request, res: Response) => {
 
     if (!existingRank) {
       return res.status(404).json({ message: "Commission rank not found" });
+    }
+
+    // ตรวจสอบว่าเป็น default rank หรือไม่
+    if (isDefaultRank(existingRank)) {
+      return res.status(403).json({ 
+        success: false,
+        message: "ไม่สามารถลบอันดับเริ่มต้นได้ สามารถแก้ไขได้เท่านั้น" 
+      });
     }
 
     // Delete the commission rank

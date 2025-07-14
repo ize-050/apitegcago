@@ -1271,3 +1271,106 @@ export const bulkCalculateTransferCommission = async (req: Request, res: Respons
     });
   }
 };
+
+/**
+ * Bulk update commission status
+ * @param req Request
+ * @param res Response  
+ * @returns Response
+ */
+export const bulkUpdateCommissionStatus = async (req: Request, res: Response) => {
+  try {
+    const { commissionIds, status } = req.body;
+
+    // Validate required fields
+    if (!commissionIds || !Array.isArray(commissionIds) || commissionIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Commission IDs are required and must be a non-empty array",
+      });
+    }
+
+    if (!status) {
+      return res.status(400).json({
+        success: false,
+        message: "Status is required",
+      });
+    }
+
+    // Validate status value
+    const validStatuses = ['PENDING', 'APPROVED', 'PAID'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid status. Must be one of: ${validStatuses.join(', ')}`,
+      });
+    }
+
+    console.log(`Bulk updating ${commissionIds.length} commissions to status: ${status}`);
+
+    // Check if all commission IDs exist
+    const existingCommissions = await prisma.finance_commission.findMany({
+      where: {
+        id: { in: commissionIds },
+      },
+      select: {
+        id: true,
+        status: true,
+      },
+    });
+
+    if (existingCommissions.length !== commissionIds.length) {
+      const foundIds = existingCommissions.map(c => c.id);
+      const missingIds = commissionIds.filter(id => !foundIds.includes(id));
+      
+      return res.status(404).json({
+        success: false,
+        message: `Some commission records not found`,
+        missingIds,
+      });
+    }
+
+    // Update commission status for all provided IDs
+    const updateResult = await prisma.finance_commission.updateMany({
+      where: {
+        id: { in: commissionIds },
+      },
+      data: {
+        status: status,
+        updatedAt: new Date(),
+      },
+    });
+
+    console.log(`Successfully updated ${updateResult.count} commission records`);
+
+    // Get updated records for response
+    const updatedCommissions = await prisma.finance_commission.findMany({
+      where: {
+        id: { in: commissionIds },
+      },
+      select: {
+        id: true,
+        status: true,
+        amount: true,
+        updatedAt: true,
+      },
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: `Updated ${updateResult.count} commission statuses to ${status}`,
+      data: {
+        updatedCount: updateResult.count,
+        commissions: updatedCommissions,
+      },
+    });
+
+  } catch (error) {
+    console.error("Error in bulk commission status update:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to update commission statuses",
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+};

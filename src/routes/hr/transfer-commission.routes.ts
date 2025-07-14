@@ -8,6 +8,7 @@ import {
   getCommissionSummary,
   exportCommissionSummary,
   bulkCalculateTransferCommission,
+  bulkUpdateCommissionStatus,
   getTransferTypes,
 } from "../../controllers/hr/transfer-commission.controller";
 import authMiddleware from "../../middleware/authMiddleware";
@@ -20,6 +21,7 @@ router.use(authMiddleware);
 // Routes - put more specific routes first
 router.post("/", saveTransferCommission);
 router.post("/bulk-calculate", bulkCalculateTransferCommission);
+router.put("/bulk-status", bulkUpdateCommissionStatus);
 router.get("/types", getTransferTypes);
 router.get("/summary", getCommissionSummary);
 router.get("/export", exportCommissionSummary);
