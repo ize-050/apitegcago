@@ -251,6 +251,30 @@ class SaleDashboardService {
   }
 
   /**
+   * 10. ดึงรายชื่อ salesperson ทั้งหมดสำหรับ dropdown filter
+   */
+  async getAllSalespersons(): Promise<any> {
+    try {
+      const salespersons = await this.saleDashboardRepo.getAvailableSalespersons();
+      
+      // Format data for dropdown
+      const formattedSalespersons = [
+        { id: 'all', fullname: 'ทั้งหมด', email: null, roles_name: 'all' },
+        ...salespersons.map((person: any) => ({
+          id: person.id,
+          fullname: person.fullname || person.name,
+          email: person.email,
+          roles_name: person.roles_name
+        }))
+      ];
+
+      return formattedSalespersons;
+    } catch (error: any) {
+      throw new Error(`getAllSalespersons error: ${error.message}`);
+    }
+  }
+
+  /**
    * 7. ดึงข้อมูลจำนวนรอปิดการขาย (Pending Deals)
    */
   async getPendingDealsData(filters: {
@@ -300,21 +324,36 @@ class SaleDashboardService {
     try {
       const rawData = await this.saleDashboardRepo.getSalesChartData(filters);
       
+      console.log('=== SALES CHART SERVICE DEBUG ===');
+      console.log('Raw data:', rawData);
+      
       // Format data for Nivo Line Chart
       const salesBySalesperson = this.groupDataBySalesperson(rawData);
+      console.log('Sales by salesperson:', salesBySalesperson);
+      
       const chartData = Object.keys(salesBySalesperson).map((saleId, index) => {
         const saleData = salesBySalesperson[saleId];
-        const monthlyData = this.fillMissingMonths(saleData);
+        
+        // Convert raw data to monthly format first
+        const monthlyDataPoints = saleData.map((item: any) => ({
+          x: this.getMonthName(parseInt(item.month_number)),
+          y: parseFloat(item.total_revenue || 0),
+          month_number: parseInt(item.month_number)
+        }));
+        
+        // Fill missing months (1-12)
+        const completeMonthlyData = this.fillMissingMonthsForSales(monthlyDataPoints);
+        
+        console.log(`Salesperson ${saleData[0]?.sale_name} data:`, completeMonthlyData);
         
         return {
           id: saleData[0]?.sale_name || `Sale ${saleId}`,
           color: this.getChartColor(index),
-          data: monthlyData.map((month: any) => ({
-            x: this.getMonthName(month.month_number),
-            y: parseFloat(month.total_revenue || 0)
-          }))
+          data: completeMonthlyData
         };
       });
+
+      console.log('Final chart data:', chartData);
 
       return {
         chartData,
@@ -526,6 +565,22 @@ class SaleDashboardService {
     const result = months.map(month => {
       const existing = data.find(d => d.x === month);
       return existing || { x: month, y: 0 };
+    });
+    
+    return result;
+  }
+
+  /**
+   * Helper: Fill missing months for sales data (1-12)
+   */
+  private fillMissingMonthsForSales(data: any[]): any[] {
+    const months = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 
+                   'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+    
+    const result = months.map((monthName, index) => {
+      const monthNumber = index + 1;
+      const existing = data.find(d => d.month_number === monthNumber);
+      return existing || { x: monthName, y: 0, month_number: monthNumber };
     });
     
     return result;

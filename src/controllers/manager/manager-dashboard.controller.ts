@@ -1,6 +1,8 @@
-import { Request, Response } from "express";
-import z from "zod";
-import SaleDashboardService from "../../services/dashboard/sale-dashboard.service";
+import { Request, Response } from 'express';
+import SaleDashboardService from '../../services/dashboard/sale-dashboard.service';
+import { CSDashboardService } from '../../services/dashboard/cs-dashboard.service';
+import AccountDashboardService from '../../services/dashboard/account-dashboard.service';
+import { z } from 'zod';
 
 // Validation schemas
 const dateFilterSchema = z.object({
@@ -19,9 +21,11 @@ const shipmentChartFilterSchema = z.object({
 
 export class ManagerDashboardController {
   private saleDashboardService: SaleDashboardService;
+  private csDashboardService: CSDashboardService;
 
   constructor() {
     this.saleDashboardService = new SaleDashboardService();
+    this.csDashboardService = new CSDashboardService();
   }
   
   // Sale Dashboard Data
@@ -90,70 +94,88 @@ export class ManagerDashboardController {
       console.log('=== MANAGER DASHBOARD DEBUG ===');
       console.log('Request params:', req.query);
       
-      const { salespersonId, year, startMonth, endMonth } = req.query;
+      const { salespersonId, year, month, startMonth, endMonth } = req.query;
       
-      console.log('Parsed filters:', { salespersonId, year, startMonth, endMonth });
+      console.log('Parsed filters:', { salespersonId, year, month, startMonth, endMonth });
 
-      // Get raw shipment data directly from repository to preserve job_type_combination
-      const rawShipmentData = await this.saleDashboardService.getShipmentChartData({
+      // Handle month filtering - if month is specified, use it for both start and end
+      let actualStartMonth = startMonth ? parseInt(startMonth as string) : 1;
+      let actualEndMonth = endMonth ? parseInt(endMonth as string) : 12;
+      
+      if (month && month !== 'all') {
+        actualStartMonth = parseInt(month as string);
+        actualEndMonth = parseInt(month as string);
+      }
+
+      // Get shipment data from service with proper month filtering
+      const shipmentResponse = await this.saleDashboardService.getShipmentChartData({
         salespersonId: salespersonId as string,
-        year: year ? parseInt(year as string) : new Date().getFullYear()
+        year: year ? parseInt(year as string) : new Date().getFullYear(),
+        startMonth: actualStartMonth,
+        endMonth: actualEndMonth
       });
 
-      console.log('=== RAW SHIPMENT DATA ===');
-      console.log('Raw shipment data:', rawShipmentData);
-      console.log('Raw data type:', typeof rawShipmentData);
-      console.log('Raw data keys:', rawShipmentData ? Object.keys(rawShipmentData) : 'null');
+      console.log('=== SHIPMENT SERVICE RESPONSE ===');
+      console.log('Service response:', shipmentResponse);
       
-      // Check if data is nested in response structure
-      const actualData = rawShipmentData?.data?.chartData || rawShipmentData?.data || rawShipmentData;
-      console.log('Actual data:', actualData);
-      console.log('Actual data is array:', Array.isArray(actualData));
-      console.log('Actual data length:', actualData?.length);
-      if (Array.isArray(actualData)) {
-        console.log('Sample actual data:', actualData.slice(0, 3));
-      }
+      // Extract data from service response
+      const chartData = shipmentResponse?.data?.chartData || [];
+      const serviceSummary = shipmentResponse?.data?.summary || null;
+      
+      console.log('Chart data:', chartData);
+      console.log('Service summary:', serviceSummary);
 
       // Get available salespersons
       const availableSalespersons = await this.saleDashboardService.getAvailableSalespersons();
       
-      // ใช้ข้อมูลที่ถูกต้องจาก actualData
-      const serviceData = actualData;
-      
-      // Calculate summary statistics จากข้อมูลดิบ (ตรวจสอบว่าเป็น array ก่อน)
-      const summary = {
-        totalShipments: Array.isArray(serviceData) ? serviceData.reduce((sum: number, item: any) => sum + (parseInt(item.shipment_count) || 0), 0) : 0,
-        totalValue: Array.isArray(serviceData) ? serviceData.reduce((sum: number, item: any) => sum + (parseFloat(item.shipment_value) || 0), 0) : 0,
-        averageShipmentsPerMonth: Array.isArray(serviceData) && serviceData.length ? (serviceData.reduce((sum: number, item: any) => sum + (parseInt(item.shipment_count) || 0), 0) / 12) : 0
-      };
+      // Calculate summary from chart data if service doesn't provide it
+      let summary = serviceSummary;
+      if (!summary && Array.isArray(chartData)) {
+        let totalShipments = 0;
+        let totalValue = 0;
+        
+        chartData.forEach((series: any) => {
+          if (series.data && Array.isArray(series.data)) {
+            series.data.forEach((point: any) => {
+              totalShipments += point.y || 0;
+              totalValue += point.value || 0;
+            });
+          }
+        });
+        
+        const monthCount = actualEndMonth - actualStartMonth + 1;
+        summary = {
+          totalShipments,
+          totalValue,
+          averageShipmentsPerMonth: monthCount > 0 ? totalShipments / monthCount : 0
+        };
+      }
       
       // Generate metadata
       const metadata = {
-        totalJobTypes: Array.isArray(serviceData) ? [...new Set(serviceData.map((item: any) => item.job_type_combination) || [])].length : 0,
-        dataPoints: Array.isArray(serviceData) ? serviceData.length : 0,
-        period: `${year}/${startMonth || 1}-${endMonth || 12}`,
+        totalJobTypes: Array.isArray(chartData) ? chartData.length : 0,
+        dataPoints: Array.isArray(chartData) ? chartData.reduce((sum: number, series: any) => sum + (series.data?.length || 0), 0) : 0,
+        period: `${year}/${actualStartMonth}-${actualEndMonth}`,
       };
 
       console.log('=== FINAL SUMMARY & METADATA ===');
       console.log('Summary:', summary);
       console.log('Metadata:', metadata);
-      console.log('Service data type:', typeof serviceData);
-      console.log('Service data is array:', Array.isArray(serviceData));
 
       const responseData = {
         chartType: 'line',
-        chartData: serviceData, // ส่งข้อมูลที่ถูกต้อง
+        chartData: chartData,
         summary,
         filters: {
           selectedSalesperson: salespersonId,
           selectedYear: year,
-          monthRange: { start: startMonth, end: endMonth },
-          availableSalespersons: Array.isArray(availableSalespersons) 
-            ? availableSalespersons.map((sp: any) => ({
+          monthRange: { start: actualStartMonth, end: actualEndMonth },
+          availableSalespersons: Array.isArray(availableSalespersons?.data) 
+            ? availableSalespersons.data.map((sp: any) => ({
                 id: sp.id,
-                name: sp.fullname || sp.email,
+                name: sp.name || sp.fullname || sp.email,
                 email: sp.email,
-                roles_name: sp.roles_name
+                roles_name: sp.role || sp.roles_name
               }))
             : []
         },
@@ -305,106 +327,172 @@ export class ManagerDashboardController {
   // CS Dashboard Data
   async getCSDashboardData(req: Request, res: Response): Promise<any> {
     try {
-      const { startDate, endDate } = dateFilterSchema.parse(req.query);
-
-      // Mock data for CS Dashboard
-      const mockData = {
-        kpis: {
-          newRequests: 45,
-          quotations: 38,
-          proposals: 32,
-          acceptedJobs: 28,
-        },
-        shipmentAnalysis: [
-          { id: 'Import', label: 'Import', value: 65 },
-          { id: 'Export', label: 'Export', value: 35 },
-        ],
-        portAnalysis: [
-          { port: 'กรุงเทพ', import: 25, export: 15 },
-          { port: 'ลาดกระบัง', import: 20, export: 12 },
-          { port: 'แหลมฉบัง', import: 15, export: 8 },
-          { port: 'เชียงใหม่', import: 5, export: 0 },
-        ],
-        productTypes: [
-          { id: 'อิเล็กทรอนิกส์', label: 'อิเล็กทรอนิกส์', value: 30 },
-          { id: 'เสื้อผ้า', label: 'เสื้อผ้า', value: 25 },
-          { id: 'อาหาร', label: 'อาหาร', value: 20 },
-          { id: 'เครื่องจักร', label: 'เครื่องจักร', value: 15 },
-          { id: 'อื่นๆ', label: 'อื่นๆ', value: 10 },
-        ],
-        containerStatus: [
-          { status: 'รอจองตู้', count: 12 },
-          { status: 'จองแล้ว', count: 18 },
-          { status: 'รอรับตู้', count: 8 },
-          { status: 'ได้รับตู้แล้ว', count: 15 },
-        ],
-        documentStatus: [
-          { status: 'รอจัดทำ', count: 10 },
-          { status: 'กำลังจัดทำ', count: 15 },
-          { status: 'เสร็จสิ้น', count: 25 },
-        ],
-        departureStatus: [
-          { status: 'รอออกเดินทาง', count: 8 },
-          { status: 'กำลังขนส่ง', count: 12 },
-          { status: 'ถึงปลายทางแล้ว', count: 20 },
-        ],
-        deliveryStatus: [
-          { status: 'รอจัดส่ง', count: 5 },
-          { status: 'กำลังจัดส่ง', count: 8 },
-          { status: 'จัดส่งเสร็จสิ้น', count: 27 },
-        ],
+      const { startDate, endDate, transport, route, term } = req.query;
+      
+      const filters = {
+        startDate: startDate as string,
+        endDate: endDate as string,
+        transport: transport as string,
+        route: route as string,
+        term: term as string
       };
+
+      // Get real data from CSDashboardService
+      const dashboardData = await this.csDashboardService.getDashboardData(filters);
 
       res.json({
         success: true,
-        data: mockData,
+        data: dashboardData,
+        message: 'CS dashboard data retrieved successfully'
       });
     } catch (error) {
       console.error('Error fetching CS dashboard data:', error);
-      res.status(500).json({ success: false, message: 'Internal server error' });
+      res.status(500).json({ 
+        success: false, 
+        message: error instanceof Error ? error.message : 'Internal server error' 
+      });
     }
   }
 
   // Account Dashboard Data
   async getAccountDashboardData(req: Request, res: Response): Promise<any> {
     try {
-      const { startDate, endDate } = dateFilterSchema.parse(req.query);
+      const { startDate, endDate, period } = req.query;
+      
+      const filters = {
+        startDate: startDate as string,
+        endDate: endDate as string,
+        period: (period as 'day' | 'month' | 'year') || 'month'
+      };
 
-      // Mock data for Account Dashboard
-      const mockData = {
+      // Get complete data from AccountDashboardService
+      const [
+        kpis, 
+        shippingMetrics, 
+        revenueMetrics, 
+        costMetrics, 
+        monthlyData, 
+        revenueProportions, 
+        expenseProportions,
+        transactionAnalysis, 
+        topCustomers
+      ] = await Promise.all([
+        AccountDashboardService.getAccountKPIs(filters),
+        AccountDashboardService.getShippingMetrics(filters),
+        AccountDashboardService.getRevenueMetrics(filters),
+        AccountDashboardService.getCostMetrics(filters),
+        AccountDashboardService.getMonthlyRevenueExpense(filters),
+        AccountDashboardService.getRevenueProportions(filters),
+        AccountDashboardService.getExpenseProportions(filters),
+        AccountDashboardService.getTransactionAnalysis(filters),
+        AccountDashboardService.getTopCustomers(filters)
+      ]);
+
+      // Format monthly data for frontend consumption
+      const monthlyDataFormatted = monthlyData.map(item => ({
+        month: item.month,
+        depositRevenue: 0, // Will be calculated from revenueProportions if needed
+        exchangeRevenue: 0, // Will be calculated from revenueProportions if needed
+        totalRevenue: item.totalRevenue,
+        totalCost: item.totalCost,
+        grossProfit: item.grossProfit,
+        netProfit: item.netProfit
+      }));
+
+      // Complete response data matching frontend interface
+      const responseData = {
         kpis: {
-          totalRevenue: 15800000,
-          totalExpenses: 12200000,
-          netProfit: 3600000,
-          profitMargin: 22.8,
-          withdrawalAmount: 2800000,
-          clearingAmount: 1900000,
-          rmbDeposits: 850000,
+          pendingShipments: kpis.pendingShipments,
+          totalWithdrawalAmount: kpis.totalWithdrawalAmount,
+          totalClearedAmount: kpis.totalClearedAmount,
+          remainingBalance: kpis.remainingBalance,
+          totalRevenue: kpis.totalRevenue,
+          revenueBeforeVat: kpis.revenueBeforeVat,
+          costOfSales: kpis.costOfSales,
+          totalAllExpenses: kpis.totalAllExpenses,
+          costPercentage: kpis.costPercentage,
+          grossProfit: kpis.grossProfit,
+          netProfit: kpis.netProfit,
+          profitMargin: kpis.profitMargin
         },
-        revenueTrends: [
-          { period: 'ม.ค.', revenue: 2200000, expenses: 1800000, profit: 400000 },
-          { period: 'ก.พ.', revenue: 2400000, expenses: 1900000, profit: 500000 },
-          { period: 'มี.ค.', revenue: 2600000, expenses: 2100000, profit: 500000 },
-          { period: 'เม.ย.', revenue: 2800000, expenses: 2200000, profit: 600000 },
-          { period: 'พ.ค.', revenue: 3000000, expenses: 2400000, profit: 600000 },
-          { period: 'มิ.ย.', revenue: 2800000, expenses: 1800000, profit: 1000000 },
-        ],
-        plAnalysis: [
-          { category: 'รายได้จากการขาย', amount: 12500000, percentage: 79.1 },
-          { category: 'รายได้จากค่าธรรมเนียม', amount: 2100000, percentage: 13.3 },
-          { category: 'รายได้จากอัตราแลกเปลี่ยน', amount: 1200000, percentage: 7.6 },
-        ],
-        rmbTracking: [
-          { type: 'ยอดฝาก RMB', amount: 850000, trend: 'up', change: 12.5 },
-          { type: 'ยอดเบิก RMB', amount: 720000, trend: 'down', change: -8.3 },
-          { type: 'ยอดคงเหลือ RMB', amount: 130000, trend: 'up', change: 15.2 },
-          { type: 'อัตราแลกเปลี่ยนเฉลี่ย', amount: 4.85, trend: 'stable', change: 0.2 },
-        ],
+        shippingMetrics: {
+          pendingShipments: shippingMetrics.pendingShipments,
+          totalWithdrawalAmount: shippingMetrics.totalWithdrawalAmount,
+          totalClearedAmount: shippingMetrics.totalClearedAmount,
+          remainingBalance: shippingMetrics.remainingBalance
+        },
+        revenueMetrics: {
+          totalDepositRevenue: revenueMetrics.totalDepositRevenue,
+          totalExchangeRevenue: revenueMetrics.totalExchangeRevenue,
+          totalRevenue: revenueMetrics.totalRevenue,
+          revenueBeforeVat: revenueMetrics.revenueBeforeVat
+        },
+        costMetrics: {
+          totalPurchaseCost: costMetrics.totalPurchaseCost,
+          totalVatAmount: costMetrics.totalVatAmount,
+          costOfSales: costMetrics.costOfSales,
+          totalShippingCost: costMetrics.totalShippingCost,
+          totalChinaExpenses: costMetrics.totalChinaExpenses,
+          totalThailandExpenses: costMetrics.totalThailandExpenses,
+          totalAllExpenses: costMetrics.totalAllExpenses,
+          costPercentage: costMetrics.costPercentage,
+          expenseBreakdown: costMetrics.expenseBreakdown || {
+            employeeCost: 0,
+            warehouseCost: 0,
+            customsCost: 0,
+            portFees: 0,
+            otherExpenses: 0
+          }
+        },
+        monthlyData: monthlyDataFormatted,
+        transactionAnalysis: {
+          totalDepositTransactions: transactionAnalysis.totalDepositTransactions,
+          totalTransferTransactions: transactionAnalysis.totalTransferTransactions,
+          depositAmountRMB: transactionAnalysis.depositAmountRMB,
+          transferAmountRMB: transactionAnalysis.transferAmountRMB,
+          totalTransactionRMB: transactionAnalysis.totalTransactionRMB,
+          depositAmountTHB: transactionAnalysis.depositAmountTHB,
+          transferAmountTHB: transactionAnalysis.transferAmountTHB,
+          totalTransactionTHB: transactionAnalysis.totalTransactionTHB
+        },
+        topCustomers: topCustomers.map(customer => ({
+          customerId: customer.customerId,
+          customerName: customer.customerName,
+          totalOrders: customer.totalOrders,
+          totalBillingAmount: customer.totalBillingAmount,
+          totalAmount: customer.totalAmount,
+          transactionCount: customer.transactionCount
+        })),
+        revenueProportions: {
+          depositRevenue: revenueProportions.depositRevenue,
+          exchangeRevenue: revenueProportions.exchangeRevenue,
+          depositPercentage: revenueProportions.depositPercentage,
+          exchangePercentage: revenueProportions.exchangePercentage
+        },
+        expenseProportions: expenseProportions.map(expense => ({
+          category: expense.category,
+          amount: expense.amount,
+          percentage: expense.percentage
+        })),
+        plAnalysis: {
+          grossProfit: kpis.grossProfit,
+          netProfit: kpis.netProfit,
+          profitMargin: kpis.profitMargin,
+          costPercentage: kpis.costPercentage
+        },
+        rmbTracking: {
+          depositAmountRMB: transactionAnalysis.depositAmountRMB,
+          transferAmountRMB: transactionAnalysis.transferAmountRMB,
+          totalTransactionRMB: transactionAnalysis.totalTransactionRMB,
+          depositAmountTHB: transactionAnalysis.depositAmountTHB,
+          transferAmountTHB: transactionAnalysis.transferAmountTHB,
+          totalTransactionTHB: transactionAnalysis.totalTransactionTHB
+        }
       };
 
       res.json({
         success: true,
-        data: mockData,
+        data: responseData,
       });
     } catch (error) {
       console.error('Error fetching account dashboard data:', error);
@@ -458,5 +546,84 @@ export class ManagerDashboardController {
       res.status(500).json({ success: false, message: 'Internal server error' });
     }
   }
-}
 
+  // Sales Chart Data
+  async getSalesChartData(req: Request, res: Response): Promise<any> {
+    try {
+      const { salespersonId, year, month, startDate, endDate } = req.query;
+
+      const filters = {
+        salespersonId: salespersonId === 'all' ? undefined : salespersonId as string,
+        year: year ? parseInt(year as string) : new Date().getFullYear(),
+        month: month && month !== 'all' ? parseInt(month as string) : undefined,
+        startDate: startDate as string,
+        endDate: endDate as string,
+      };
+
+      console.log('=== SALES CHART API ===');
+      console.log('Filters:', filters);
+
+      const data = await this.saleDashboardService.getSalesChartData(filters);
+
+      res.json({
+        success: true,
+        data,
+      });
+    } catch (error) {
+      console.error('Error fetching sales chart data:', error);
+      res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+  }
+
+  /**
+   * Get salesperson options for dropdown
+   */
+  async getSalespersonOptions(req: Request, res: Response): Promise<void> {
+    try {
+      console.log('=== GET SALESPERSON OPTIONS ===');
+      
+      const salespersonOptions = await this.saleDashboardService.getSalespersonOptions();
+      
+      console.log('Salesperson Options:', salespersonOptions);
+      
+      res.status(200).json({
+        success: true,
+        message: 'Salesperson options retrieved successfully',
+        data: salespersonOptions
+      });
+    } catch (error: any) {
+      console.error('Error in getSalespersonOptions:', error);
+      res.status(500).json({
+        success: false,
+        message: error.message || 'Internal server error',
+        data: null
+      });
+    }
+  }
+
+  /**
+   * Get all salespersons for dropdown filter
+   */
+  async getAllSalespersons(req: Request, res: Response): Promise<void> {
+    try {
+      console.log('=== GET ALL SALESPERSONS ===');
+      
+      const salespersons = await this.saleDashboardService.getAllSalespersons();
+      
+      console.log('All Salespersons:', salespersons);
+      
+      res.status(200).json({
+        success: true,
+        message: 'All salespersons retrieved successfully',
+        data: salespersons
+      });
+    } catch (error: any) {
+      console.error('Error in getAllSalespersons:', error);
+      res.status(500).json({
+        success: false,
+        message: error.message || 'Internal server error',
+        data: null
+      });
+    }
+  }
+}

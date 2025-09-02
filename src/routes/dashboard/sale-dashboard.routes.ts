@@ -18,6 +18,14 @@ const saleDashboardController = new SaleDashboardController();
  * Dashboard Overview Routes
  */
 
+// GET /api/dashboard/sale/kpis
+// ดึงข้อมูล KPI Cards สำหรับ Sale Dashboard (เฉพาะของ user ที่ login)
+router.get(
+  "/kpis",
+  authMiddleware,
+  saleDashboardController.getSaleKPIs.bind(saleDashboardController)
+);
+
 // GET /api/dashboard/sale/overview
 // ดึงข้อมูล Dashboard Overview (KPI Cards + Trends)
 router.get(

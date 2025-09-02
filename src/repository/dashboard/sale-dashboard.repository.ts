@@ -453,25 +453,26 @@ class SaleDashboardRepository {
 
       const salesQuery = `
         SELECT 
-          MONTH(dp.createdAt) as month_number,
-          MONTHNAME(dp.createdAt) as month_name,
+          MONTH(pf.createdAt) as month_number,
+          MONTHNAME(pf.createdAt) as month_name,
           COUNT(*) as jobs_count,
-          SUM(COALESCE(CAST(pf.total_after_vat AS DECIMAL(10,2)), 0)) as total_revenue,
-          AVG(COALESCE(CAST(pf.total_after_vat AS DECIMAL(10,2)), 0)) as avg_job_value,
+          SUM(COALESCE(CAST(pf.billing_amount AS DECIMAL(15,2)), 0)) as total_revenue,
+          AVG(COALESCE(CAST(pf.billing_amount AS DECIMAL(15,2)), 0)) as avg_job_value,
           COUNT(CASE WHEN dp.d_status = 'ปิดการขาย' THEN 1 END) as closed_jobs,
           u.fullname as sale_name,
           u.id as sale_id
-        FROM d_purchase dp
-        JOIN d_purchase_emp dpe ON dp.id = dpe.d_purchase_id
-        JOIN user u ON dpe.user_id = u.id
-        LEFT JOIN purchase_finance pf ON dp.id = pf.d_purchase_id
-  
-          AND YEAR(dp.createdAt) = ${year}
+        FROM purchase_finance pf
+        LEFT JOIN d_purchase dp ON pf.d_purchase_id = dp.id
+        LEFT JOIN d_purchase_emp dpe ON dp.id = dpe.d_purchase_id
+        LEFT JOIN user u ON dpe.user_id = u.id
+        WHERE YEAR(pf.createdAt) = ${year}
+          AND dpe.is_active = 1
+          AND u.fullname IS NOT NULL
+          AND pf.billing_amount IS NOT NULL
           ${salespersonId && salespersonId !== 'all' ? `AND u.id = '${salespersonId}'` : ''}
-        GROUP BY MONTH(dp.createdAt), MONTHNAME(dp.createdAt), u.id, u.fullname
+        GROUP BY MONTH(pf.createdAt), MONTHNAME(pf.createdAt), u.id, u.fullname
         ORDER BY u.fullname, month_number
       `;
-//      WHERE dp.d_status IN ('ปิดการขาย', 'Financial', 'อยู่ระหว่างทำ Financial')
       // Execute the query and return the results
       const result = await prisma.$queryRawUnsafe(salesQuery);
       return Array.isArray(result) ? result : [];
