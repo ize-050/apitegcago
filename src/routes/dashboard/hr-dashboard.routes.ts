@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { HRDashboardController } from '../../controllers/hr/dashboard.controller';
+import { HRDashboardController } from '../../controllers/dashboard/hr-dashboard.controller';
 import authMiddleware from '../../middleware/authMiddleware';
 
 const router = Router();
@@ -52,19 +52,6 @@ router.get(
   '/revenue-commission-chart',
   authMiddleware,
   controller.getRevenueCommissionChart
-);
-
-// Legacy routes for backward compatibility
-router.get(
-  '/monthly-commission',
-  authMiddleware,
-  controller.getMonthlyCommission
-);
-
-router.get(
-  '/sales-commission',
-  authMiddleware,
-  controller.getSalesCommission
 );
 
 export default router;

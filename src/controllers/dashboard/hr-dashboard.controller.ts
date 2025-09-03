@@ -290,15 +290,4 @@ export class HRDashboardController {
       });
     }
   };
-
-  /**
-   * Legacy methods for backward compatibility
-   */
-  public async getMonthlyCommission(req: Request, res: Response) {
-    return this.getMonthlyData(req, res);
-  }
-
-  public async getSalesCommission(req: Request, res: Response) {
-    return this.getEmployeePerformance(req, res);
-  }
 }

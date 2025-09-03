@@ -17,6 +17,11 @@ const Superadmin = require('./superadmin')
 const FinanceRouter = require('./finance')
 const EmployeeRouter = require('./employee')
 const HrRouter = require('./hr')
+const SaleDashboardRouter = require('./dashboard/sale-dashboard.routes')
+const CSDashboardRouter = require('./dashboard/cs-dashboard.routes').default
+const AccountDashboardRouter = require('./dashboard/account-dashboard.routes').default
+const HRDashboardRouter = require('./hr/dashboard.routes').default
+const ManagerRouter = require('./manager.routes')
 
 
 router.use('/superadmin',Superadmin)
@@ -29,6 +34,11 @@ router.use('/cs_status',Csstatus)
 router.use('/finance',FinanceRouter)
 router.use('/employee',EmployeeRouter)
 router.use('/hr', HrRouter)
+router.use('/dashboard/sale', SaleDashboardRouter)
+router.use('/dashboard/cs', CSDashboardRouter)
+router.use('/dashboard/account', AccountDashboardRouter)
+router.use('/dashboard/hr', HRDashboardRouter)
+router.use('/manager', ManagerRouter)
 
 
 
