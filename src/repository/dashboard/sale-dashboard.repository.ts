@@ -447,9 +447,22 @@ class SaleDashboardRepository {
   async getSalesChartData(filters: {
     salespersonId?: string;
     year?: number;
+    month?: number;
+    startDate?: string;
+    endDate?: string;
   }): Promise<any> {
     try {
-      const { salespersonId, year = new Date().getFullYear() } = filters;
+      const { salespersonId, year = new Date().getFullYear(), month, startDate, endDate } = filters;
+
+      // Build date filter conditions
+      let dateFilter = '';
+      if (startDate && endDate) {
+        dateFilter = `AND pf.createdAt BETWEEN '${startDate}' AND '${endDate}'`;
+      } else if (month) {
+        dateFilter = `AND YEAR(pf.createdAt) = ${year} AND MONTH(pf.createdAt) = ${month}`;
+      } else {
+        dateFilter = `AND YEAR(pf.createdAt) = ${year}`;
+      }
 
       const salesQuery = `
         SELECT 
@@ -465,10 +478,10 @@ class SaleDashboardRepository {
         LEFT JOIN d_purchase dp ON pf.d_purchase_id = dp.id
         LEFT JOIN d_purchase_emp dpe ON dp.id = dpe.d_purchase_id
         LEFT JOIN user u ON dpe.user_id = u.id
-        WHERE YEAR(pf.createdAt) = ${year}
-          AND dpe.is_active = 1
+        WHERE dpe.is_active = 1
           AND u.fullname IS NOT NULL
           AND pf.billing_amount IS NOT NULL
+          ${dateFilter}
           ${salespersonId && salespersonId !== 'all' ? `AND u.id = '${salespersonId}'` : ''}
         GROUP BY MONTH(pf.createdAt), MONTHNAME(pf.createdAt), u.id, u.fullname
         ORDER BY u.fullname, month_number

@@ -339,7 +339,7 @@ export class CSDashboardRepository {
   }
 
   /**
-   * Get CS Status Tracking - สถานะต่างๆ ของ CS
+   * Get CS Status Tracking - สถานะต่างๆ ของ CS ทั้งหมด
    */
   async getCSStatusTracking(filters: {
     startDate?: string;
@@ -355,77 +355,63 @@ export class CSDashboardRepository {
         }
       } : {};
 
-      // CS Status Tracking from cs_purchase table
-      const statusData = await prisma.cs_purchase.groupBy({
-        by: ['status_key', 'status_name'],
-        where: {
-          deletedAt: null,
-          status_active: true,
-          d_purchase: {
-            deletedAt: null,
-            ...dateFilter
-          }
-        },
-        _count: {
-          id: true
-        }
-      });
+      // Get all CS Status from cs_purchase table with date filter
+      // Use raw SQL to properly handle the join and date filtering
+      const statusQuery = `
+        SELECT cp.status_key, cp.status_name, COUNT(*) as count
+        FROM cs_purchase cp
+        LEFT JOIN d_purchase dp ON cp.d_purchase_id = dp.id
+        WHERE cp.deletedAt IS NULL AND dp.deletedAt IS NULL
+        AND dp.createdAt BETWEEN '${startDate}' AND '${endDate} 23:59:59'
+        GROUP BY cp.status_key, cp.status_name
+        ORDER BY cp.status_key ASC
+      `;
 
-      // Additional status counts
-      const containerStatus = await prisma.bookcabinet.count({
-        where: {
-          deletedAt: null,
-          ...dateFilter
-        }
-      });
+      const allStatusData = await prisma.$queryRawUnsafe(statusQuery) as Array<{
+        status_key: string;
+        status_name: string;
+        count: number;
+      }>;
 
-      const departureStatus = await prisma.leave.count({
-        where: {
-          deletedAt: null,
-          ...dateFilter
-        }
-      });
-
-      const deliveryStatus = await prisma.cs_already_sent.count({
-        where: {
-          deletedAt: null,
-          ...dateFilter
-        }
-      });
-
-      // CS Status Breakdown
-      const csStatusBreakdown = await prisma.cs_purchase.groupBy({
-        by: ['status_key', 'status_name'],
-        where: {
-          deletedAt: null,
-          ...dateFilter
-        },
-        _count: {
-          id: true
-        }
+      // Map to organized structure with all 11 statuses
+      const statusMapping: { [key: string]: any } = {};
+      allStatusData.forEach((item: any) => {
+        statusMapping[item.status_key] = {
+          statusKey: item.status_key,
+          statusName: item.status_name,
+          count: Number(item.count)
+        };
       });
 
       return {
-        containerStatus: {
-          total: containerStatus,
-          label: 'สถานะจองตู้'
-        },
-        documentStatus: {
-          total: statusData.filter(s => s.status_key === 'Document').reduce((sum, s) => sum + s._count.id, 0),
-          label: 'สถานะจัดทำเอกสาร'
-        },
-        departureStatus: {
-          total: departureStatus,
-          label: 'สถานะรออกเดินทาง'
-        },
-        deliveryStatus: {
-          total: deliveryStatus,
-          label: 'สถานะจัดส่งปลายทาง'
-        },
-        statusBreakdown: statusData.map(item => ({
+        containerStatus: [
+          statusMapping['Bookcabinet'] || { statusKey: 'Bookcabinet', statusName: 'จองตู้', count: 0 },
+          statusMapping['Contain'] || { statusKey: 'Contain', statusName: 'บรรจุตู้', count: 0 },
+          statusMapping['Receive'] || { statusKey: 'Receive', statusName: 'รับตู้', count: 0 }
+        ],
+        documentStatus: [
+          statusMapping['Document'] || { statusKey: 'Document', statusName: 'จัดทำเอกสาร', count: 0 }
+        ],
+        departureStatus: [
+          statusMapping['Leave'] || { statusKey: 'Leave', statusName: 'ออกเดินทาง', count: 0 },
+          statusMapping['Departure'] || { statusKey: 'Departure', statusName: 'ยืนยันวันออกเดินทาง', count: 0 }
+        ],
+        deliveryStatus: [
+          statusMapping['WaitRelease'] || { statusKey: 'WaitRelease', statusName: 'รอตรวจปล่อย', count: 0 },
+          statusMapping['Released'] || { statusKey: 'Released', statusName: 'ตรวจปล่อยเรียบร้อย', count: 0 },
+          statusMapping['Destination'] || { statusKey: 'Destination', statusName: 'จัดส่งปลายทาง', count: 0 },
+          statusMapping['SentSuccess'] || { statusKey: 'SentSuccess', statusName: 'ส่งเรียบร้อย', count: 0 }
+        ],
+        otherStatus: [
+          statusMapping['Etc'] || { statusKey: 'Etc', statusName: 'หมายเหตุ', count: 0 }
+        ],
+        
+        // Summary totals
+        totalJobs: allStatusData.reduce((sum: number, item: any) => sum + Number(item.count), 0),
+        statusBreakdown: allStatusData.map((item: any) => ({
           statusKey: item.status_key,
           statusName: item.status_name,
-          count: item._count.id
+          count: Number(item.count)
         }))
       };
     } catch (error: any) {

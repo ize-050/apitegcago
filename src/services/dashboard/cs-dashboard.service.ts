@@ -25,10 +25,13 @@ export interface ProductTypeData {
 }
 
 export interface CSStatusData {
-  containerStatus: Array<{ status: string; count: number }>;
-  documentStatus: Array<{ status: string; count: number }>;
-  departureStatus: Array<{ status: string; count: number }>;
-  deliveryStatus: Array<{ status: string; count: number }>;
+  containerStatus: Array<{ statusKey: string; statusName: string; count: number }>;
+  documentStatus: Array<{ statusKey: string; statusName: string; count: number }>;
+  departureStatus: Array<{ statusKey: string; statusName: string; count: number }>;
+  deliveryStatus: Array<{ statusKey: string; statusName: string; count: number }>;
+  allStatuses?: Array<{ statusKey: string; statusName: string; count: number }>;
+  totalJobs?: number;
+  statusBreakdown?: Array<{ statusKey: string; statusName: string; count: number }>;
 }
 
 export interface CSFiltersData {
