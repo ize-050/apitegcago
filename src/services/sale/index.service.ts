@@ -891,40 +891,52 @@ class SaleService {
               })
               .filter((item: any) => item !== null);
 
-            for (let i = 0; i < typeData.length; i++) {
-              const uploadDir = path.join(
-                "public",
-                "images",
-                "payment",
-                `${RequestData.d_purchase_id}`
-              );
-              await fs.mkdirSync(uploadDir, { recursive: true });
-              console.log("item1231232", typeData[i]);
-              let paymentData: any = {
-                d_purchase_id: RequestData.d_purchase_id,
-                payment_date: new Date(),
-                payment_name: typeData[i].type_payment,
-                payment_price: typeData[i].price,
-                payment_type: typeData[i].currency,
-                payment_image_name: "",
-                payment_path: "",
-              };
+            if (typeData && typeData.length > 0) {
+              // เก็บข้อมูลรูปภาพเดิมไว้ก่อนลบ
+              const existingPayments = await tx.d_purchase_customer_payment.findMany({
+                where: {
+                  d_purchase_id: RequestData.d_purchase_id,
+                },
+              });
 
-              // เก็บข้อมูลรูปภาพเดิมไว้ก่อน
-              const existingPayments =
-                await tx.d_purchase_customer_payment.findMany({
-                  where: {
-                    d_purchase_id: RequestData.d_purchase_id,
-                  },
-                });
+              // ลบข้อมูลเก่าทั้งหมดก่อน (เพื่อจัดการกับรายการที่ถูกลบใน Frontend)
+              await tx.d_purchase_customer_payment.deleteMany({
+                where: {
+                  d_purchase_id: RequestData.d_purchase_id,
+                },
+              });
 
-              // ในลูป processedTypes
-              if (RequestData.typeImage && RequestData.typeImage.length > 0) {
-                const findImage = RequestData.typeImage.find(
-                  (file: any) => file.index === i
+              console.log(`Deleted existing payments for purchase: ${RequestData.d_purchase_id}`);
+              console.log(`Creating ${typeData.length} new payment records`);
+
+              // สร้างข้อมูลใหม่ทั้งหมดตามที่ส่งมาจาก Frontend
+              for (let i = 0; i < typeData.length; i++) {
+                const uploadDir = path.join(
+                  "public",
+                  "images",
+                  "payment",
+                  `${RequestData.d_purchase_id}`
                 );
+                await fs.mkdirSync(uploadDir, { recursive: true });
+                console.log("Processing payment item:", typeData[i]);
+                
+                let paymentData: any = {
+                  d_purchase_id: RequestData.d_purchase_id,
+                  payment_date: new Date(),
+                  payment_name: typeData[i].type_payment,
+                  payment_price: typeData[i].price,
+                  payment_type: typeData[i].currency,
+                  payment_image_name: "",
+                  payment_path: "",
+                };
 
-                if (findImage) {
+                // จัดการรูปภาพ
+                if (RequestData.typeImage && RequestData.typeImage.length > 0) {
+                  const findImage = RequestData.typeImage.find(
+                    (file: any) => file.index === i
+                  );
+
+                  if (findImage) {
                   // กรณีมีการอัพโหลดรูปใหม่
                   console.log(
                     `Found new image: ${findImage.originalname} for index ${i}`
@@ -938,32 +950,25 @@ class SaleService {
 
                   paymentData.payment_image_name = findImage.originalname;
                   paymentData.payment_path = `/images/payment/${RequestData.d_purchase_id}/${findImage.originalname}`;
-                } 
-                else{
-                  console.log("no image");
-                  paymentData.payment_image_name = existingPayments[i].payment_image_name;
-                  paymentData.payment_path = existingPayments[i].payment_path;
+                  } else {
+                    // ไม่มีรูปใหม่ ใช้รูปเดิมถ้ามี
+                    console.log("No new image for index:", i);
+                    if (existingPayments[i]) {
+                      paymentData.payment_image_name = existingPayments[i].payment_image_name;
+                      paymentData.payment_path = existingPayments[i].payment_path;
+                    }
+                  }
+                } else {
+                  // ไม่มีรูปใหม่เลย ใช้รูปเดิมถ้ามี
+                  console.log("No images uploaded");
+                  if (existingPayments[i]) {
+                    paymentData.payment_image_name = existingPayments[i].payment_image_name;
+                    paymentData.payment_path = existingPayments[i].payment_path;
+                  }
                 }
-              }
-              else{
-                console.log("no image");
-                paymentData.payment_image_name = existingPayments[i].payment_image_name;
-                paymentData.payment_path = existingPayments[i].payment_path;
-              }
 
-              // แยก update และ create ให้ชัดเจน
-              if (
-                typeData[i].id &&
-                typeData[i].id !== undefined &&
-                typeData[i].id !== ""
-              ) {
-                console.log("Updating payment with id:", typeData[i].id);
-                await tx.d_purchase_customer_payment.update({
-                  where: { id: typeData[i].id },
-                  data: paymentData,
-                });
-              } else {
-                console.log("Creating new payment", paymentData);
+                // สร้างข้อมูลใหม่เสมอ (เพราะเราลบข้อมูลเก่าไปแล้ว)
+                console.log("Creating new payment record:", paymentData);
                 await tx.d_purchase_customer_payment.create({
                   data: {
                     ...paymentData,
@@ -994,6 +999,72 @@ class SaleService {
       return true;
     } catch (err: any) {
       throw new Error(err);
+    }
+  }
+
+  // ลบลูกค้า
+  async deleteCustomer(customerId: string): Promise<any> {
+    try {
+      // ตรวจสอบว่าลูกค้ามีรายการจองหรือไม่
+      const existingPurchases = await this.prisma.d_purchase.findMany({
+        where: {
+          customer_id: customerId
+        } 
+      });
+
+      if (existingPurchases.length > 0) {
+        throw new Error(`ไม่สามารถลบข้อมูลลูกค้าได้ เนื่องจากมีรายการจองทั้งหมด ${existingPurchases.length} รายการ กรุณาลบรายการจองก่อน หรือติดต่อผู้ดูแลระบบ`);
+      }
+
+      // ตรวจสอบว่าลูกค้ามีอยู่จริงหรือไม่
+      const existingCustomer = await this.prisma.customer.findUnique({
+        where: {
+          id: customerId
+        }
+      });
+
+      if (!existingCustomer) {
+        throw new Error("ไม่พบข้อมูลลูกค้าที่ต้องการลบ");
+      }
+
+      // ลบข้อมูลที่เกี่ยวข้องก่อน (ถ้ามี)
+      await this.prisma.$transaction(async (tx) => {
+        // ลบ customer_emp (ความสัมพันธ์ลูกค้า-พนักงาน)
+        await tx.customer_emp.deleteMany({
+          where: {
+            customer_id: customerId
+          }
+        });
+
+        // ลบ customer_status
+        await tx.customer_status.deleteMany({
+          where: {
+            customer_id: customerId
+          }
+        });
+
+        // ลบ customer_detail
+        await tx.customer_detail.deleteMany({
+          where: {
+            customer_id: customerId
+          }
+        });
+
+        // ลบ customer หลัก
+        await tx.customer.delete({
+          where: {
+            id: customerId
+          }
+        });
+      });
+
+      return {
+        message: "ลบข้อมูลลูกค้าเรียบร้อยแล้ว"
+      };
+
+    } catch (err: any) {
+      console.log("Error in deleteCustomer service:", err);
+      throw err;
     }
   }
 }

@@ -33,6 +33,7 @@ router.get('/getCustomer',authMiddleware, (req, res) =>  saleController.getCusto
 router.get('/getCustomerDetail/:id',authMiddleware, (req, res) =>  saleController.getCustomerDetail(req, res));
 router.post('/createCustomer',authMiddleware, (req, res) => saleController.createCustomer(req, res));
 router.put('/editCustomer/:id',authMiddleware, (req, res) => saleController.editCustomer(req, res));
+router.delete('/deleteCustomer/:id',authMiddleware, (req, res) => saleController.deleteCustomer(req, res));
 router.post('/changetagStatus/:id',authMiddleware, (req, res) => saleController.changeTagStatus(req, res));
 
 

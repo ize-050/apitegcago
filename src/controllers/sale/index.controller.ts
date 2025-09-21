@@ -594,6 +594,10 @@ export class SaleController {
 
       };  
 
+      console.log("=== DEBUG: Backend received data ===");
+      console.log("RequestData keys:", Object.keys(RequestData));
+      console.log("RequestData.type:", RequestData.type);
+      console.log("Full RequestData:", RequestData);
       console.log("request", request)
 
 
@@ -612,5 +616,52 @@ export class SaleController {
       res.status(500).json(err)
     }
 
+  }
+
+  // DELETE: ลบลูกค้า
+  async deleteCustomer(req: Request, res: Response): Promise<any> {
+    try {
+      const customerId = req.params.id;
+      
+      if (!customerId) {
+        return res.status(400).json({
+          message: "กรุณาระบุ ID ลูกค้า",
+          statusCode: 400
+        });
+      }
+
+      const result = await this.saleservice.deleteCustomer(customerId);
+      
+      res.status(200).json({
+        data: {
+          message: result.message,
+          statusCode: 200
+        }
+      });
+    } catch (err: any) {
+      console.log("Error deleting customer:", err);
+      
+      // ตรวจสอบประเภทของ error
+      if (err.message) {
+        if (err.message.includes("มีรายการจอง") || err.message.includes("ไม่สามารถลบ")) {
+          return res.status(400).json({
+            message: err.message,
+            statusCode: 400
+          });
+        }
+        
+        if (err.message.includes("ไม่พบข้อมูลลูกค้า")) {
+          return res.status(404).json({
+            message: err.message,
+            statusCode: 404
+          });
+        }
+      }
+      
+      res.status(500).json({
+        message: err.message || "เกิดข้อผิดพลาดในการลบลูกค้า",
+        statusCode: 500
+      });
+    }
   }
 }

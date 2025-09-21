@@ -373,21 +373,23 @@ export class CSDashboardRepository {
         count: number;
       }>;
 
-      // Map to organized structure with all 11 statuses
-      const statusMapping: { [key: string]: any } = {};
-      allStatusData.forEach((item: any) => {
-        statusMapping[item.status_key] = {
-          statusKey: item.status_key,
-          statusName: item.status_name,
-          count: Number(item.count)
-        };
-      });
+      // Map all status data to consistent format
+      const statusMapping = allStatusData.reduce((acc: Record<string, { statusKey: string; statusName: string; count: number }>, item: any) => {
+        if (item.status_key) {
+          acc[item.status_key] = {
+            statusKey: item.status_key,
+            statusName: item.status_name || '',
+            count: Number(item.count)
+          };
+        }
+        return acc;
+      }, {} as Record<string, { statusKey: string; statusName: string; count: number }>);
 
+      // Return all CS statuses with proper structure
       return {
+        // Individual status categories (for backward compatibility)
         containerStatus: [
-          statusMapping['Bookcabinet'] || { statusKey: 'Bookcabinet', statusName: 'จองตู้', count: 0 },
-          statusMapping['Contain'] || { statusKey: 'Contain', statusName: 'บรรจุตู้', count: 0 },
-          statusMapping['Receive'] || { statusKey: 'Receive', statusName: 'รับตู้', count: 0 }
+          statusMapping['Bookcabinet'] || { statusKey: 'Bookcabinet', statusName: 'จองตู้', count: 0 }
         ],
         documentStatus: [
           statusMapping['Document'] || { statusKey: 'Document', statusName: 'จัดทำเอกสาร', count: 0 }
@@ -397,12 +399,22 @@ export class CSDashboardRepository {
           statusMapping['Departure'] || { statusKey: 'Departure', statusName: 'ยืนยันวันออกเดินทาง', count: 0 }
         ],
         deliveryStatus: [
-          statusMapping['WaitRelease'] || { statusKey: 'WaitRelease', statusName: 'รอตรวจปล่อย', count: 0 },
-          statusMapping['Released'] || { statusKey: 'Released', statusName: 'ตรวจปล่อยเรียบร้อย', count: 0 },
           statusMapping['Destination'] || { statusKey: 'Destination', statusName: 'จัดส่งปลายทาง', count: 0 },
           statusMapping['SentSuccess'] || { statusKey: 'SentSuccess', statusName: 'ส่งเรียบร้อย', count: 0 }
         ],
-        otherStatus: [
+        
+        // All CS statuses for comprehensive display
+        allStatuses: [
+          statusMapping['Bookcabinet'] || { statusKey: 'Bookcabinet', statusName: 'จองตู้', count: 0 },
+          statusMapping['Contain'] || { statusKey: 'Contain', statusName: 'บรรจุตู้', count: 0 },
+          statusMapping['Document'] || { statusKey: 'Document', statusName: 'จัดทำเอกสาร', count: 0 },
+          statusMapping['Receive'] || { statusKey: 'Receive', statusName: 'รับตู้', count: 0 },
+          statusMapping['Departure'] || { statusKey: 'Departure', statusName: 'ยืนยันวันออกเดินทาง', count: 0 },
+          statusMapping['Leave'] || { statusKey: 'Leave', statusName: 'ออกเดินทาง', count: 0 },
+          statusMapping['WaitRelease'] || { statusKey: 'WaitRelease', statusName: 'รอตรวจปล่อย', count: 0 },
+          statusMapping['Released'] || { statusKey: 'Released', statusName: 'ตรวจปล่อยเรียบร้อย', count: 0 },
+          statusMapping['Destination'] || { statusKey: 'Destination', statusName: 'จัดส่งปลายทาง', count: 0 },
+          statusMapping['SentSuccess'] || { statusKey: 'SentSuccess', statusName: 'ส่งเรียบร้อย', count: 0 },
           statusMapping['Etc'] || { statusKey: 'Etc', statusName: 'หมายเหตุ', count: 0 }
         ],
         

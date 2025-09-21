@@ -12,7 +12,7 @@ export class HRDashboardController {
   /**
    * Get complete HR dashboard data
    */
-  public getCompleteDashboard = async (req: Request, res: Response) => {
+  public async getCompleteDashboard = async (req: Request, res: Response) => {
     try {
       const filters: HRFilters = {
         year: req.query.year as string,
@@ -55,7 +55,7 @@ export class HRDashboardController {
   /**
    * Get HR overview metrics
    */
-  public getOverview = async (req: Request, res: Response) => {
+  public async getOverview = async (req: Request, res: Response) => {
     try {
       const filters: HRFilters = {
         year: req.query.year as string,
@@ -95,7 +95,7 @@ export class HRDashboardController {
   /**
    * Get monthly HR data
    */
-  public getMonthlyData = async (req: Request, res: Response) => {
+  public async getMonthlyData = async (req: Request, res: Response) => {
     try {
       const filters: HRFilters = {
         year: req.query.year as string
@@ -134,7 +134,7 @@ export class HRDashboardController {
   /**
    * Get commission by type
    */
-  public getCommissionByType = async (req: Request, res: Response) => {
+  public async getCommissionByType = async (req: Request, res: Response) => {
     try {
       const filters: HRFilters = {
         year: req.query.year as string,
@@ -174,7 +174,7 @@ export class HRDashboardController {
   /**
    * Get employee performance
    */
-  public getEmployeePerformance = async (req: Request, res: Response) => {
+  public async getEmployeePerformance = async (req: Request, res: Response) => {
     try {
       const filters: HRFilters = {
         year: req.query.year as string,
@@ -215,7 +215,7 @@ export class HRDashboardController {
   /**
    * Get commission status
    */
-  public getCommissionStatus = async (req: Request, res: Response) => {
+  public async getCommissionStatus = async (req: Request, res: Response) => {
     try {
       const filters: HRFilters = {
         year: req.query.year as string,
@@ -255,7 +255,7 @@ export class HRDashboardController {
   /**
    * Get revenue and commission chart data
    */
-  public getRevenueCommissionChart = async (req: Request, res: Response) => {
+  public async getRevenueCommissionChart = async (req: Request, res: Response) => {
     try {
       const filters: HRFilters = {
         year: req.query.year as string

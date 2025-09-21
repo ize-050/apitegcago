@@ -320,9 +320,6 @@ class SaleDashboardService {
   async getSalesChartData(filters: {
     salespersonId?: string;
     year?: number;
-    month?: number;
-    startDate?: string;
-    endDate?: string;
   }): Promise<any> {
     try {
       const rawData = await this.saleDashboardRepo.getSalesChartData(filters);

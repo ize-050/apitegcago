@@ -44,44 +44,6 @@ export class SaleDashboardController {
   }
 
   /**
-   * GET /api/dashboard/sale/kpis
-   * ดึงข้อมูล KPI Cards สำหรับ Sale Dashboard (เฉพาะของ user ที่ login)
-   */
-  async getSaleKPIs(req: Request, res: Response): Promise<any> {
-    try {
-      const userId = (req as any).user?.id;
-      if (!userId) {
-        return res.status(401).json({
-          success: false,
-          message: 'Unauthorized - User not found'
-        });
-      }
-
-      const { year, month } = req.query;
-      const filters = {
-        salespersonId: userId, // ดึงข้อมูลเฉพาะของ user ที่ login
-        year: year ? parseInt(year as string) : new Date().getFullYear(),
-        month: month ? parseInt(month as string) : undefined
-      };
-
-      const kpiData = await this.saleDashboardService.getDashboardOverview(filters);
-      
-      return res.status(200).json({
-        success: true,
-        data: kpiData,
-        message: 'Sale KPIs retrieved successfully'
-      });
-    } catch (error) {
-      console.error('Error in getSaleKPIs:', error);
-      return res.status(500).json({
-        success: false,
-        message: 'Internal server error',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
-  }
-
-  /**
    * GET /api/dashboard/sale/overview
    * ดึงข้อมูล Dashboard Overview (KPI Cards + Trends)
    */
